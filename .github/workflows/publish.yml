@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   publish:
@@ -21,14 +21,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
 
       - run: bun install
 
       - run: bun test
 
       - run: bun run build
+
+      - name: Smoke test compiled CLI
+        run: bun packages/cli/dist/bin/ferret.js --version
 
       - name: Publish @specferret/core
         run: cd packages/core && npm publish --access public --provenance

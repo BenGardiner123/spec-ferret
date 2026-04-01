@@ -35,7 +35,7 @@ jobs:
       - run: bun run build
 
       - name: Smoke test compiled CLI
-        run: node packages/cli/dist/bin/ferret.js --version
+        run: bun packages/cli/dist/bin/ferret.js --version
 
       - name: Performance gate
         run: |

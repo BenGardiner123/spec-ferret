@@ -107,7 +107,7 @@ packages/cli/bin/ferret.ts
 ## Build Order — Strict
 
 Do not start a task until the previous task has passing tests.
-`npm test` must be green before moving forward. Every time.
+`bun test` must be green before moving forward. Every time.
 
 ```
 Task 1   store/types.ts + sqlite.ts    shape_schema field + migration
@@ -232,14 +232,14 @@ MARKETING.md
 - Tests live next to the file they test: `validator.ts` → `validator.test.ts`
 - Both SQLite and Postgres implementations must pass all store tests
 - The validator is a pure function — test every edge case in isolation
-- `npm test` is the required test command
+- `bun test` is the required test command
 
 ---
 
 ## Before You Commit
 
 ```bash
-npm test          # all green
+bun test          # all green
 ferret lint       # exits 0, under 500ms
 ```
 

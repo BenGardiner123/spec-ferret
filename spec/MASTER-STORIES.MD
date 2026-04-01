@@ -8,7 +8,7 @@ Sprint boundary is enforced — do not build roadmap items in Sprint 1.
 ## Sprint 1 — Core Engine (Complete)
 
 These stories are built, tested, and committed.
-42/42 tests green under Vitest. `ferret lint` at 330.69ms wall clock.
+62 tests green under `bun test`. `ferret lint` at 330.69ms wall clock.
 
 ---
 
@@ -183,7 +183,7 @@ These stories are built, tested, and committed.
 **Acceptance Criteria:**
 
 - Default store is SQLite at `.ferret/graph.db`
-- Default SQLite implementation uses Node's built-in `node:sqlite` driver
+- Default SQLite implementation uses Bun's built-in `bun:sqlite` driver
 - Store layer contains SQL only — no business logic, no graph traversal, ever
 - `upsertNode`, `upsertContract`, `upsertDependency` are idempotent
 - `getNodeByFilePath` returns null for unknown paths (not an error)

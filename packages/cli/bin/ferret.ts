@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { Command } from "commander";
 
 const VERSION = "0.1.0";

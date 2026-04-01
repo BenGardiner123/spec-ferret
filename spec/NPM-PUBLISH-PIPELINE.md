@@ -15,7 +15,7 @@ Two packages. Published to npm under the `@specferret` org scope.
 | `@specferret/core` | —        | Engine. Store, extractor, validator, reconciler. Importable library. |
 | `@specferret/cli`  | `ferret` | CLI. Thin wrapper over core. What developers install globally.       |
 
-Developers run: `npm install -g @specferret/cli`
+Developers run: `bun install -g @specferret/cli`
 That one command is the entire install experience.
 It must work on the first try. No exceptions.
 
@@ -69,14 +69,15 @@ LICENSE
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "bun": "./src/index.ts",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
   "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
-    "test": "vitest run"
+    "build": "bun ../../scripts/clean-dist.ts dist && tsc --project tsconfig.build.json",
+    "test": "bun test"
   },
   "dependencies": {
     "ajv": "^8.12.0",
@@ -85,7 +86,7 @@ LICENSE
     "gray-matter": "^4.0.3",
     "zod": "^3.22.4"
   },
-  "engines": { "node": ">=22.0.0" },
+  "engines": { "bun": ">=1.0.0" },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -106,8 +107,8 @@ LICENSE
   "bin": { "ferret": "./dist/bin/ferret.js" },
   "files": ["dist/", "README.md", "LICENSE"],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
-    "test": "node --test"
+    "build": "bun ../../scripts/clean-dist.ts dist && tsc --project tsconfig.build.json",
+    "test": "bun test"
   },
   "dependencies": {
     "@specferret/core": "0.1.0",
@@ -115,7 +116,7 @@ LICENSE
     "glob": "^13.0.6",
     "picocolors": "^1.1.1"
   },
-  "engines": { "node": ">=22.0.0" },
+  "engines": { "bun": ">=1.0.0" },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -133,8 +134,8 @@ LICENSE
   "private": true,
   "workspaces": ["packages/core", "packages/cli"],
   "scripts": {
-    "build": "npm run build --workspace=@specferret/core && npm run build --workspace=@specferret/cli",
-    "test": "npm run test --workspace=@specferret/core",
+    "build": "bun run --filter '*' build",
+    "test": "bun test",
     "publish:core": "cd packages/core && npm publish --access public",
     "publish:cli": "cd packages/cli && npm publish --access public"
   }
@@ -151,8 +152,9 @@ npm receives compiled JS + `.d.ts` type declarations. Not raw TypeScript.
 ### Why
 
 npm consumers may not be using Bun or TypeScript. The published package
-must work with plain Node.js 22+. The published artifact relies on Node's built-in
-`node:sqlite` support and cannot depend on Bun being installed.
+must still install cleanly from the npm registry, but SpecFerret itself runs on Bun.
+The published artifact relies on Bun's built-in `bun:sqlite` support and requires
+`bun` to be installed.
 
 ### tsconfig.build.json (per package)
 
@@ -174,13 +176,13 @@ must work with plain Node.js 22+. The published artifact relies on Node's built-
 
 ```bash
 # From packages/core
-npm run build
+bun run build
 ls dist/          # must contain index.js, index.d.ts, all source maps
 
 # From packages/cli
-npm run build
+bun run build
 ls dist/bin/      # must contain ferret.js with correct shebang
-node dist/bin/ferret.js --version   # must print 0.1.0
+bun dist/bin/ferret.js --version   # must print 0.1.0
 ```
 
 ---
@@ -190,20 +192,13 @@ node dist/bin/ferret.js --version   # must print 0.1.0
 `dist/bin/ferret.js` must begin with:
 
 ```
-#!/usr/bin/env node
+#!/usr/bin/env bun
 ```
 
-Not `#!/usr/bin/env bun`. The CLI is installed globally by developers who
-may not have Bun. Node 22+ is the runtime contract.
+Not `#!/usr/bin/env node`. Bun is the runtime contract.
 
-The compiled output must not depend on Bun APIs.
+The compiled output is allowed to depend on Bun APIs.
 Audit compiled `dist/bin/ferret.js` before publish and confirm the shebang is correct.
-
-### SQLite Warning Discipline
-
-Node currently labels `node:sqlite` experimental.
-The CLI must suppress only the SQLite experimental warning so clean runs stay clean.
-Do not disable all warnings globally, and do not remove all warning listeners.
 
 ---
 
@@ -242,20 +237,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: "24"
+          bun-version: 1.3.11
 
-      - run: npm install
+      - run: bun install
 
-      - run: npm test
+      - run: bun test
 
       - name: Performance gate
         run: |
           mkdir -p /tmp/ferret-gate
           cd /tmp/ferret-gate
-          node $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js init --no-hook
-          time node $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js lint
+          bun $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js init --no-hook
+          time bun $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js lint
         # Must complete in under 500ms. If this step takes >1s something is wrong.
 
   build:
@@ -264,15 +259,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: "24"
+          bun-version: 1.3.11
 
-      - run: npm install
-      - run: npm run build
+      - run: bun install
+      - run: bun run build
 
       - name: Smoke test compiled CLI
-        run: node packages/cli/dist/bin/ferret.js --version
+        run: bun packages/cli/dist/bin/ferret.js --version
 ```
 
 ### `.github/workflows/publish.yml`
@@ -295,17 +290,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - run: npm install
+      - run: bun install
 
-      - run: npm test
+      - run: bun test
         name: Tests must pass before publish
 
-      - run: npm run build
+      - run: bun run build
+
+      - name: Smoke test compiled CLI
+        run: bun packages/cli/dist/bin/ferret.js --version
 
       - name: Publish @specferret/core
         run: cd packages/core && npm publish --access public --provenance
@@ -329,17 +331,17 @@ tampered with. Boris approves this. Use it.
 This is the exact sequence every time we publish. No shortcuts.
 
 ```
-1. npm test                         all 42+ tests green
-2. npm run build                    both packages compile cleanly
-3. node packages/cli/dist/bin/ferret.js --version   prints correct version
-4. npm install -g ./packages/cli    install locally from disk
+1. bun test                         all tests green
+2. bun run build                    both packages compile cleanly
+3. bun packages/cli/dist/bin/ferret.js --version   prints correct version
+4. bun install -g ./packages/cli    install locally from disk
 5. ferret --version                 prints correct version from global install
 6. ferret init (fresh dir)          scaffolds correctly
 7. ferret lint                      exits 0, under 500ms, no SQLite warning noise
 8. git tag v0.1.0
 9. git push origin v0.1.0           triggers publish workflow
 10. watch GitHub Actions            both packages publish green
-11. npm install -g @specferret/cli  install from npm (not local)
+11. bun install -g @specferret/cli  install from npm (not local)
 12. ferret --version                final smoke test from npm registry
 ```
 
@@ -393,15 +395,15 @@ For Sprint 1 the package boundary is:
 - [x] **W11** — Write `tsconfig.build.json` for each package
 - [x] **W12** — Verify `files` allowlists publish only `dist/`, `README.md`, and `LICENSE`
 - [x] **W13** — Update all internal imports to use `@specferret/core` in CLI package
-- [x] **W14** — `npm install` — confirm workspace links resolve correctly
+- [x] **W14** — `bun install` — confirm workspace links resolve correctly
 
 ### Build Verification (Bruno)
 
-- [x] **W15** — `npm test` — all tests still green after restructure
-- [x] **W16** — `npm run build` — both packages compile without errors
-- [x] **W17** — Confirm `dist/bin/ferret.js` shebang is `#!/usr/bin/env node`
-- [x] **W18** — `node packages/cli/dist/bin/ferret.js --version` prints `0.1.0`
-- [x] **W19** — `npm install -g ./packages/cli` — global install from disk works
+- [x] **W15** — `bun test` — all tests still green after restructure
+- [x] **W16** — `bun run build` — both packages compile without errors
+- [x] **W17** — Confirm `dist/bin/ferret.js` shebang is `#!/usr/bin/env bun`
+- [x] **W18** — `bun packages/cli/dist/bin/ferret.js --version` prints `0.1.0`
+- [x] **W19** — `bun install -g ./packages/cli` — global install from disk works
 - [x] **W20** — `ferret init` in a fresh temp directory — scaffolds correctly
 - [x] **W21** — `ferret lint` in that directory — exits 0, under 500ms, with clean stderr
 
@@ -409,7 +411,7 @@ For Sprint 1 the package boundary is:
 
 - [x] **W22** — Write `init.test.ts` — covers S01 acceptance criteria
 - [x] **W23** — Write `lint.test.ts` — covers S07 acceptance criteria including `--ci` JSON shape
-- [x] **W24** — `npm test` — 42 tests become 62 tests (20 new CLI), all green
+- [x] **W24** — `bun test` — 42 tests become 62 tests (20 new CLI), all green
 
 ### CI/CD (Todd)
 
@@ -422,7 +424,7 @@ For Sprint 1 the package boundary is:
 - [x] **W28** — Run full release sequence steps 1–7 locally (dry run)
 - [x] **W29** — `git tag v0.1.0 && git push origin v0.1.0`
 - [ ] **W30** — Watch publish workflow complete — both packages green
-- [ ] **W31** — `npm install -g @specferret/cli` from registry — smoke test
+- [ ] **W31** — `bun install -g @specferret/cli` from registry — smoke test
 - [ ] **W32** — `ferret --version` from global registry install — final gate
 
 **HN post goes live only after W32 passes.**
@@ -431,11 +433,11 @@ For Sprint 1 the package boundary is:
 
 ## What Can Go Wrong — Known Risks
 
-| Risk                             | Mitigation                                                                                        |
-| -------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Stale compiled output            | Run `npm run build` before release checks so `dist/` matches the current Node source tree.        |
-| Package name squatting           | Check W02 immediately — if names are taken, decision needed before any other work.                |
-| SQLite warning leaks into stderr | Keep the targeted SQLite warning filter in the CLI entrypoint and verify clean stderr during W21. |
+| Risk                   | Mitigation                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| Stale compiled output  | Run `bun run build` before release checks so `dist/` matches the current Bun source tree. |
+| Package name squatting | Check W02 immediately — if names are taken, decision needed before any other work.        |
+| Bun runtime missing    | Keep `bun` in `engines`, preserve the Bun shebang, and verify the compiled CLI under Bun. |
 
 ---
 
