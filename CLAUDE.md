@@ -15,13 +15,14 @@ Domain: specferret.dev
 Before writing any code, read these documents in order:
 
 ```
-spec/ferret-master-architecture.md     — system design, layer rules, interfaces
-spec/ferret-master-implementation-plan.md — task order, code snippets, test requirements
-spec/CONTRACT-SCHEMA.md                — the contract convention, JSON Schema subset
-spec/ferret-master-stories.md          — acceptance criteria for every story
+spec/MASTER-ARCHITECTURE.MD            — system design, layer rules, interfaces
+spec/MASTER-IMPLEMENTATION-PLAN.MD     — task order, code snippets, test requirements
+spec/CONTRACT-SCHEMA.MD                — the contract convention, JSON Schema subset
+spec/MASTER-STORIES.MD                 — acceptance criteria for every story
+spec/SPEC-CONVENTIONS.MD               — folder structure, naming rules, BMAD/spec-kit integration
 ```
 
-If the answer to your question is not in those four documents, the spec has a gap.
+If the answer to your question is not in those five documents, the spec has a gap.
 Flag it. Do not invent an answer.
 
 ---
