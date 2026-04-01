@@ -4,12 +4,16 @@
   "description": "SpecFerret keeps your specs honest.",
   "type": "module",
   "bin": {
-    "ferret": "./bin/ferret.js"
+    "ferret": "./dist/bin/ferret.js"
   },
-  "files": ["bin/", "README.md", "LICENSE"],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "test": "bun test"
+    "test": "node --test"
   },
   "dependencies": {
     "@specferret/core": "0.1.0",
@@ -18,12 +22,11 @@
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@types/bun": "latest",
     "@types/node": "^25.5.0",
     "typescript": "^6.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "license": "MIT",
   "repository": {

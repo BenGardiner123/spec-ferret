@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'bun:test';
-import { extractFromSpecFile } from './frontmatter.js';
+import assert from "node:assert/strict";
+import { describe, it } from "vitest";
+import { extractFromSpecFile } from "./frontmatter.js";
 
 const VALID_SPEC = `---
 ferret:
@@ -65,46 +66,53 @@ ferret:
 ---
 `;
 
-describe('extractFromSpecFile — Task 3', () => {
-  it('extracts valid frontmatter correctly', () => {
-    const result = extractFromSpecFile('specs/users.md', VALID_SPEC);
-    expect(result.filePath).toBe('specs/users.md');
-    expect(result.fileType).toBe('spec');
-    expect(result.extractedBy).toBe('gray-matter');
-    expect(result.warning).toBeUndefined();
-    expect(result.contracts).toHaveLength(1);
-    expect(result.contracts[0].id).toBe('api.GET/users');
-    expect(result.contracts[0].type).toBe('api');
-    expect(result.contracts[0].shape_hash).toBeDefined();
-    expect(result.contracts[0].shape_hash).toHaveLength(64); // SHA-256 hex
-    expect(result.contracts[0].imports).toEqual([]);
+describe("extractFromSpecFile — Task 3", () => {
+  it("extracts valid frontmatter correctly", () => {
+    const result = extractFromSpecFile("specs/users.md", VALID_SPEC);
+    assert.equal(result.filePath, "specs/users.md");
+    assert.equal(result.fileType, "spec");
+    assert.equal(result.extractedBy, "gray-matter");
+    assert.equal(result.warning, undefined);
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].id, "api.GET/users");
+    assert.equal(result.contracts[0].type, "api");
+    assert.notEqual(result.contracts[0].shape_hash, undefined);
+    assert.equal(result.contracts[0].shape_hash.length, 64);
+    assert.deepEqual(result.contracts[0].imports, []);
   });
 
-  it('extracts imports correctly', () => {
-    const result = extractFromSpecFile('specs/search.md', SPEC_WITH_IMPORTS);
-    expect(result.contracts[0].imports).toEqual(['auth.jwt', 'tables.document']);
+  it("extracts imports correctly", () => {
+    const result = extractFromSpecFile("specs/search.md", SPEC_WITH_IMPORTS);
+    assert.deepEqual(result.contracts[0].imports, [
+      "auth.jwt",
+      "tables.document",
+    ]);
   });
 
-  it('missing frontmatter returns warning, empty contracts, does not throw', () => {
-    const result = extractFromSpecFile('specs/plain.md', SPEC_NO_FRONTMATTER);
-    expect(result.warning).toBe('no-frontmatter');
-    expect(result.contracts).toHaveLength(0);
-    expect(result.filePath).toBe('specs/plain.md');
-    expect(result.fileType).toBe('spec');
+  it("missing frontmatter returns warning, empty contracts, does not throw", () => {
+    const result = extractFromSpecFile("specs/plain.md", SPEC_NO_FRONTMATTER);
+    assert.equal(result.warning, "no-frontmatter");
+    assert.equal(result.contracts.length, 0);
+    assert.equal(result.filePath, "specs/plain.md");
+    assert.equal(result.fileType, "spec");
   });
 
   it('missing required field "shape" throws with field name in message', () => {
-    expect(() => extractFromSpecFile('specs/broken.md', SPEC_MISSING_FIELDS))
-      .toThrow('shape');
+    assert.throws(
+      () => extractFromSpecFile("specs/broken.md", SPEC_MISSING_FIELDS),
+      /shape/,
+    );
   });
 
-  it('missing multiple required fields throws with all field names in message', () => {
+  it("missing multiple required fields throws with all field names in message", () => {
     const specMissingAll = `---\nferret:\n  someField: value\n---\n`;
-    expect(() => extractFromSpecFile('specs/broken.md', specMissingAll))
-      .toThrow(/id.*type.*shape|Missing required/);
+    assert.throws(
+      () => extractFromSpecFile("specs/broken.md", specMissingAll),
+      /id.*type.*shape|Missing required/,
+    );
   });
 
-  it('unsupported schema keyword produces warning, does not fail', () => {
+  it("unsupported schema keyword produces warning, does not fail", () => {
     const stderrOutput: string[] = [];
     const originalWrite = process.stderr.write.bind(process.stderr);
     // Capture stderr writes
@@ -115,39 +123,45 @@ describe('extractFromSpecFile — Task 3', () => {
 
     let result: ReturnType<typeof extractFromSpecFile> | undefined;
     try {
-      result = extractFromSpecFile('specs/complex.md', SPEC_WITH_UNSUPPORTED_KEYWORD);
+      result = extractFromSpecFile(
+        "specs/complex.md",
+        SPEC_WITH_UNSUPPORTED_KEYWORD,
+      );
     } finally {
       process.stderr.write = originalWrite;
     }
 
-    expect(result).toBeDefined();
-    expect(result!.contracts).toHaveLength(1);
-    expect(result!.warning).toBeUndefined();
-    expect(stderrOutput.some(line => line.includes('allOf'))).toBe(true);
+    assert.notEqual(result, undefined);
+    assert.equal(result!.contracts.length, 1);
+    assert.equal(result!.warning, undefined);
+    assert.equal(
+      stderrOutput.some((line) => line.includes("allOf")),
+      true,
+    );
   });
 
-  it('extraction is synchronous — the function itself has no async/await', () => {
+  it("extraction is synchronous — the function itself has no async/await", () => {
     // If extractFromSpecFile returns a Promise, this would be a thenable object
-    const result = extractFromSpecFile('specs/users.md', VALID_SPEC);
-    expect(result).not.toBeInstanceOf(Promise);
-    expect(typeof (result as any).then).not.toBe('function');
+    const result = extractFromSpecFile("specs/users.md", VALID_SPEC);
+    assert.equal(result instanceof Promise, false);
+    assert.notEqual(typeof (result as any).then, "function");
   });
 
-  it('identical files produce identical shape_hash', () => {
-    const r1 = extractFromSpecFile('specs/a.md', VALID_SPEC);
-    const r2 = extractFromSpecFile('specs/b.md', VALID_SPEC);
-    expect(r1.contracts[0].shape_hash).toBe(r2.contracts[0].shape_hash);
+  it("identical files produce identical shape_hash", () => {
+    const r1 = extractFromSpecFile("specs/a.md", VALID_SPEC);
+    const r2 = extractFromSpecFile("specs/b.md", VALID_SPEC);
+    assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 
-  it('different shapes produce different shape_hash', () => {
+  it("different shapes produce different shape_hash", () => {
     const specA = VALID_SPEC;
-    const specB = specA.replace('format: uuid', 'format: email');
-    const r1 = extractFromSpecFile('specs/a.md', specA);
-    const r2 = extractFromSpecFile('specs/b.md', specB);
-    expect(r1.contracts[0].shape_hash).not.toBe(r2.contracts[0].shape_hash);
+    const specB = specA.replace("format: uuid", "format: email");
+    const r1 = extractFromSpecFile("specs/a.md", specA);
+    const r2 = extractFromSpecFile("specs/b.md", specB);
+    assert.notEqual(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 
-  it('property order change in shape does NOT change shape_hash', () => {
+  it("property order change in shape does NOT change shape_hash", () => {
     const specA = `---
 ferret:
   id: api.GET/test
@@ -176,9 +190,9 @@ ferret:
     required: [id, name]
 ---
 `;
-    const r1 = extractFromSpecFile('specs/a.md', specA);
-    const r2 = extractFromSpecFile('specs/b.md', specB);
+    const r1 = extractFromSpecFile("specs/a.md", specA);
+    const r2 = extractFromSpecFile("specs/b.md", specB);
     // Keys are sorted before hashing — order change is a no-change
-    expect(r1.contracts[0].shape_hash).toBe(r2.contracts[0].shape_hash);
+    assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 });

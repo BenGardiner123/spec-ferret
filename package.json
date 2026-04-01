@@ -1,9 +1,12 @@
 {
   "name": "specferret-workspace",
   "private": true,
-  "workspaces": ["packages/core", "packages/cli"],
+  "workspaces": [
+    "packages/core",
+    "packages/cli"
+  ],
   "scripts": {
-    "build": "bun run --filter '*' build",
-    "test": "bun test"
+    "build": "npm run build --workspace=@specferret/core && npm run build --workspace=@specferret/cli",
+    "test": "npm run test --workspace=@specferret/core"
   }
 }
