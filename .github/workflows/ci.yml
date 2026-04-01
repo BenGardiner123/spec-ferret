@@ -41,5 +41,5 @@ jobs:
         run: |
           mkdir -p /tmp/ferret-gate
           cd /tmp/ferret-gate
-          node $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js init --no-hook
-          time node $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js lint
+          bun $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js init --no-hook
+          time bun $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js lint
