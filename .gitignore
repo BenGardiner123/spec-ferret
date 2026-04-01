@@ -139,10 +139,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 
-# SpecFerret — internal files, never public
-CLAUDE.md
-MARKETING.md
-BRUNO-PROMPT.md
-docs/
-src/spec/
-spec/
+

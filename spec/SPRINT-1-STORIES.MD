@@ -1,0 +1,204 @@
+# SPRINT-1-STORIES.MD
+
+Engineering stories for SpecFerret Sprint 1.
+Acceptance criteria map directly to the test suite.
+Sprint 1 is complete. See ROADMAP.MD for Sprint 2 and beyond.
+
+---
+
+## Status: Complete
+
+62 tests passing. `ferret lint` at 11ms wall clock on a clean project.
+Performance gate cleared. npm publish pipeline in place.
+
+---
+
+### S01 — Project Initialisation
+
+**As a** developer setting up SpecFerret for the first time,
+**I want** a single command that scaffolds everything I need,
+**so that** I can start tracking contracts in under a minute.
+
+**Acceptance Criteria:**
+
+- `ferret init` creates `.ferret/graph.db` silently — no prompt, no question
+- `ferret init` creates `specs/` directory if it does not exist
+- `ferret init` writes `specs/example.md` with valid frontmatter template
+- `ferret init` writes `ferret.config.json` with correct defaults (`specDir`, `filePattern`, `store`)
+- `ferret init` writes `CLAUDE.md` with `context.json` instruction
+- `ferret init` prompts (opt-in) to install pre-commit hook — defaults to no
+- `ferret init` is idempotent — running it twice does not overwrite existing files
+- All output goes to stdout. No output goes to stderr on a clean run.
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/extractor/frontmatter.test.ts` (init behaviour covered in integration)
+
+---
+
+### S02 — Spec File Extraction
+
+**As a** developer with spec files in `specs/`,
+**I want** SpecFerret to read the frontmatter and extract a typed contract,
+**so that** the system knows what shape each contract promises.
+
+**Acceptance Criteria:**
+
+- Extracts `id`, `type`, `shape`, and `imports` from YAML frontmatter via `gray-matter`
+- Returns `ExtractionResult` with correct `contracts[]` array
+- `extractedBy` is always `'gray-matter'` in Sprint 1
+- `fileType` is always `'spec'` in Sprint 1
+- Files with no `ferret:` frontmatter block return `warning: 'no-frontmatter'` and empty contracts — they do not crash
+- Files with a `ferret:` block missing required fields (`id`, `type`, `shape`) throw with the missing field name(s) in the message
+- Unsupported JSON Schema keywords (`$ref`, `allOf`, `anyOf`, etc.) print a warning to stderr and continue — they do not fail the scan
+- Extraction is purely synchronous — no async, no await, no I/O inside the extractor
+- Extractor never calls the store — it returns a value, nothing else
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/extractor/frontmatter.test.ts`
+
+---
+
+### S03 — Deterministic Schema Hashing
+
+**As a** developer who edits spec files,
+**I want** SpecFerret to detect real shape changes and ignore formatting noise,
+**so that** I don't get false positives from whitespace or property reordering.
+
+**Acceptance Criteria:**
+
+- Identical schemas always produce identical hashes regardless of property order
+- Hash is SHA-256 of canonically serialised (key-sorted) JSON
+- Hash output is a 64-character hex string
+- Whitespace differences in YAML produce identical hashes
+- Required array order differences produce identical hashes
+- A genuine field change produces a different hash
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/extractor/validator.test.ts`
+
+---
+
+### S04 — Breaking / Non-Breaking Classification
+
+**As a** developer scanning a changed spec file,
+**I want** SpecFerret to tell me whether my change is breaking or non-breaking,
+**so that** I know whether downstream consumers are affected.
+
+**Acceptance Criteria:**
+
+**Breaking — exits 1 in CI, downstream flagged:**
+- Required field removed
+- Required field added
+- Field type changed
+- Property removed entirely
+- Enum value removed
+- Array items type changed
+
+**Non-breaking — hash updated, no downstream flags:**
+- Optional field added (present in `properties`, absent from `required`)
+- Enum value added
+
+**No-change — complete no-op, nothing happens:**
+- Property order changed
+- Required array order changed
+- Whitespace differences
+
+**Structural rules:**
+- Classification is a pure function — no I/O, no side effects, no async
+- Nested schemas (`response:`, `items:`) are compared recursively
+- Non-breaking results from nested comparisons bubble up correctly
+- `null` previous schema is treated as empty object
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/extractor/validator.test.ts`
+
+---
+
+### S05 — Scan Command
+
+**As a** developer who has edited a spec file,
+**I want** to run `ferret scan` and see what changed,
+**so that** the database reflects the current contract state.
+
+**Acceptance Criteria:**
+
+- `ferret scan` reads all `.md` files under `specDir` matching `filePattern`
+- Changed contracts are compared against the stored `shape_schema` and classified
+- Breaking changes print: `BREAKING <contractId> — <reason>`
+- Non-breaking changes print: `NON-BREAKING <contractId> — <reason>`
+- Unchanged files (hash match) are skipped — no output, no DB write
+- `ferret scan --force` bypasses the file-hash gate and forces schema comparison regardless
+- Files with no frontmatter print a warning to stderr and are skipped cleanly
+- Breaking contracts are stored with `status: 'needs-review'`
+- Non-breaking and unchanged contracts are stored with `status: 'stable'`
+- After scan completes, `.ferret/context.json` is written automatically
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/extractor/frontmatter.test.ts`, `packages/core/src/extractor/validator.test.ts`, `packages/core/src/context/index.test.ts`
+
+---
+
+### S06 — Context File Generation
+
+**As an** AI coding tool (or developer) reading the project state,
+**I want** a machine-readable contract graph written after every scan,
+**so that** I always work from accurate contract state, not stale prose.
+
+**Acceptance Criteria:**
+
+- `.ferret/context.json` is written after every successful `ferret scan`
+- Contains full node list, contract list, and dependency edges
+- Format is stable JSON — no ANSI codes, no human-only formatting
+- File is overwritten on each scan — not appended
+- Writing `context.json` does not affect scan exit code
+- If write fails, logs to stderr and continues — never crashes
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/context/index.test.ts`
+
+---
+
+### S07 — Lint Command
+
+**As a** developer or CI pipeline,
+**I want** to run `ferret lint` and get a clear pass/fail on drift,
+**so that** breaking spec changes never ship unreviewed.
+
+**Acceptance Criteria:**
+
+- `ferret lint` runs scan first, then reconcile, then reports drift status
+- Clean project (no drift): prints `✓ ferret  N contracts  0 drift  Xms` and exits 0
+- Drifting project: prints drift summary and exits 1
+- `ferret lint --ci` outputs JSON to stdout, zero ANSI codes, exits 1 if drift present
+- JSON output shape: `{ version, consistent, breaking, nonBreaking, flagged, timestamp }`
+- Performance gate: clean lint completes in under 500ms wall clock — hard gate, not a target
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/extractor/validator.test.ts` (lint integration section)
+
+---
+
+### S08 — SQLite Store
+
+**As a** SpecFerret core engine,
+**I want** a persistent, local store backed by SQLite,
+**so that** contract state survives between scans without requiring a network.
+
+**Acceptance Criteria:**
+
+- Default store is SQLite at `.ferret/graph.db` via `bun:sqlite`
+- Store layer contains SQL only — no business logic, no graph traversal, ever
+- `upsertNode`, `upsertContract`, `upsertDependency` are idempotent
+- `getNodeByFilePath` returns null for unknown paths — not an error
+- `getContract` returns null for unknown ids — not an error
+- `getNodesByStatus` filters correctly by status value
+- In-memory mode (`:memory:`) works for tests — no disk writes
+- Store initialises schema on `init()` — safe to call multiple times (idempotent DDL)
+- `shape_schema` column stores full JSON string of the contract shape
+
+**Status:** ✓ Complete
+**Tests:** `packages/core/src/store/sqlite.test.ts`
+
+---
+
+*© Laser Unicorn — MIT License*
