@@ -5,16 +5,18 @@ AI coding tools build fast. Specs drift faster.
 
 ## Runtime
 
-SpecFerret targets Node.js 22+ and ships as a plain Node CLI.
-It uses Node's built-in `node:sqlite` backend for the local graph store, so there is no separate runtime shim or database setup.
+SpecFerret targets Bun 1.0+ and ships as a CLI tool.
+It uses Bun's built-in `bun:sqlite` backend for the local graph store, so there is no separate runtime shim or database setup.
 
 ## Install
 
 ```bash
-npm install -g @specferret/cli
+bun install -g @specferret/cli
 ferret init
 ferret lint
 ```
+
+Requires Bun 1.0 or later. Install Bun at [bun.sh](https://bun.sh).
 
 ## Your First Spec
 
@@ -74,8 +76,6 @@ SpecFerret watches your spec files. Each spec exports a contract — a typed JSO
 When a shape changes, SpecFerret classifies it: breaking or non-breaking. Breaking changes block your pre-commit hook. Non-breaking changes pass silently.
 
 No LLM. No network call. No opinion. Just your specs, your contracts, and a fast deterministic check every time you commit.
-
-Clean runs stay clean. The CLI suppresses Node's SQLite experimental warning so `ferret lint` prints the result, not runtime noise.
 
 ## Contract Types
 

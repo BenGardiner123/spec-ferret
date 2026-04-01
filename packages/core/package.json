@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "test": "node ./scripts/run-vitest.mjs"
+    "test": "bun test"
   },
   "dependencies": {
     "ajv": "^8.12.0",
@@ -28,12 +28,11 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
+    "@types/bun": "latest",
+    "typescript": "^6.0.2"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "bun": ">=1.0.0"
   },
   "license": "MIT",
   "repository": {

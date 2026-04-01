@@ -1,31 +1,4 @@
 #!/usr/bin/env node
-const originalEmitWarning = process.emitWarning.bind(process);
-
-process.emitWarning = ((warning: string | Error, ...args: unknown[]) => {
-  const warningName =
-    warning instanceof Error
-      ? warning.name
-      : typeof args[0] === "string"
-        ? args[0]
-        : typeof args[0] === "object" &&
-            args[0] !== null &&
-            "type" in args[0] &&
-            typeof (args[0] as { type?: unknown }).type === "string"
-          ? (args[0] as { type: string }).type
-          : "Warning";
-  const warningMessage =
-    warning instanceof Error ? warning.message : String(warning);
-
-  if (
-    warningName === "ExperimentalWarning" &&
-    warningMessage.includes("SQLite")
-  ) {
-    return;
-  }
-
-  return originalEmitWarning(warning as never, ...(args as never[]));
-}) as typeof process.emitWarning;
-
 import { Command } from "commander";
 
 const VERSION = "0.1.0";

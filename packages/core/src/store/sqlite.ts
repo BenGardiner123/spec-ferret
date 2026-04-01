@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
+import { Database } from "bun:sqlite";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { findProjectRoot } from "../utils/paths.js";
@@ -13,7 +13,7 @@ import type {
 } from "./types.js";
 
 export class SqliteStore implements DBStore {
-  private db: DatabaseSync | null = null;
+  private db: Database | null = null;
   private dbPath: string;
 
   constructor(customPath?: string) {
@@ -41,7 +41,7 @@ export class SqliteStore implements DBStore {
       } catch {}
     }
 
-    this.db = new DatabaseSync(this.dbPath);
+    this.db = new Database(this.dbPath);
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA foreign_keys = ON;");
 

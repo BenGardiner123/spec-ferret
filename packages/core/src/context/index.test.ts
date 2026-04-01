@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { afterEach, describe, it } from "vitest";
+import { afterEach, describe, it } from "bun:test";
 import { writeContext, type FerretContext } from "./index.js";
 import { SqliteStore } from "../store/sqlite.js";
 import * as fs from "node:fs";

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "vitest";
+import { describe, it } from "bun:test";
 import { SqliteStore } from "./sqlite.js";
 import type { FerretNode, FerretContract } from "./types.js";
 import { randomUUID } from "node:crypto";
