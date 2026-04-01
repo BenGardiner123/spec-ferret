@@ -1,8 +1,8 @@
-import { Command } from 'commander';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { execSync } from 'node:child_process';
-import { glob } from 'glob';
+import { Command } from "commander";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
+import { glob } from "glob";
 import {
   extractFromSpecFile,
   compareSchemas,
@@ -11,16 +11,16 @@ import {
   loadConfig,
   findProjectRoot,
   hashSchema,
-} from '@specferret/core';
-import { randomUUID } from 'node:crypto';
-import pc from 'picocolors';
+} from "@specferret/core";
+import { randomUUID } from "node:crypto";
+import pc from "picocolors";
 
-export const scanCommand = new Command('scan')
-  .description('Scan spec files and update the contract graph.')
-  .argument('[files...]', 'Specific files to scan (optional)')
-  .option('--changed', 'Scan only git-staged files')
-  .option('--force', 'Re-extract all files regardless of hash')
-  .option('--ci', 'Machine-readable output, no colours')
+export const scanCommand = new Command("scan")
+  .description("Scan spec files and update the contract graph.")
+  .argument("[files...]", "Specific files to scan (optional)")
+  .option("--changed", "Scan only git-staged files")
+  .option("--force", "Re-extract all files regardless of hash")
+  .option("--ci", "Machine-readable output, no colours")
   .action(async (files: string[], options) => {
     const root = findProjectRoot();
     const config = loadConfig();
@@ -34,17 +34,17 @@ export const scanCommand = new Command('scan')
       if (filesToScan.length === 0) {
         // Glob spec files from specDir
         const specDir = path.resolve(root, config.specDir);
-        const pattern = config.filePattern ?? '**/*.md';
+        const pattern = config.filePattern ?? "**/*.md";
         filesToScan = await glob(pattern, { cwd: specDir, absolute: false });
-        filesToScan = filesToScan.map(f => path.join(config.specDir, f));
+        filesToScan = filesToScan.map((f) => path.join(config.specDir, f));
       }
 
       // --changed flag: filter to staged files only
       if (options.changed) {
         const staged = getStagedFiles(root);
-        filesToScan = filesToScan.filter(f => {
+        filesToScan = filesToScan.filter((f) => {
           const abs = path.resolve(root, f);
-          const rel = path.relative(root, abs).replace(/\\/g, '/');
+          const rel = path.relative(root, abs).replace(/\\/g, "/");
           return staged.has(rel) || staged.has(f);
         });
       }
@@ -61,10 +61,10 @@ export const scanCommand = new Command('scan')
           continue;
         }
 
-        const content = fs.readFileSync(absFile, 'utf-8');
+        const content = fs.readFileSync(absFile, "utf-8");
         const result = extractFromSpecFile(relFile, content);
 
-        if (result.warning === 'no-frontmatter') {
+        if (result.warning === "no-frontmatter") {
           const msg = `⚠ ${relFile} has no ferret frontmatter — skipped\n`;
           process.stderr.write(msg);
           skipped++;
@@ -81,7 +81,8 @@ export const scanCommand = new Command('scan')
 
           // --force: always process regardless of file hash
           // no --force: skip if file content hash unchanged (no edit detected)
-          const fileChanged = options.force || !existingNode || existingNode.hash !== fileHash;
+          const fileChanged =
+            options.force || !existingNode || existingNode.hash !== fileHash;
 
           if (!fileChanged) {
             // File unchanged — skip this contract
@@ -92,20 +93,28 @@ export const scanCommand = new Command('scan')
           const prevContract = await store.getContract(contract.id);
 
           // Determine status from schema comparison
-          let nodeStatus: 'stable' | 'needs-review' = 'stable';
+          let nodeStatus: "stable" | "needs-review" = "stable";
 
           if (prevContract && prevContract.shape_schema) {
             let prevShape: unknown = {};
-            try { prevShape = JSON.parse(prevContract.shape_schema); } catch {}
+            try {
+              prevShape = JSON.parse(prevContract.shape_schema);
+            } catch {}
 
             const comparison = compareSchemas(prevShape, contract.shape);
-            if (comparison.classification === 'breaking') {
-              nodeStatus = 'needs-review';
-              const label = options.ci ? 'BREAKING' : pc.red('BREAKING');
-              process.stdout.write(`  ${label}  ${contract.id} — ${comparison.reason}\n`);
-            } else if (comparison.classification === 'non-breaking') {
-              const label = options.ci ? 'NON-BREAKING' : pc.yellow('NON-BREAKING');
-              process.stdout.write(`  ${label}  ${contract.id} — ${comparison.reason}\n`);
+            if (comparison.classification === "breaking") {
+              nodeStatus = "needs-review";
+              const label = options.ci ? "BREAKING" : pc.red("BREAKING");
+              process.stdout.write(
+                `  ${label}  ${contract.id} — ${comparison.reason}\n`,
+              );
+            } else if (comparison.classification === "non-breaking") {
+              const label = options.ci
+                ? "NON-BREAKING"
+                : pc.yellow("NON-BREAKING");
+              process.stdout.write(
+                `  ${label}  ${contract.id} — ${comparison.reason}\n`,
+              );
             }
           }
 
@@ -141,9 +150,8 @@ export const scanCommand = new Command('scan')
       // Always write context.json after scan
       await writeContext(store, root);
 
-      const summary = `${scanned} file${scanned !== 1 ? 's' : ''} scanned. ${changed} changed. ${changed} contract${changed !== 1 ? 's' : ''} updated.`;
-      process.stdout.write(summary + '\n');
-
+      const summary = `${scanned} file${scanned !== 1 ? "s" : ""} scanned. ${changed} changed. ${changed} contract${changed !== 1 ? "s" : ""} updated.`;
+      process.stdout.write(summary + "\n");
     } finally {
       await store.close();
     }
@@ -151,11 +159,11 @@ export const scanCommand = new Command('scan')
 
 function getStagedFiles(root: string): Set<string> {
   try {
-    const output = execSync('git diff --cached --name-only', {
-      encoding: 'utf8',
+    const output = execSync("git diff --cached --name-only", {
+      encoding: "utf8",
       cwd: root,
     }) as string;
-    return new Set(output.split('\n').filter(Boolean));
+    return new Set(output.split("\n").filter(Boolean));
   } catch {
     return new Set();
   }
