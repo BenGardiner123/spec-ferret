@@ -47,7 +47,6 @@ Returns the list of registered users.
 Run:
 
 ```bash
-ferret scan
 ferret lint
 ```
 
@@ -57,10 +56,10 @@ You should see:
 ✓ ferret  1 contract  0 drift  12ms
 ```
 
-Now change `required: [id, email]` to `required: [id]` and scan again:
+Now change `required: [id, email]` to `required: [id]` and run lint again:
 
 ```bash
-ferret scan
+ferret lint
 ```
 
 ```
@@ -68,6 +67,10 @@ BREAKING api.GET/users — required field(s) removed: email
 ```
 
 That's spec drift. SpecFerret caught it before your AI assistant, your teammates, or your users did.
+
+Already using BMAD or spec-kit? Skip the example file. Pick a data shape from your PRD or architecture document, create a `.contract.md` file in `contracts/`, and run `ferret lint`. SpecFerret takes it from there.
+
+`ferret scan` is still available for manual graph updates and debugging, but normal day-to-day flow should be lint-first.
 
 ## How It Works
 
@@ -110,6 +113,43 @@ Outputs JSON, exits 1 on drift. Drop it in any pipeline.
 ```
 
 [![SpecFerret](https://img.shields.io/badge/spec--drift-protected-green)](https://specferret.dev)
+
+## Working Alongside BMAD and spec-kit
+
+SpecFerret is not a planning tool. It lives downstream of your planning workflow.
+
+If you use BMAD, spec-kit, or any structured planning process, the integration is straightforward:
+
+1. Your planning workflow produces a PRD, architecture doc, or stories
+2. When that planning defines a concrete data shape — an API response, a table schema, a shared type — create a `.contract.md` file in `contracts/` with `ferret:` frontmatter
+3. Run `ferret lint` to register and validate the contract
+4. From that point, SpecFerret detects if the shape drifts
+
+```
+your-project/
+  _bmad-output/          ← BMAD planning artifacts
+    PRD.md
+    architecture.md
+  contracts/             ← SpecFerret guards this
+    auth/
+      jwt.contract.md
+    tables/
+      user.contract.md
+  ferret.config.json
+```
+
+Planning tools define intent. SpecFerret enforces it.
+
+### Agent Skills
+
+To automate the bridge — having your AI agent read planning docs and scaffold the `.contract.md` files for you — copy the agent skill template for your tool:
+
+| Tool           | Template                                                                                                 | Install location                           |
+| -------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| Claude Code    | [docs/agent-skills/ferret-extract.claude-command.md](docs/agent-skills/ferret-extract.claude-command.md) | `.claude/commands/ferret-extract.md`       |
+| GitHub Copilot | [docs/agent-skills/ferret-extract.prompt.md](docs/agent-skills/ferret-extract.prompt.md)                 | `.github/prompts/ferret-extract.prompt.md` |
+
+Once installed, invoke it (`/ferret-extract` in Claude Code, or via Copilot agent mode) and point it at your planning docs. It will create the contract files and run `ferret lint`.
 
 ---
 

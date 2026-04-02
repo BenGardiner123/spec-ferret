@@ -14,17 +14,17 @@ Install: `bun install -g @specferret/cli`
 
 Boris and Todd approved. Not open for reconsideration.
 
-| Job | Tool | Reason |
-|---|---|---|
-| Runtime | Bun 1.0+ | Performance, native SQLite, TypeScript native, Claude Code alignment |
-| Spec frontmatter parsing | `gray-matter` | Synchronous, proven, zero deps, no WASM, no build step |
-| JSON Schema validation | `ajv` + `ajv-formats` | Proven. 50M weekly downloads. |
-| Schema hashing | `node:crypto` SHA-256 | Built-in, deterministic, fast |
-| Storage — default | `bun:sqlite` | Built-in to Bun, synchronous, zero deps |
-| Storage — roadmap | Postgres via `DBStore` interface | Sprint 2 |
-| Annotation detection | Regex | Sprint 3. Predictable pattern. No parser needed. |
-| Code shape extraction | Tree-sitter TypeScript | Sprint 3. The one job needing a real AST parser. |
-| Test runner | `bun test` | Native to runtime, fast, no config |
+| Job                      | Tool                             | Reason                                                               |
+| ------------------------ | -------------------------------- | -------------------------------------------------------------------- |
+| Runtime                  | Bun 1.0+                         | Performance, native SQLite, TypeScript native, Claude Code alignment |
+| Spec frontmatter parsing | `gray-matter`                    | Synchronous, proven, zero deps, no WASM, no build step               |
+| JSON Schema validation   | `ajv` + `ajv-formats`            | Proven. 50M weekly downloads.                                        |
+| Schema hashing           | `node:crypto` SHA-256            | Built-in, deterministic, fast                                        |
+| Storage — default        | `bun:sqlite`                     | Built-in to Bun, synchronous, zero deps                              |
+| Storage — roadmap        | Postgres via `DBStore` interface | Sprint 2                                                             |
+| Annotation detection     | Regex                            | Sprint 3. Predictable pattern. No parser needed.                     |
+| Code shape extraction    | Tree-sitter TypeScript           | Sprint 3. The one job needing a real AST parser.                     |
+| Test runner              | `bun test`                       | Native to runtime, fast, no config                                   |
 
 **SpecFerret is a CLI. It runs natively on Bun. Never use the WASM build of Tree-sitter — that is for browsers. Use the native binding in Sprint 3.**
 **No LLM in the default path. Ever.**
@@ -81,18 +81,20 @@ Performance gate cleared. npm publish pipeline in place.
 `packages/core/src/store/postgres.ts` — Sprint 2 stub. Throws on any call.
 
 **Key interface:**
+
 ```typescript
 export interface FerretContract {
   id: string;
   node_id: string;
-  shape_hash: string;    // SHA-256 of key-sorted schema — quick diff
-  shape_schema: string;  // JSON.stringify of schema object — comparison
+  shape_hash: string; // SHA-256 of key-sorted schema — quick diff
+  shape_schema: string; // JSON.stringify of schema object — comparison
   type: string;
   status: ContractStatus;
 }
 ```
 
 **SQLite schema:**
+
 ```sql
 CREATE TABLE IF NOT EXISTS ferret_contracts (
   id TEXT PRIMARY KEY,
@@ -153,7 +155,7 @@ export interface FerretConfig {
   specDir: string;
   filePattern: string;
   includes?: string[];
-  store: 'sqlite' | 'postgres';
+  store: "sqlite" | "postgres";
   codeContracts?: {
     include: string[];
     watchNodes?: string[];
@@ -161,10 +163,10 @@ export interface FerretConfig {
 }
 
 export const DEFAULT_CONFIG: FerretConfig = {
-  specDir: 'contracts/',
-  filePattern: '**/*.contract.md',
-  includes: ['**/*.contract.md'],
-  store: 'sqlite',
+  specDir: "contracts/",
+  filePattern: "**/*.contract.md",
+  includes: ["**/*.contract.md"],
+  store: "sqlite",
 };
 ```
 
@@ -179,11 +181,11 @@ No separate command. Silent. If write fails, logs to stderr and continues.
 
 ```typescript
 export interface FerretContext {
-  version: '2.0';
-  generated: string;       // ISO timestamp
+  version: "2.0";
+  generated: string; // ISO timestamp
   contracts: ContextContract[];
   edges: ContextEdge[];
-  needsReview: string[];   // contract IDs currently flagged
+  needsReview: string[]; // contract IDs currently flagged
 }
 ```
 
@@ -230,6 +232,7 @@ Tests: `packages/core/src/context/index.test.ts`
 - Performance gate: under 500ms on clean project. Hard gate, not a target.
 
 **CI JSON output shape:**
+
 ```json
 {
   "version": "2.0",
@@ -248,16 +251,16 @@ Tests: `packages/core/src/context/index.test.ts`
 `packages/core/src/index.ts`
 
 ```typescript
-export * from './extractor/frontmatter.js';
-export * from './extractor/validator.js';
-export * from './extractor/hash.js';
-export * from './context/index.js';
-export * from './store/types.js';
-export * from './store/sqlite.js';
-export * from './store/factory.js';
-export * from './reconciler/index.js';
-export * from './config.js';
-export * from './utils/paths.js';
+export * from "./extractor/frontmatter.js";
+export * from "./extractor/validator.js";
+export * from "./extractor/hash.js";
+export * from "./context/index.js";
+export * from "./store/types.js";
+export * from "./store/sqlite.js";
+export * from "./store/factory.js";
+export * from "./reconciler/index.js";
+export * from "./config.js";
+export * from "./utils/paths.js";
 ```
 
 ---
@@ -308,36 +311,38 @@ export * from './utils/paths.js';
 
 Do not build these in Sprint 1.
 
-| Task | Description |
-|---|---|
-| S09 | Postgres store implementation — `FERRET_DATABASE_URL` wiring |
-| S10 | SQLite → Postgres migration |
-| S11 | `ferret upgrade` command |
+| Task | Description                                                                                 |
+| ---- | ------------------------------------------------------------------------------------------- |
+| S09  | Postgres store implementation — `FERRET_DATABASE_URL` wiring                                |
+| S10  | SQLite → Postgres migration                                                                 |
+| S11  | `ferret upgrade` command                                                                    |
+| S12  | `ferret watch` — watch `contracts/**/*.contract.md` and auto-run scan + reconcile on change |
 
 ---
 
 ## Sprint 3 — Roadmap
 
-| Task | Description |
-|---|---|
-| S12 | Tree-sitter TypeScript shape extraction |
-| S13 | `@ferret-contract` annotation scanning via regex |
-| S14 | Code-to-spec contract linking, upward BFS drift detection |
-| S15 | `ferret place` command |
-| S16 | `ferret status` command |
-| S17 | `ferret graph` command |
-| S18 | Full import integrity enforcement (unresolved, self-import, circular) |
+| Task | Description                                                                                           |
+| ---- | ----------------------------------------------------------------------------------------------------- |
+| S13  | Tree-sitter TypeScript shape extraction                                                               |
+| S14  | `@ferret-contract` annotation scanning via regex                                                      |
+| S15  | Code-to-spec contract linking, upward BFS drift detection                                             |
+| S16  | `ferret place` command                                                                                |
+| S17  | `ferret status` command                                                                               |
+| S18  | `ferret graph` command                                                                                |
+| S19  | `ferret extract` — deterministic extraction of contract shapes from annotated TypeScript source files |
+| S20  | Full import integrity enforcement (unresolved, self-import, circular)                                 |
 
 ---
 
 ## Sprint 4 — Roadmap
 
-| Task | Description |
-|---|---|
-| S19 | `ferret audit` — bidirectional drift report |
-| S20 | `ferret review` — interactive resolution flow |
-| S21 | Deleted contract lifecycle handling |
-| S22 | Extended lifecycle: roadmap status propagation |
+| Task | Description                                    |
+| ---- | ---------------------------------------------- |
+| S21  | `ferret audit` — bidirectional drift report    |
+| S22  | `ferret review` — interactive resolution flow  |
+| S23  | Deleted contract lifecycle handling            |
+| S24  | Extended lifecycle: roadmap status propagation |
 
 ---
 
@@ -356,19 +361,19 @@ Revisit when there are real users and real data.
 
 Maria approved.
 
-| Decision | Value |
-|---|---|
-| **Tagline** | "SpecFerret keeps your specs honest." |
-| **Domain** | `specferret.dev` ✓ `ferretout.dev` ✓ |
-| **npm packages** | `@specferret/cli` and `@specferret/core` |
-| **CLI command** | `ferret` |
-| **Install** | `bun install -g @specferret/cli` |
-| **HN Post title** | "I built a tool that stops AI coding assistants from confidently building the wrong thing" |
-| **HN timing** | Tuesday 9am Eastern. Ben posts personally. Answers every comment. |
-| **Badge** | `[![SpecFerret](https://img.shields.io/badge/spec--drift-protected-green)](https://specferret.dev)` |
-| **Distribution** | Claude Code + Cursor starter templates. One integration > 1000 blog posts. |
-| **We do not** | Run ads. Describe ourselves as AI-powered. We are the thing that keeps AI honest. |
+| Decision          | Value                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| **Tagline**       | "SpecFerret keeps your specs honest."                                                               |
+| **Domain**        | `specferret.dev` ✓ `ferretout.dev` ✓                                                                |
+| **npm packages**  | `@specferret/cli` and `@specferret/core`                                                            |
+| **CLI command**   | `ferret`                                                                                            |
+| **Install**       | `bun install -g @specferret/cli`                                                                    |
+| **HN Post title** | "I built a tool that stops AI coding assistants from confidently building the wrong thing"          |
+| **HN timing**     | Tuesday 9am Eastern. Ben posts personally. Answers every comment.                                   |
+| **Badge**         | `[![SpecFerret](https://img.shields.io/badge/spec--drift-protected-green)](https://specferret.dev)` |
+| **Distribution**  | Claude Code + Cursor starter templates. One integration > 1000 blog posts.                          |
+| **We do not**     | Run ads. Describe ourselves as AI-powered. We are the thing that keeps AI honest.                   |
 
 ---
 
-*© Laser Unicorn — MIT License*
+_© Laser Unicorn — MIT License_
