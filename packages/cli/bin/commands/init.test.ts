@@ -41,15 +41,15 @@ describe("ferret init — S01 acceptance criteria", () => {
     assert.ok(fs.existsSync(path.join(tmpDir, ".ferret", "graph.db")));
   });
 
-  it("creates specs/ directory if it does not exist", () => {
+  it("creates contracts/ directory if it does not exist", () => {
     runInit(tmpDir);
-    assert.ok(fs.existsSync(path.join(tmpDir, "specs")));
+    assert.ok(fs.existsSync(path.join(tmpDir, "contracts")));
   });
 
-  it("writes specs/example.md with valid ferret frontmatter", () => {
+  it("writes contracts/example.contract.md with valid ferret frontmatter", () => {
     runInit(tmpDir);
     const content = fs.readFileSync(
-      path.join(tmpDir, "specs", "example.md"),
+      path.join(tmpDir, "contracts", "example.contract.md"),
       "utf-8",
     );
     assert.ok(content.includes("ferret:"), "missing ferret: block");
@@ -65,7 +65,7 @@ describe("ferret init — S01 acceptance criteria", () => {
       "utf-8",
     );
     const config = JSON.parse(raw) as Record<string, unknown>;
-    assert.equal(config.specDir, "specs/");
+    assert.equal(config.specDir, "contracts/");
     assert.equal(typeof config.filePattern, "string");
     assert.equal(config.store, "sqlite");
   });
@@ -85,10 +85,10 @@ describe("ferret init — S01 acceptance criteria", () => {
     assert.ok(result.stdout.length > 0);
   });
 
-  it("is idempotent — running twice does not overwrite specs/example.md", () => {
+  it("is idempotent — running twice does not overwrite contracts/example.contract.md", () => {
     runInit(tmpDir);
 
-    const examplePath = path.join(tmpDir, "specs", "example.md");
+    const examplePath = path.join(tmpDir, "contracts", "example.contract.md");
     const sentinel = "# sentinel — must survive second init";
     fs.writeFileSync(examplePath, sentinel, "utf-8");
 

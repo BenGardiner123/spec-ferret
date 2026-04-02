@@ -14,9 +14,9 @@ export interface FerretConfig {
 }
 
 export const DEFAULT_CONFIG: FerretConfig = {
-  specDir: 'specs/',
-  filePattern: '**/*.md',
-  includes: ['**/*.md'],
+  specDir: 'contracts/',
+  filePattern: '**/*.contract.md',
+  includes: ['**/*.contract.md'],
   store: 'sqlite',
 };
 

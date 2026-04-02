@@ -23,10 +23,10 @@ describe("validateFerretSchema", () => {
 
     for (const keyword of UNSUPPORTED) {
       const shape = { type: "object", [keyword]: {} };
-      const result = validateFerretSchema(shape, "specs/test.md");
+      const result = validateFerretSchema(shape, "contracts/test.contract.md");
       assert.equal(result.warnings.length, 1);
       assert.match(result.warnings[0], new RegExp(keyword.replace("$", "\\$")));
-      assert.match(result.warnings[0], /specs\/test\.md/);
+      assert.match(result.warnings[0], /contracts\/test\.contract\.md/);
       assert.equal(result.valid, true);
     }
   });
@@ -45,7 +45,7 @@ describe("validateFerretSchema", () => {
       required: ["id", "name"],
       additionalProperties: false,
     };
-    const result = validateFerretSchema(shape, "specs/valid.md");
+    const result = validateFerretSchema(shape, "contracts/valid.contract.md");
     assert.equal(result.warnings.length, 0);
     assert.equal(result.valid, true);
   });
@@ -57,7 +57,7 @@ describe("validateFerretSchema", () => {
       anyOf: [{}],
       $ref: "#/definitions/Foo",
     };
-    const result = validateFerretSchema(shape, "specs/complex.md");
+    const result = validateFerretSchema(shape, "contracts/complex.contract.md");
     assert.ok(result.warnings.length >= 3);
     assert.equal(result.valid, true);
   });

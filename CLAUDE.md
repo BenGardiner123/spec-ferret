@@ -146,12 +146,12 @@ Drift detected:
   ferret  3 contracts need review
 
   BREAKING  auth.jwt
-  ├── specs/search.md          imports this directly
-  ├── specs/recommendations.md imports this directly
-  └── specs/analytics.md       imports this transitively (depth 2)
+  ├── contracts/search.contract.md          imports this directly
+  ├── contracts/recommendations.contract.md imports this directly
+  └── contracts/analytics.contract.md       imports this transitively (depth 2)
 
   NON-BREAKING  tables.document
-  └── specs/search.md          optional field added — no action needed
+  └── contracts/search.contract.md          optional field added — no action needed
 
   2 breaking  1 non-breaking
 

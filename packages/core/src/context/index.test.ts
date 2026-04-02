@@ -21,7 +21,7 @@ async function makeStoreWithData(tmpDir: string) {
   const nodeId = randomUUID();
   await store.upsertNode({
     id: nodeId,
-    file_path: "specs/auth.md",
+    file_path: "contracts/auth.contract.md",
     hash: "abc",
     status: "stable",
   });
@@ -44,7 +44,7 @@ async function makeStoreWithData(tmpDir: string) {
   const nodeId2 = randomUUID();
   await store.upsertNode({
     id: nodeId2,
-    file_path: "specs/search.md",
+    file_path: "contracts/search.contract.md",
     hash: "def",
     status: "needs-review",
   });
@@ -167,7 +167,7 @@ describe("writeContext — Task 5", () => {
     ) as FerretContext;
     const edge = ctx.edges.find((e) => e.to === contractId);
     assert.notEqual(edge, undefined);
-    assert.equal(edge!.from, "specs/search.md");
+    assert.equal(edge!.from, "contracts/search.contract.md");
 
     await store.close();
   });

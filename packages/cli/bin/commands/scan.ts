@@ -34,7 +34,7 @@ export const scanCommand = new Command("scan")
       if (filesToScan.length === 0) {
         // Glob spec files from specDir
         const specDir = path.resolve(root, config.specDir);
-        const pattern = config.filePattern ?? "**/*.md";
+        const pattern = config.filePattern ?? "**/*.contract.md";
         filesToScan = await glob(pattern, { cwd: specDir, absolute: false });
         filesToScan = filesToScan.map((f) => path.join(config.specDir, f));
       }

@@ -161,9 +161,9 @@ export interface FerretConfig {
 }
 
 export const DEFAULT_CONFIG: FerretConfig = {
-  specDir: 'specs/',
-  filePattern: '**/*.md',
-  includes: ['**/*.md'],
+  specDir: 'contracts/',
+  filePattern: '**/*.contract.md',
+  includes: ['**/*.contract.md'],
   store: 'sqlite',
 };
 ```
@@ -196,8 +196,8 @@ Tests: `packages/core/src/context/index.test.ts`
 `packages/cli/bin/commands/init.ts`
 
 - Creates `.ferret/graph.db` silently — no prompt
-- Creates `specs/` directory
-- Writes `specs/example.md` with valid frontmatter template
+- Creates `contracts/` directory
+- Writes `contracts/example.contract.md` with valid frontmatter template
 - Writes `ferret.config.json` with correct defaults
 - Writes `CLAUDE.md` with `context.json` instruction
 - Pre-commit hook prompt — opt-in, defaults to no
@@ -269,20 +269,20 @@ export * from './utils/paths.js';
    ✓ 62 tests passing across all layers
 
 2. ferret init in a fresh directory
-   ✓ specs/example.md created with correct frontmatter
+   ✓ contracts/example.contract.md created with correct frontmatter
    ✓ ferret.config.json created
    ✓ CLAUDE.md created
    ✓ .ferret/graph.db created silently
 
-3. ferret scan on specs/example.md
+3. ferret scan on contracts/example.contract.md
    ✓ Extracts contracts correctly via gray-matter
    ✓ .ferret/context.json written automatically
 
-4. Edit specs/example.md — remove a required field
+4. Edit contracts/example.contract.md — remove a required field
    ✓ ferret scan classifies as breaking
    ✓ BREAKING printed to stdout
 
-5. Edit specs/example.md — add an optional field
+5. Edit contracts/example.contract.md — add an optional field
    ✓ ferret scan classifies as non-breaking
    ✓ NON-BREAKING printed to stdout
 

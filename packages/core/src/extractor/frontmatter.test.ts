@@ -68,8 +68,8 @@ ferret:
 
 describe("extractFromSpecFile — Task 3", () => {
   it("extracts valid frontmatter correctly", () => {
-    const result = extractFromSpecFile("specs/users.md", VALID_SPEC);
-    assert.equal(result.filePath, "specs/users.md");
+    const result = extractFromSpecFile("contracts/users.contract.md", VALID_SPEC);
+    assert.equal(result.filePath, "contracts/users.contract.md");
     assert.equal(result.fileType, "spec");
     assert.equal(result.extractedBy, "gray-matter");
     assert.equal(result.warning, undefined);
@@ -82,7 +82,7 @@ describe("extractFromSpecFile — Task 3", () => {
   });
 
   it("extracts imports correctly", () => {
-    const result = extractFromSpecFile("specs/search.md", SPEC_WITH_IMPORTS);
+    const result = extractFromSpecFile("contracts/search.contract.md", SPEC_WITH_IMPORTS);
     assert.deepEqual(result.contracts[0].imports, [
       "auth.jwt",
       "tables.document",
@@ -90,16 +90,16 @@ describe("extractFromSpecFile — Task 3", () => {
   });
 
   it("missing frontmatter returns warning, empty contracts, does not throw", () => {
-    const result = extractFromSpecFile("specs/plain.md", SPEC_NO_FRONTMATTER);
+    const result = extractFromSpecFile("contracts/plain.contract.md", SPEC_NO_FRONTMATTER);
     assert.equal(result.warning, "no-frontmatter");
     assert.equal(result.contracts.length, 0);
-    assert.equal(result.filePath, "specs/plain.md");
+    assert.equal(result.filePath, "contracts/plain.contract.md");
     assert.equal(result.fileType, "spec");
   });
 
   it('missing required field "shape" throws with field name in message', () => {
     assert.throws(
-      () => extractFromSpecFile("specs/broken.md", SPEC_MISSING_FIELDS),
+      () => extractFromSpecFile("contracts/broken.contract.md", SPEC_MISSING_FIELDS),
       /shape/,
     );
   });
@@ -107,7 +107,7 @@ describe("extractFromSpecFile — Task 3", () => {
   it("missing multiple required fields throws with all field names in message", () => {
     const specMissingAll = `---\nferret:\n  someField: value\n---\n`;
     assert.throws(
-      () => extractFromSpecFile("specs/broken.md", specMissingAll),
+      () => extractFromSpecFile("contracts/broken.contract.md", specMissingAll),
       /id.*type.*shape|Missing required/,
     );
   });
@@ -124,7 +124,7 @@ describe("extractFromSpecFile — Task 3", () => {
     let result: ReturnType<typeof extractFromSpecFile> | undefined;
     try {
       result = extractFromSpecFile(
-        "specs/complex.md",
+        "contracts/complex.contract.md",
         SPEC_WITH_UNSUPPORTED_KEYWORD,
       );
     } finally {
@@ -142,22 +142,22 @@ describe("extractFromSpecFile — Task 3", () => {
 
   it("extraction is synchronous — the function itself has no async/await", () => {
     // If extractFromSpecFile returns a Promise, this would be a thenable object
-    const result = extractFromSpecFile("specs/users.md", VALID_SPEC);
+    const result = extractFromSpecFile("contracts/users.contract.md", VALID_SPEC);
     assert.equal(result instanceof Promise, false);
     assert.notEqual(typeof (result as any).then, "function");
   });
 
   it("identical files produce identical shape_hash", () => {
-    const r1 = extractFromSpecFile("specs/a.md", VALID_SPEC);
-    const r2 = extractFromSpecFile("specs/b.md", VALID_SPEC);
+    const r1 = extractFromSpecFile("contracts/a.contract.md", VALID_SPEC);
+    const r2 = extractFromSpecFile("contracts/b.contract.md", VALID_SPEC);
     assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 
   it("different shapes produce different shape_hash", () => {
     const specA = VALID_SPEC;
     const specB = specA.replace("format: uuid", "format: email");
-    const r1 = extractFromSpecFile("specs/a.md", specA);
-    const r2 = extractFromSpecFile("specs/b.md", specB);
+    const r1 = extractFromSpecFile("contracts/a.contract.md", specA);
+    const r2 = extractFromSpecFile("contracts/b.contract.md", specB);
     assert.notEqual(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 
@@ -190,8 +190,8 @@ ferret:
     required: [id, name]
 ---
 `;
-    const r1 = extractFromSpecFile("specs/a.md", specA);
-    const r2 = extractFromSpecFile("specs/b.md", specB);
+    const r1 = extractFromSpecFile("contracts/a.contract.md", specA);
+    const r2 = extractFromSpecFile("contracts/b.contract.md", specB);
     // Keys are sorted before hashing — order change is a no-change
     assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });

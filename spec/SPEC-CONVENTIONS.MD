@@ -9,17 +9,16 @@ Covers native SpecFerret projects, BMAD/spec-kit integration, and naming rules.
 
 ### The Rule
 
-SpecFerret owns `specs/`. Planning docs live elsewhere.
+SpecFerret owns `contracts/`. Planning docs live elsewhere.
 
 ```
-specs/           ← live contracts — SpecFerret reads this
-spec/            ← planning docs, architecture, roadmap — SpecFerret ignores this
-docs/            ← user-facing docs — SpecFerret ignores this
+contracts/       ← live contracts — SpecFerret reads this
+docs/            ← planning docs, architecture, roadmap — SpecFerret ignores this
 ```
 
-`specs/` is the contract tree. Every `.md` file under it must have valid
+`contracts/` is the contract tree. Every `.contract.md` file under it must have valid
 `ferret:` frontmatter or SpecFerret will warn on scan. Do not put prose-only
-documents, meeting notes, or ADRs in `specs/`.
+documents, meeting notes, or ADRs in `contracts/`.
 
 ### Domain-First, Not Sprint-First
 
@@ -30,33 +29,33 @@ they match how your system actually works.
 **Good — domain-first:**
 
 ```
-specs/
+contracts/
   auth/
-    jwt.md
-    login.md
-    refresh.md
+    jwt.contract.md
+    login.contract.md
+    refresh.contract.md
   users/
-    profile.md
-    preferences.md
+    profile.contract.md
+    preferences.contract.md
   search/
-    query.md
-    index.md
+    query.contract.md
+    index.contract.md
   tables/
-    user.md
-    document.md
-    session.md
+    user.contract.md
+    document.contract.md
+    session.contract.md
 ```
 
 **Bad — sprint-first:**
 
 ```
-specs/
+contracts/
   sprint-1/
-    auth-jwt.md
-    user-table.md
+    auth-jwt.contract.md
+    user-table.contract.md
   sprint-2/
-    search-query.md
-    user-preferences.md
+    search-query.contract.md
+    user-preferences.contract.md
 ```
 
 Sprint folders create three problems:
@@ -67,16 +66,16 @@ Sprint folders create three problems:
 
 ### Flat Is Fine
 
-If your project has fewer than ~15 contracts, a flat `specs/` directory is
+If your project has fewer than ~15 contracts, a flat `contracts/` directory is
 perfectly valid. Don't create folders for the sake of folders:
 
 ```
-specs/
-  jwt.md
-  login.md
-  user-table.md
-  search-query.md
-  example.md
+contracts/
+  jwt.contract.md
+  login.contract.md
+  user-table.contract.md
+  search-query.contract.md
+  example.contract.md
 ```
 
 Add domain folders when a flat list becomes hard to scan visually — typically
@@ -89,13 +88,13 @@ Three levels means your spec tree is modelling your org chart, not your system.
 
 ```
 # Good — one level
-specs/auth/jwt.md
+contracts/auth/jwt.contract.md
 
 # Acceptable — two levels
-specs/api/auth/login.md
+contracts/api/auth/login.contract.md
 
 # Too deep — stop
-specs/api/v2/auth/internal/jwt.md
+contracts/api/v2/auth/internal/jwt.contract.md
 ```
 
 ### The `specDir` Config
@@ -104,12 +103,12 @@ specs/api/v2/auth/internal/jwt.md
 
 ```json
 {
-  "specDir": "specs/",
-  "filePattern": "**/*.md"
+  "specDir": "contracts/",
+  "filePattern": "**/*.contract.md"
 }
 ```
 
-SpecFerret recursively scans all `.md` files under `specDir`. Subdirectories
+SpecFerret recursively scans all `.contract.md` files under `specDir`. Subdirectories
 are automatically included — no extra configuration needed.
 
 ---
@@ -118,24 +117,24 @@ are automatically included — no extra configuration needed.
 
 ### File Names
 
-| Rule                    | Example                                                     |
-| ----------------------- | ----------------------------------------------------------- |
-| Lowercase only          | `jwt.md` not `JWT.md`                                       |
-| Hyphens for multi-word  | `user-profile.md` not `user_profile.md` or `userProfile.md` |
-| Match the contract name | `id: auth.jwt` → file: `auth/jwt.md` or `jwt.md`            |
-| No spaces               | `rate-limits.md` not `rate limits.md`                       |
-| `.md` extension         | Always Markdown                                             |
+| Rule                    | Example                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| Lowercase only          | `jwt.contract.md` not `JWT.contract.md`                                      |
+| Hyphens for multi-word  | `user-profile.contract.md` not `user_profile.contract.md`                    |
+| Match the contract name | `id: auth.jwt` → file: `auth/jwt.contract.md` or `jwt.contract.md`          |
+| No spaces               | `rate-limits.contract.md` not `rate limits.contract.md`                      |
+| `.contract.md` extension| Always — this is what SpecFerret scans for                                   |
 
 File names do not need to match contract IDs exactly, but a predictable mapping
 makes the project navigable. The recommended convention:
 
 ```
 Contract ID        File path
-─────────────      ─────────────────
-auth.jwt           specs/auth/jwt.md
-tables.user        specs/tables/user.md
-api.GET/users      specs/api/get-users.md
-flows.onboarding   specs/flows/onboarding.md
+─────────────      ─────────────────────────────
+auth.jwt           contracts/auth/jwt.contract.md
+tables.user        contracts/tables/user.contract.md
+api.GET/users      contracts/api/get-users.contract.md
+flows.onboarding   contracts/flows/onboarding.contract.md
 ```
 
 The namespace portion of the ID maps to the folder. The name portion maps to
@@ -157,7 +156,7 @@ id: <namespace>.<name>
 
 ### One Contract Per File
 
-Each `.md` file exports exactly one contract. If you need two contracts for the
+Each `.contract.md` file exports exactly one contract. If you need two contracts for the
 same endpoint (request and response as separate shapes), use two files or combine
 them into a single shape with `request:` and `response:` keys.
 
@@ -184,43 +183,43 @@ guards the contracts.**
 ```
 Planning layer (BMAD / spec-kit / your process)
   ↓ writes
-spec/                    ← PRDs, architecture, stories, ADRs
+docs/                    ← PRDs, architecture, stories, ADRs
   ↓ informs
-specs/                   ← live contracts with ferret: frontmatter
+contracts/               ← live contracts with ferret: frontmatter
   ↑ guards
 SpecFerret               ← detects drift, flags dependencies
 ```
 
 The handoff point is the frontmatter block. When a planning document defines a
-contract shape, a developer (or an AI agent) creates a corresponding `.md` file
-in `specs/` with the `ferret:` frontmatter. From that point forward, SpecFerret
+contract shape, a developer (or an AI agent) creates a corresponding `.contract.md` file
+in `contracts/` with the `ferret:` frontmatter. From that point forward, SpecFerret
 owns the shape.
 
 ### Parallel Directory Convention
 
 ```
 your-project/
-  spec/                        ← planning docs (BMAD, spec-kit, ADRs)
+  docs/                        ← planning docs (BMAD, spec-kit, ADRs)
     architecture.md
     prd-search-feature.md
     stories/
       sprint-2-stories.md
-  specs/                       ← live contracts (SpecFerret)
+  contracts/                   ← live contracts (SpecFerret)
     auth/
-      jwt.md
-      login.md
+      jwt.contract.md
+      login.contract.md
     search/
-      query.md
-      index.md
+      query.contract.md
+      index.contract.md
     tables/
-      user.md
-      document.md
+      user.contract.md
+      document.contract.md
   src/                         ← source code
   ferret.config.json
 ```
 
-`spec/` (singular) is for humans and planning tools.
-`specs/` (plural) is for SpecFerret.
+`docs/` is for humans and planning tools.
+`contracts/` is for SpecFerret.
 
 This is a convention, not a requirement. SpecFerret only reads `specDir`.
 You can name your planning folder anything — `docs/`, `planning/`, `.bmad/` —
@@ -230,7 +229,7 @@ as long as it is not inside `specDir`.
 
 1. **Plan**: Use BMAD or spec-kit to produce a PRD, architecture doc, or story
 2. **Extract contracts**: Identify the data shapes in the planning doc
-3. **Create spec files**: Write `.md` files in `specs/` with `ferret:` frontmatter
+3. **Create spec files**: Write `.contract.md` files in `contracts/` with `ferret:` frontmatter
 4. **Scan**: Run `ferret scan` to register contracts in the graph
 5. **Build**: Implement the feature
 6. **Guard**: `ferret lint` runs on commit — catches drift before it ships
@@ -261,8 +260,8 @@ your-project/
   .ferret/
     graph.db                   ← contract database (auto-created)
     context.json               ← live graph snapshot (auto-generated on scan)
-  specs/
-    example.md                 ← starter template (delete when you have real specs)
+  contracts/
+    example.contract.md        ← starter template (delete when you have real contracts)
   ferret.config.json           ← config (auto-created)
   CLAUDE.md                    ← AI agent instructions (auto-created)
 ```
@@ -270,17 +269,17 @@ your-project/
 Then build out your contract tree by domain:
 
 ```
-specs/
+contracts/
   auth/
-    jwt.md                     ← id: auth.jwt
-    login.md                   ← id: api.POST/auth/login
-    refresh.md                 ← id: api.POST/auth/refresh
+    jwt.contract.md            ← id: auth.jwt
+    login.contract.md          ← id: api.POST/auth/login
+    refresh.contract.md        ← id: api.POST/auth/refresh
   users/
-    profile.md                 ← id: api.GET/users/profile
-    table.md                   ← id: tables.user
+    profile.contract.md        ← id: api.GET/users/profile
+    table.contract.md          ← id: tables.user
   config/
-    rate-limits.md             ← id: config.rate-limits
-    feature-flags.md           ← id: config.feature-flags
+    rate-limits.contract.md    ← id: config.rate-limits
+    feature-flags.contract.md  ← id: config.feature-flags
 ```
 
 ### For BMAD/spec-kit Projects
@@ -292,17 +291,17 @@ your-project/
   .ferret/
     graph.db
     context.json
-  spec/                        ← your planning docs (SpecFerret ignores)
+  docs/                        ← your planning docs (SpecFerret ignores)
     architecture.md
     prd-v2.md
     stories/
       sprint-3.md
-  specs/                       ← live contracts (SpecFerret reads)
+  contracts/                   ← live contracts (SpecFerret reads)
     auth/
-      jwt.md
-      login.md
+      jwt.contract.md
+      login.contract.md
     search/
-      query.md
+      query.contract.md
   src/
     ...
   ferret.config.json
@@ -337,16 +336,17 @@ free-form prose that SpecFerret never reads.
 
 ## Summary — The Opinions
 
-| Topic                     | SpecFerret's position                                      |
-| ------------------------- | ---------------------------------------------------------- |
-| Contract tree location    | `specs/` — singular `spec/` is for planning docs           |
-| Folder structure          | Domain-first, never sprint-first                           |
-| Nesting depth             | 1 level recommended, 2 max                                 |
-| File naming               | Lowercase, hyphens, `.md` extension                        |
-| One contract per file     | Yes, always                                                |
-| Planning doc separation   | Keep planning docs outside `specDir`                       |
-| Flat vs nested            | Flat is fine under ~15 files                               |
-| BMAD/spec-kit integration | Parallel directories, manual bridge, SpecFerret downstream |
+| Topic                     | SpecFerret's position                                            |
+| ------------------------- | ---------------------------------------------------------------- |
+| Contract tree location    | `contracts/` — completely separate from planning docs            |
+| File extension            | `.contract.md` — SpecFerret scans only these files               |
+| Folder structure          | Domain-first, never sprint-first                                 |
+| Nesting depth             | 1 level recommended, 2 max                                      |
+| File naming               | Lowercase, hyphens, `.contract.md` extension                     |
+| One contract per file     | Yes, always                                                      |
+| Planning doc separation   | Keep planning docs outside `specDir`                             |
+| Flat vs nested            | Flat is fine under ~15 files                                     |
+| BMAD/spec-kit integration | Parallel directories, manual bridge, SpecFerret downstream       |
 
 ---
 

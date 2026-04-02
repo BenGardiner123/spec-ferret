@@ -22,8 +22,8 @@ Performance gate cleared. npm publish pipeline in place.
 **Acceptance Criteria:**
 
 - `ferret init` creates `.ferret/graph.db` silently — no prompt, no question
-- `ferret init` creates `specs/` directory if it does not exist
-- `ferret init` writes `specs/example.md` with valid frontmatter template
+- `ferret init` creates `contracts/` directory if it does not exist
+- `ferret init` writes `contracts/example.contract.md` with valid frontmatter template
 - `ferret init` writes `ferret.config.json` with correct defaults (`specDir`, `filePattern`, `store`)
 - `ferret init` writes `CLAUDE.md` with `context.json` instruction
 - `ferret init` prompts (opt-in) to install pre-commit hook — defaults to no
@@ -37,7 +37,7 @@ Performance gate cleared. npm publish pipeline in place.
 
 ### S02 — Spec File Extraction
 
-**As a** developer with spec files in `specs/`,
+**As a** developer with spec files in `contracts/`,
 **I want** SpecFerret to read the frontmatter and extract a typed contract,
 **so that** the system knows what shape each contract promises.
 

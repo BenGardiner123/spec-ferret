@@ -12,7 +12,7 @@ function makeStore() {
 function makeNode(overrides: Partial<FerretNode> = {}): FerretNode {
   return {
     id: randomUUID(),
-    file_path: "specs/test.md",
+    file_path: "contracts/test.contract.md",
     hash: "abc123",
     status: "stable",
     ...overrides,
@@ -144,10 +144,10 @@ describe("SqliteStore — existing store functionality still passes", () => {
     const store = makeStore();
     await store.init();
 
-    const node = makeNode({ file_path: "specs/auth.md" });
+    const node = makeNode({ file_path: "contracts/auth.contract.md" });
     await store.upsertNode(node);
 
-    const retrieved = await store.getNodeByFilePath("specs/auth.md");
+    const retrieved = await store.getNodeByFilePath("contracts/auth.contract.md");
     assert.notEqual(retrieved, null);
     assert.equal(retrieved!.id, node.id);
     assert.equal(retrieved!.hash, node.hash);
@@ -158,7 +158,7 @@ describe("SqliteStore — existing store functionality still passes", () => {
   it("returns null for unknown file path", async () => {
     const store = makeStore();
     await store.init();
-    const result = await store.getNodeByFilePath("specs/nonexistent.md");
+    const result = await store.getNodeByFilePath("contracts/nonexistent.contract.md");
     assert.equal(result, null);
     await store.close();
   });
@@ -202,8 +202,8 @@ describe("SqliteStore — existing store functionality still passes", () => {
     const store = makeStore();
     await store.init();
 
-    const nodeA = makeNode({ id: "node-a", file_path: "specs/a.md" });
-    const nodeB = makeNode({ id: "node-b", file_path: "specs/b.md" });
+    const nodeA = makeNode({ id: "node-a", file_path: "contracts/a.contract.md" });
+    const nodeB = makeNode({ id: "node-b", file_path: "contracts/b.contract.md" });
     await store.upsertNode(nodeA);
     await store.upsertNode(nodeB);
 

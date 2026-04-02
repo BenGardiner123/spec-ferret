@@ -40,9 +40,9 @@ Run \`ferret lint\` before generating code that touches contracts.
 `;
 
 const DEFAULT_CONFIG = {
-  specDir: "specs/",
-  filePattern: "**/*.md",
-  includes: ["**/*.md"],
+  specDir: "contracts/",
+  filePattern: "**/*.contract.md",
+  includes: ["**/*.contract.md"],
   store: "sqlite",
   codeContracts: {
     include: ["src/**/*.ts"],
@@ -73,14 +73,14 @@ export const initCommand = new Command("init")
     await store.init();
     await store.close();
 
-    // 2. specs/ directory
-    const specsDir = path.join(root, "specs");
-    if (!fs.existsSync(specsDir)) {
-      fs.mkdirSync(specsDir, { recursive: true });
+    // 2. contracts/ directory
+    const contractsDir = path.join(root, "contracts");
+    if (!fs.existsSync(contractsDir)) {
+      fs.mkdirSync(contractsDir, { recursive: true });
     }
 
-    // 3. specs/example.md with valid frontmatter template
-    const examplePath = path.join(specsDir, "example.md");
+    // 3. contracts/example.contract.md with valid frontmatter template
+    const examplePath = path.join(contractsDir, "example.contract.md");
     if (!fs.existsSync(examplePath)) {
       fs.writeFileSync(examplePath, EXAMPLE_SPEC, "utf-8");
     }
@@ -103,7 +103,7 @@ export const initCommand = new Command("init")
 
     process.stdout.write("✓ ferret initialised\n");
     process.stdout.write("  .ferret/graph.db     created\n");
-    process.stdout.write("  specs/example.md     created\n");
+    process.stdout.write("  contracts/example.contract.md  created\n");
     process.stdout.write("  CLAUDE.md            created\n");
     process.stdout.write("  ferret.config.json   created\n");
 

@@ -19,7 +19,7 @@ A file is just the container. The contract is what matters.
 
 ## Part 1 — Spec Contracts
 
-Spec contracts live in Markdown files inside your `specDir` (default: `specs/`).
+Spec contracts live in Markdown files inside your `specDir` (default: `contracts/`).
 They are defined using YAML frontmatter at the top of the file.
 
 ### The Frontmatter Block
@@ -431,7 +431,7 @@ dependencies            — deprecated in JSON Schema draft 2019
 
 Warning format:
 ```
-⚠ Unsupported JSON Schema keyword: $ref in specs/search.md
+⚠ Unsupported JSON Schema keyword: $ref in contracts/search.contract.md
   SpecFerret supports a subset of JSON Schema.
   See: spec/CONTRACT-SCHEMA.md — Part 3
 ```

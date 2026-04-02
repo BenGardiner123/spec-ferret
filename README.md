@@ -20,7 +20,7 @@ Requires Bun 1.0 or later. Install Bun at [bun.sh](https://bun.sh).
 
 ## Your First Spec
 
-After `ferret init`, open `specs/example.md` and replace it with your first real contract:
+After `ferret init`, open `contracts/example.contract.md` and replace it with your first real contract:
 
 ```markdown
 ---
