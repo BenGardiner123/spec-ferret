@@ -38,7 +38,11 @@ export class SqliteStore implements DBStore {
       }
       const gitignorePath = path.join(ferretDir, ".gitignore");
       try {
-        fs.writeFileSync(gitignorePath, "*\n!.gitignore\n", "utf-8");
+        fs.writeFileSync(
+          gitignorePath,
+          "*\n!.gitignore\n!context.json\n",
+          "utf-8",
+        );
       } catch {}
     }
 

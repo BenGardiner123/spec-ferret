@@ -9,12 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - name: Install SpecFerret
-        run: bun install -g @specferret/cli
       - name: Prepare baseline
-        run: ferret init --no-hook; ferret lint
+        run: bun vendor/ferret.bundle.js init --no-hook; bun vendor/ferret.bundle.js lint
       - name: Validate no drift
-        run: ferret lint --ci
+        run: bun vendor/ferret.bundle.js lint --ci
 
   seeded-fail:
     runs-on: ubuntu-latest
@@ -22,14 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - name: Install SpecFerret
-        run: bun install -g @specferret/cli
       - name: Seed breaking drift
         run: chmod +x scripts/seed-breaking-drift.sh; ./scripts/seed-breaking-drift.sh
       - name: Expect CI failure on drift
         run: |
           set +e
-          ferret lint --ci
+          bun vendor/ferret.bundle.js lint --ci
           code=$?
           set -e
           if [ "$code" -eq 0 ]; then
@@ -43,9 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - name: Install SpecFerret
-        run: bun install -g @specferret/cli
-      - name: Resolve drift
-        run: chmod +x scripts/resolve-drift.sh; ./scripts/resolve-drift.sh
+      - name: Seed then resolve drift
+        run: chmod +x scripts/seed-breaking-drift.sh scripts/resolve-drift.sh; ./scripts/seed-breaking-drift.sh; ./scripts/resolve-drift.sh
       - name: Validate resolved state
-        run: ferret lint --ci
+        run: bun vendor/ferret.bundle.js lint --ci

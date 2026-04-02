@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "bun ../../scripts/clean-dist.ts dist && tsc --project tsconfig.build.json",
+    "bundle": "bun build bin/ferret.ts --bundle --target=bun --outfile=dist/ferret.bundle.js --external bun:sqlite --external node:fs --external node:path --external node:crypto --external node:process --external node:os",
     "test": "bun test"
   },
   "dependencies": {

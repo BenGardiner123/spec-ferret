@@ -227,16 +227,18 @@ async function restoreCommittedBaseline(
     if (!contract.specFile) {
       continue;
     }
-    const existing = contractsByFilePath.get(contract.specFile) ?? [];
+    const normalizedSpecFile = contract.specFile.replace(/\\/g, "/");
+    const existing = contractsByFilePath.get(normalizedSpecFile) ?? [];
     existing.push(contract);
-    contractsByFilePath.set(contract.specFile, existing);
+    contractsByFilePath.set(normalizedSpecFile, existing);
   }
 
   const dependencyTargetsByFilePath = new Map<string, string[]>();
   for (const edge of context.edges) {
-    const existing = dependencyTargetsByFilePath.get(edge.from) ?? [];
+    const normalizedFrom = edge.from.replace(/\\/g, "/");
+    const existing = dependencyTargetsByFilePath.get(normalizedFrom) ?? [];
     existing.push(edge.to);
-    dependencyTargetsByFilePath.set(edge.from, existing);
+    dependencyTargetsByFilePath.set(normalizedFrom, existing);
   }
 
   const allFilePaths = new Set<string>([
