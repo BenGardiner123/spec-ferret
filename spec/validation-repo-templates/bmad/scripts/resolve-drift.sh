@@ -8,12 +8,6 @@ if ! test -f "$target"; then
   exit 1
 fi
 
-python - <<'PY'
-from pathlib import Path
-p = Path('contracts/auth/jwt.contract.md')
-text = p.read_text(encoding='utf-8')
-text = text.replace('required: [id, email, token]', 'required: [id, email, token, expiresAt]')
-p.write_text(text, encoding='utf-8')
-PY
+bun -e "const file = 'contracts/auth/jwt.contract.md'; const source = await Bun.file(file).text(); const updated = source.replace('required: [id, email, token]', 'required: [id, email, token, expiresAt]'); if (source === updated) { throw new Error('Expected required list not found in contracts/auth/jwt.contract.md'); } await Bun.write(file, updated);"
 
 echo "Resolved drift by restoring expiresAt as required."

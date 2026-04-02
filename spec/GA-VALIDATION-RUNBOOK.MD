@@ -78,7 +78,17 @@ In both repos, pin the candidate under test:
 bun install -g @specferret/cli@<candidate-version>
 ```
 
-If validating a local candidate build, document exactly how install is performed.
+If validating a local candidate build before npm publication, use the compiled CLI artifact from this monorepo instead of `bun install -g`.
+
+Example from a bootstrapped validation repo:
+
+```bash
+bun ../specferret/packages/cli/dist/bin/ferret.js init --no-hook
+bun ../specferret/packages/cli/dist/bin/ferret.js lint
+bun ../specferret/packages/cli/dist/bin/ferret.js lint --ci
+```
+
+Document the exact path used in the evidence log.
 
 ---
 
@@ -95,6 +105,12 @@ ferret lint --ci
 ```
 
 Expected: pass
+
+If using a local unpublished candidate, replace `ferret` with:
+
+```bash
+bun ../specferret/packages/cli/dist/bin/ferret.js
+```
 
 2. Seed breaking drift
 
@@ -187,6 +203,18 @@ Fix:
 
 - Ensure `oven-sh/setup-bun@v2` runs before install
 - Keep install step: `bun install -g @specferret/cli`
+
+### Failure: `bun install -g @specferret/cli` returns 404
+
+Cause:
+
+- candidate has not been published to npm yet
+
+Fix:
+
+- for local dry runs, invoke the compiled artifact directly:
+  - `bun ../specferret/packages/cli/dist/bin/ferret.js ...`
+- for CI proof, publish the candidate or document an equivalent install mechanism before collecting final GA evidence
 
 ### Failure: Drift diagnostics too weak
 

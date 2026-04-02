@@ -31,6 +31,8 @@ Each validation repository must:
   - one contract importing another contract
 - Include one intentional breaking-change scenario used by CI smoke tests
 
+For unpublished release candidates, local dry runs may invoke the compiled CLI artifact directly from this monorepo, but final CI evidence still requires a documented install path for the exact candidate under test.
+
 Starter templates are provided in this repo:
 
 - `spec/validation-repo-templates/spec-kit/`

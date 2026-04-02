@@ -93,4 +93,34 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(result.stdout, "");
     assert.match(result.stderr, /invalid --ci-baseline/);
   });
+
+  it("uses committed context baseline for fail then resolve CI flow", () => {
+    runFerret(tmpDir, ["scan"]);
+
+    const contractPath = path.join(tmpDir, "contracts", "example.contract.md");
+    const baselineSource = fs.readFileSync(contractPath, "utf-8");
+    const brokenSource = baselineSource.replace(
+      "required: [id, name]",
+      "required: [id]",
+    );
+    fs.writeFileSync(contractPath, brokenSource, "utf-8");
+
+    const seeded = runFerret(tmpDir, ["lint", "--ci"]);
+    assert.equal(seeded.status, 1);
+    const seededJson = JSON.parse(seeded.stdout) as Record<string, unknown>;
+    assert.equal(seededJson.consistent, false);
+    assert.equal(seededJson.breaking, 0);
+    assert.equal(seededJson.nonBreaking, 0);
+    assert.ok(Array.isArray(seededJson.flagged));
+
+    fs.writeFileSync(contractPath, baselineSource, "utf-8");
+
+    const resolved = runFerret(tmpDir, ["lint", "--ci"]);
+    assert.equal(resolved.status, 0);
+    const resolvedJson = JSON.parse(resolved.stdout) as Record<string, unknown>;
+    assert.equal(resolvedJson.consistent, true);
+    assert.equal(resolvedJson.breaking, 0);
+    assert.equal(resolvedJson.nonBreaking, 0);
+    assert.deepEqual(resolvedJson.flagged, []);
+  });
 });

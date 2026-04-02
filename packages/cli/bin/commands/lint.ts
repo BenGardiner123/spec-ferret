@@ -1,12 +1,14 @@
 import { Command } from "commander";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { randomUUID } from "node:crypto";
 import pc from "picocolors";
 import {
   getStore,
   Reconciler,
   findProjectRoot,
   loadConfig,
+  hashSchema,
 } from "@specferret/core";
 
 export const lintCommand = new Command("lint")
@@ -34,9 +36,12 @@ export const lintCommand = new Command("lint")
     const contextPath = path.join(root, ".ferret", "context.json");
     const store = await getStore();
     const suggestionsEnabled = config.importSuggestions?.enabled !== false;
+    const baselineMode = options.ci
+      ? String(options.ciBaseline ?? "committed")
+      : undefined;
+    let committedContextSource: string | undefined;
 
     if (options.ci) {
-      const baselineMode = String(options.ciBaseline ?? "committed");
       if (baselineMode !== "committed" && baselineMode !== "rebuild") {
         process.stderr.write(
           "ferret: invalid --ci-baseline value. Use 'committed' or 'rebuild'.\n",
@@ -51,13 +56,25 @@ export const lintCommand = new Command("lint")
         );
         process.exit(2);
       }
+
+      if (baselineMode === "committed") {
+        committedContextSource = fs.readFileSync(contextPath, "utf-8");
+      }
     }
 
     try {
       await store.init();
 
+      if (options.ci && baselineMode === "committed") {
+        await restoreCommittedBaseline(store, contextPath);
+      }
+
       // Run scan first (inline — keeps lint under 50 lines by delegating to scan logic)
       await runScan(root, options);
+
+      if (committedContextSource !== undefined) {
+        fs.writeFileSync(contextPath, committedContextSource, "utf-8");
+      }
 
       // Reconcile
       const reconciler = new Reconciler(store);
@@ -177,6 +194,93 @@ export const lintCommand = new Command("lint")
       await store.close();
     }
   });
+
+type CommittedContext = {
+  contracts: Array<{
+    id: string;
+    type: string;
+    shape: unknown;
+    status: "stable" | "roadmap" | "needs-review";
+    specFile: string | null;
+  }>;
+  edges: Array<{
+    from: string;
+    to: string;
+  }>;
+  needsReview: string[];
+};
+
+async function restoreCommittedBaseline(
+  store: Awaited<ReturnType<typeof getStore>>,
+  contextPath: string,
+): Promise<void> {
+  const context = JSON.parse(
+    fs.readFileSync(contextPath, "utf-8"),
+  ) as CommittedContext;
+  const existingNodes = await store.getNodes();
+  const nodeIdByFilePath = new Map(
+    existingNodes.map((node) => [node.file_path, node.id]),
+  );
+  const contractsByFilePath = new Map<string, CommittedContext["contracts"]>();
+
+  for (const contract of context.contracts) {
+    if (!contract.specFile) {
+      continue;
+    }
+    const existing = contractsByFilePath.get(contract.specFile) ?? [];
+    existing.push(contract);
+    contractsByFilePath.set(contract.specFile, existing);
+  }
+
+  const dependencyTargetsByFilePath = new Map<string, string[]>();
+  for (const edge of context.edges) {
+    const existing = dependencyTargetsByFilePath.get(edge.from) ?? [];
+    existing.push(edge.to);
+    dependencyTargetsByFilePath.set(edge.from, existing);
+  }
+
+  const allFilePaths = new Set<string>([
+    ...contractsByFilePath.keys(),
+    ...dependencyTargetsByFilePath.keys(),
+  ]);
+
+  for (const filePath of allFilePaths) {
+    const nodeId = nodeIdByFilePath.get(filePath) ?? randomUUID();
+    const fileContracts = contractsByFilePath.get(filePath) ?? [];
+    const nodeStatus = fileContracts.some(
+      (contract) =>
+        contract.status === "needs-review" ||
+        context.needsReview.includes(contract.id),
+    )
+      ? "needs-review"
+      : fileContracts.some((contract) => contract.status === "roadmap")
+        ? "roadmap"
+        : "stable";
+
+    await store.upsertNode({
+      id: nodeId,
+      file_path: filePath,
+      hash: "",
+      status: nodeStatus,
+    });
+
+    for (const contract of fileContracts) {
+      await store.upsertContract({
+        id: contract.id,
+        node_id: nodeId,
+        shape_hash: hashSchema(contract.shape),
+        shape_schema: JSON.stringify(contract.shape ?? {}),
+        type: contract.type,
+        status: contract.status,
+      });
+    }
+
+    await store.replaceDependenciesForSourceNode(
+      nodeId,
+      dependencyTargetsByFilePath.get(filePath) ?? [],
+    );
+  }
+}
 
 async function runScan(
   root: string,
