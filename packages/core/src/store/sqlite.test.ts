@@ -147,7 +147,9 @@ describe("SqliteStore — existing store functionality still passes", () => {
     const node = makeNode({ file_path: "contracts/auth.contract.md" });
     await store.upsertNode(node);
 
-    const retrieved = await store.getNodeByFilePath("contracts/auth.contract.md");
+    const retrieved = await store.getNodeByFilePath(
+      "contracts/auth.contract.md",
+    );
     assert.notEqual(retrieved, null);
     assert.equal(retrieved!.id, node.id);
     assert.equal(retrieved!.hash, node.hash);
@@ -158,7 +160,9 @@ describe("SqliteStore — existing store functionality still passes", () => {
   it("returns null for unknown file path", async () => {
     const store = makeStore();
     await store.init();
-    const result = await store.getNodeByFilePath("contracts/nonexistent.contract.md");
+    const result = await store.getNodeByFilePath(
+      "contracts/nonexistent.contract.md",
+    );
     assert.equal(result, null);
     await store.close();
   });
@@ -202,8 +206,14 @@ describe("SqliteStore — existing store functionality still passes", () => {
     const store = makeStore();
     await store.init();
 
-    const nodeA = makeNode({ id: "node-a", file_path: "contracts/a.contract.md" });
-    const nodeB = makeNode({ id: "node-b", file_path: "contracts/b.contract.md" });
+    const nodeA = makeNode({
+      id: "node-a",
+      file_path: "contracts/a.contract.md",
+    });
+    const nodeB = makeNode({
+      id: "node-b",
+      file_path: "contracts/b.contract.md",
+    });
     await store.upsertNode(nodeA);
     await store.upsertNode(nodeB);
 
@@ -224,6 +234,38 @@ describe("SqliteStore — existing store functionality still passes", () => {
       ),
       true,
     );
+
+    await store.close();
+  });
+
+  it("replaceDependenciesForSourceNode replaces stale edges and deduplicates targets", async () => {
+    const store = makeStore();
+    await store.init();
+
+    const nodeA = makeNode({
+      id: "node-a",
+      file_path: "contracts/a.contract.md",
+    });
+    await store.upsertNode(nodeA);
+
+    await store.replaceDependenciesForSourceNode(nodeA.id, [
+      "api.GET/one",
+      "api.GET/one",
+      "api.GET/two",
+    ]);
+
+    let deps = await store.getDependencies();
+    assert.equal(deps.length, 2);
+    assert.deepEqual(
+      deps.map((dependency) => dependency.target_contract_id).sort(),
+      ["api.GET/one", "api.GET/two"],
+    );
+
+    await store.replaceDependenciesForSourceNode(nodeA.id, ["api.GET/two"]);
+
+    deps = await store.getDependencies();
+    assert.equal(deps.length, 1);
+    assert.equal(deps[0].target_contract_id, "api.GET/two");
 
     await store.close();
   });

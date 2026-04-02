@@ -46,6 +46,9 @@ const DEFAULT_CONFIG = {
   filePattern: "**/*.contract.md",
   includes: ["**/*.contract.md"],
   store: "sqlite",
+  importSuggestions: {
+    enabled: true,
+  },
   codeContracts: {
     include: ["src/**/*.ts"],
   },

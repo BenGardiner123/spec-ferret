@@ -56,10 +56,10 @@ export interface DBStore {
   /** Core initialisation & teardown */
   init(): Promise<void>;
   close(): Promise<void>;
-  
+
   /** Retrieves a node based on its unique file path relative to specDir */
   getNodeByFilePath(filePath: string): Promise<FerretNode | null>;
-  
+
   /** Upserts a node based on its ID */
   upsertNode(node: FerretNode): Promise<void>;
 
@@ -72,13 +72,19 @@ export interface DBStore {
   /** Creates a dependency edge between a Node and a Contract */
   upsertDependency(dependency: FerretDependency): Promise<void>;
 
+  /** Replaces all dependency edges for a source node with the provided targets */
+  replaceDependenciesForSourceNode(
+    sourceNodeId: string,
+    targetContractIds: string[],
+  ): Promise<void>;
+
   /** Full graph retrieval methods for the Reconciler engine */
   getNodes(): Promise<FerretNode[]>;
   getNodesByStatus(status: NodeStatus): Promise<FerretNode[]>;
   getContracts(): Promise<FerretContract[]>;
   getContract(id: string): Promise<FerretContract | null>;
   getDependencies(): Promise<FerretDependency[]>;
-  
+
   /** Update helper for the Reconciler to safely flag nodes */
   updateNodeStatus(nodeId: string, status: NodeStatus): Promise<void>;
 

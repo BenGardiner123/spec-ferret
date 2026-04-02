@@ -10,5 +10,6 @@ export * from "./store/types.js";
 export * from "./store/sqlite.js";
 export * from "./store/factory.js";
 export * from "./reconciler/index.js";
+export * from "./reconciler/import-suggestions.js";
 export * from "./config.js";
 export * from "./utils/paths.js";

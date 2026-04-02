@@ -75,22 +75,22 @@ export const scanCommand = new Command("scan")
 
         scanned++;
 
+        const existingNode = await store.getNodeByFilePath(relFile);
+        const fileHash = hashSchema(content); // hash of raw file content for change detection
+        const nodeId = existingNode?.id ?? randomUUID();
+
+        // --force: always process regardless of file hash
+        // no --force: skip if file content hash unchanged (no edit detected)
+        const fileChanged =
+          options.force || !existingNode || existingNode.hash !== fileHash;
+
+        if (!fileChanged) {
+          continue;
+        }
+
+        const importIds = new Set<string>();
+
         for (const contract of result.contracts) {
-          // Upsert node
-          const existingNode = await store.getNodeByFilePath(relFile);
-          const fileHash = hashSchema(content); // hash of raw file content for change detection
-          const nodeId = existingNode?.id ?? randomUUID();
-
-          // --force: always process regardless of file hash
-          // no --force: skip if file content hash unchanged (no edit detected)
-          const fileChanged =
-            options.force || !existingNode || existingNode.hash !== fileHash;
-
-          if (!fileChanged) {
-            // File unchanged — skip this contract
-            continue;
-          }
-
           // Get previous contract for comparison
           const prevContract = await store.getContract(contract.id);
 
@@ -136,17 +136,12 @@ export const scanCommand = new Command("scan")
             status: nodeStatus,
           });
 
-          // Upsert dependency edges (imports)
-          for (const importId of contract.imports) {
-            await store.upsertDependency({
-              id: randomUUID(),
-              source_node_id: nodeId,
-              target_contract_id: importId,
-            });
-          }
+          contract.imports.forEach((importId) => importIds.add(importId));
 
           changed++;
         }
+
+        await store.replaceDependenciesForSourceNode(nodeId, [...importIds]);
       }
 
       // Always write context.json after scan

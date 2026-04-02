@@ -401,14 +401,14 @@ This is the implementation plan for G1-G7. Stories are ordered by dependency.
 
 ### Sprint 4 — Resolution UX + GA Hardening
 
-| Story | Gate  | Scope                                                                                | Deliverable                                       | Acceptance Test                                                         |
-| ----- | ----- | ------------------------------------------------------------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| S32   | G6    | Guided `ferret review` flow (accept/update/reject)                                   | Interactive review command                        | Two-person trial resolves a drift event without opening docs            |
-| S33   | G6    | Non-interactive review mode for CI/dev scripts                                       | `ferret review --json` and structured output      | Tooling can consume resolution options programmatically                 |
-| S34   | G1-G6 | End-to-end GA smoke harness (`init` -> lint -> break -> block -> review -> green CI) | Automated smoke test workflow                     | Smoke pipeline passes on main and fails on intentional drift seed       |
-| S35   | G1-G6 | Docs and onboarding hardening (single 30-min quickstart path)                        | Consolidated quickstart + troubleshooting         | New developer completes setup + first blocked drift in under 30 minutes |
-| S36   | G7    | Build spec-kit validation repository and CI harness                                  | Public/paired test repo + workflow + evidence log | Spec-kit repo green on full smoke flow and drift-block scenario         |
-| S37   | G7    | Build BMAD validation repository and CI harness                                      | Public/paired test repo + workflow + evidence log | BMAD repo green on full smoke flow and drift-block scenario             |
+| Story | Gate  | Scope                                                                                 | Deliverable                                              | Acceptance Test                                                         |
+| ----- | ----- | ------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| S32   | G6    | Guided `ferret review` flow (accept/update/reject) with structured copy-paste context | Interactive review command + AI-friendly terminal output | Two-person trial resolves a drift event without opening docs            |
+| S33   | G6    | Non-interactive review mode for CI/dev scripts                                        | `ferret review --json` and structured output             | Tooling can consume resolution options programmatically                 |
+| S34   | G1-G6 | End-to-end GA smoke harness (`init` -> lint -> break -> block -> review -> green CI)  | Automated smoke test workflow                            | Smoke pipeline passes on main and fails on intentional drift seed       |
+| S35   | G1-G6 | Docs and onboarding hardening (single 30-min quickstart path)                         | Consolidated quickstart + troubleshooting                | New developer completes setup + first blocked drift in under 30 minutes |
+| S36   | G7    | Build spec-kit validation repository and CI harness                                   | Public/paired test repo + workflow + evidence log        | Spec-kit repo green on full smoke flow and drift-block scenario         |
+| S37   | G7    | Build BMAD validation repository and CI harness                                       | Public/paired test repo + workflow + evidence log        | BMAD repo green on full smoke flow and drift-block scenario             |
 
 ### Ownership and Sequencing Notes
 
@@ -417,6 +417,8 @@ This is the implementation plan for G1-G7. Stories are ordered by dependency.
 3. S32-S35 are blockers for GA announcement readiness.
 4. S36-S37 are hard blockers for GA launch approval.
 5. `ferret watch` (S12) can run in parallel but does not replace any GA gate.
+
+For S32-S33, terminal output must be structured enough that editor agents can read `ferret review` the same way they read build or test output today.
 
 ### Definition of Done for GA Program
 

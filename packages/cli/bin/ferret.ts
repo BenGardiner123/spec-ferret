@@ -21,17 +21,20 @@ async function main(): Promise<void> {
     { scanCommand },
     { lintCommand },
     { extractCommand },
+    { reviewCommand },
   ] = await Promise.all([
     import("./commands/init.js"),
     import("./commands/scan.js"),
     import("./commands/lint.js"),
     import("./commands/extract.js"),
+    import("./commands/review.js"),
   ]);
 
   program.addCommand(initCommand);
   program.addCommand(scanCommand);
   program.addCommand(lintCommand);
   program.addCommand(extractCommand);
+  program.addCommand(reviewCommand);
 
   await program.parseAsync(process.argv);
 }

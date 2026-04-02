@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import { findProjectRoot } from "../utils/paths.js";
 import type {
   DBStore,
@@ -164,6 +165,31 @@ export class SqliteStore implements DBStore {
       dependency.source_node_id,
       dependency.target_contract_id,
     );
+  }
+
+  async replaceDependenciesForSourceNode(
+    sourceNodeId: string,
+    targetContractIds: string[],
+  ): Promise<void> {
+    const uniqueTargets = [...new Set(targetContractIds)].sort();
+    const deleteStatement = this.db!.prepare(
+      "DELETE FROM ferret_dependencies WHERE source_node_id = ?",
+    );
+    const insertStatement = this.db!.prepare(
+      `
+      INSERT INTO ferret_dependencies (id, source_node_id, target_contract_id)
+      VALUES (?, ?, ?)
+    `,
+    );
+
+    const transaction = this.db!.transaction((sourceId: string) => {
+      deleteStatement.run(sourceId);
+      for (const targetId of uniqueTargets) {
+        insertStatement.run(randomUUID(), sourceId, targetId);
+      }
+    });
+
+    transaction(sourceNodeId);
   }
 
   async getNodes(): Promise<FerretNode[]> {

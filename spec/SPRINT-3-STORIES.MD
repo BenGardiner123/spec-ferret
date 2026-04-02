@@ -128,7 +128,17 @@ Gate target: G4, G5.
 - `packages/core/src/reconciler/index.test.ts` (new)
 - `packages/cli/bin/commands/lint.test.ts` (new sections)
 
-**Status:** Planned
+**Status:** ✓ Complete
+**Implemented Files:**
+
+- `packages/cli/bin/commands/lint.ts`
+- `packages/cli/bin/commands/lint.test.ts`
+- `packages/cli/bin/commands/scan.ts`
+- `packages/core/src/reconciler/index.ts`
+- `packages/core/src/reconciler/index.test.ts`
+- `packages/core/src/store/sqlite.ts`
+- `packages/core/src/store/sqlite.test.ts`
+- `packages/core/src/store/types.ts`
 
 ---
 
@@ -161,7 +171,17 @@ Gate target: G4, G5.
 - `packages/core/src/reconciler/import-suggestions.test.ts` (new)
 - `packages/cli/bin/commands/lint.test.ts` (new sections)
 
-**Status:** Planned
+**Status:** ✓ Complete
+**Implemented Files:**
+
+- `packages/core/src/reconciler/import-suggestions.ts`
+- `packages/core/src/reconciler/import-suggestions.test.ts`
+- `packages/core/src/reconciler/index.ts`
+- `packages/core/src/config.ts`
+- `packages/core/src/index.ts`
+- `packages/cli/bin/commands/lint.ts`
+- `packages/cli/bin/commands/lint.test.ts`
+- `packages/cli/bin/commands/init.ts`
 
 ---
 
