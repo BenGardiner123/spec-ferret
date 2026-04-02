@@ -75,6 +75,37 @@ Already using BMAD or spec-kit? Skip the example file. Pick a data shape from yo
 
 `ferret scan` is still available for manual graph updates and debugging, but normal day-to-day flow should be lint-first.
 
+## Resolving Drift
+
+When `ferret lint` blocks, run:
+
+```bash
+ferret review
+```
+
+`ferret review` shows:
+
+- the drifting contract id
+- the source contract file
+- direct and transitive downstream impact
+- the available actions: accept, update, reject
+
+Typical flow:
+
+```bash
+ferret lint
+ferret review
+ferret lint
+```
+
+If you want editor or agent tooling to consume the review context directly, use:
+
+```bash
+ferret review --json
+```
+
+That emits stable JSON to stdout with the current reviewable items, grouped impact, recommended action, and available options. Use `--contract <id>` or `--all` with `--action <accept|update|reject>` for non-interactive review steps.
+
 ## How It Works
 
 SpecFerret watches your spec files. Each spec exports a contract — a typed JSON Schema shape defined in lightweight YAML frontmatter.
@@ -117,6 +148,16 @@ ferret lint --ci
 
 # Use in ephemeral CI runners if you do not commit context.json
 ferret lint --ci --ci-baseline rebuild
+```
+
+S34 end-to-end smoke harness:
+
+```bash
+# Clean path: init -> lint -> break -> block -> review -> green
+bun run smoke:s34
+
+# Intentional failure seed: init -> lint -> break -> block
+bun run smoke:s34:drift
 ```
 
 ```yaml

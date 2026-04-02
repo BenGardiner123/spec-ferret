@@ -43,3 +43,9 @@ jobs:
           cd /tmp/ferret-gate
           bun $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js init --no-hook
           time bun $GITHUB_WORKSPACE/packages/cli/dist/bin/ferret.js lint
+
+      - name: S34 smoke harness (clean)
+        run: bun run smoke:s34
+
+      - name: S34 smoke harness (intentional drift seed)
+        run: bun run smoke:s34:drift

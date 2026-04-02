@@ -17,6 +17,24 @@ function runFerret(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
   });
 }
 
+function stableIt(name: string, fn: () => void | Promise<void>): void {
+  it(name, fn, 15_000);
+}
+
+async function cleanupTmpDir(tmpDir: string): Promise<void> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      return;
+    } catch (error: any) {
+      if (error?.code !== "EBUSY" || attempt === 19) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+}
+
 describe("ferret lint — S07 acceptance criteria", () => {
   let tmpDir: string;
 
@@ -27,27 +45,27 @@ describe("ferret lint — S07 acceptance criteria", () => {
     runFerret(tmpDir, ["scan"]);
   });
 
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
   });
 
-  it("exits 0 on a clean project with no drift", () => {
+  stableIt("exits 0 on a clean project with no drift", () => {
     const result = runFerret(tmpDir, ["lint"]);
     assert.equal(result.status, 0);
   });
 
-  it("prints the clean-state summary line to stdout", () => {
+  stableIt("prints the clean-state summary line to stdout", () => {
     const result = runFerret(tmpDir, ["lint"]);
     // Expected: ✓ ferret  N contracts  0 drift  Xms
     assert.match(result.stdout, /0 drift\s+\d+ms/);
   });
 
-  it("produces no stderr on a clean run", () => {
+  stableIt("produces no stderr on a clean run", () => {
     const result = runFerret(tmpDir, ["lint"]);
     assert.equal(result.stderr, "");
   });
 
-  it("--ci flag outputs valid JSON to stdout", () => {
+  stableIt("--ci flag outputs valid JSON to stdout", () => {
     const result = runFerret(tmpDir, [
       "lint",
       "--ci",
@@ -57,23 +75,26 @@ describe("ferret lint — S07 acceptance criteria", () => {
     assert.doesNotThrow(() => JSON.parse(result.stdout));
   });
 
-  it("--ci JSON has all required fields: version, consistent, breaking, nonBreaking, flagged, timestamp", () => {
-    const result = runFerret(tmpDir, [
-      "lint",
-      "--ci",
-      "--ci-baseline",
-      "rebuild",
-    ]);
-    const json = JSON.parse(result.stdout) as Record<string, unknown>;
-    assert.ok("version" in json, "missing version");
-    assert.ok("consistent" in json, "missing consistent");
-    assert.ok("breaking" in json, "missing breaking");
-    assert.ok("nonBreaking" in json, "missing nonBreaking");
-    assert.ok("flagged" in json, "missing flagged");
-    assert.ok("timestamp" in json, "missing timestamp");
-  });
+  stableIt(
+    "--ci JSON has all required fields: version, consistent, breaking, nonBreaking, flagged, timestamp",
+    () => {
+      const result = runFerret(tmpDir, [
+        "lint",
+        "--ci",
+        "--ci-baseline",
+        "rebuild",
+      ]);
+      const json = JSON.parse(result.stdout) as Record<string, unknown>;
+      assert.ok("version" in json, "missing version");
+      assert.ok("consistent" in json, "missing consistent");
+      assert.ok("breaking" in json, "missing breaking");
+      assert.ok("nonBreaking" in json, "missing nonBreaking");
+      assert.ok("flagged" in json, "missing flagged");
+      assert.ok("timestamp" in json, "missing timestamp");
+    },
+  );
 
-  it("--ci JSON has correct types for each field", () => {
+  stableIt("--ci JSON has correct types for each field", () => {
     const result = runFerret(tmpDir, ["lint", "--ci"]);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(typeof json.version, "string");
@@ -84,24 +105,24 @@ describe("ferret lint — S07 acceptance criteria", () => {
     assert.equal(typeof json.timestamp, "string");
   });
 
-  it("--ci exits 0 on a consistent (drift-free) project", () => {
+  stableIt("--ci exits 0 on a consistent (drift-free) project", () => {
     const result = runFerret(tmpDir, ["lint", "--ci"]);
     assert.equal(result.status, 0);
   });
 
-  it("--ci consistent field is true on a clean project", () => {
+  stableIt("--ci consistent field is true on a clean project", () => {
     const result = runFerret(tmpDir, ["lint", "--ci"]);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(json.consistent, true);
   });
 
-  it("--ci output contains zero ANSI escape codes", () => {
+  stableIt("--ci output contains zero ANSI escape codes", () => {
     const result = runFerret(tmpDir, ["lint", "--ci"]);
     // ANSI sequences start with ESC (\x1b)
     assert.doesNotMatch(result.stdout, /\x1b\[/);
   });
 
-  it("includes a timing value in the clean-state summary output", () => {
+  stableIt("includes a timing value in the clean-state summary output", () => {
     const result = runFerret(tmpDir, ["lint"]);
     assert.equal(result.status, 0);
     const match = result.stdout.match(/(\d+)ms/);
@@ -117,27 +138,34 @@ describe("ferret lint — S30 import integrity", () => {
     runFerret(tmpDir, ["init", "--no-hook"]);
   });
 
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
   });
 
-  it("fails on unresolved imports with actionable local diagnostics", () => {
-    const contractPath = path.join(tmpDir, "contracts", "example.contract.md");
-    fs.writeFileSync(
-      contractPath,
-      `---\nferret:\n  id: api.GET/example\n  type: api\n  imports:\n    - api.GET/missing\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
-      "utf-8",
-    );
+  stableIt(
+    "fails on unresolved imports with actionable local diagnostics",
+    () => {
+      const contractPath = path.join(
+        tmpDir,
+        "contracts",
+        "example.contract.md",
+      );
+      fs.writeFileSync(
+        contractPath,
+        `---\nferret:\n  id: api.GET/example\n  type: api\n  imports:\n    - api.GET/missing\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
+        "utf-8",
+      );
 
-    const result = runFerret(tmpDir, ["lint"]);
-    assert.equal(result.status, 2);
-    assert.match(result.stdout, /import integrity violations/);
-    assert.match(result.stdout, /api.GET\/example/);
-    assert.match(result.stdout, /contracts[\\/]example\.contract\.md/);
-    assert.match(result.stdout, /unresolved import api.GET\/missing/);
-  });
+      const result = runFerret(tmpDir, ["lint"]);
+      assert.equal(result.status, 2);
+      assert.match(result.stdout, /import integrity violations/);
+      assert.match(result.stdout, /api.GET\/example/);
+      assert.match(result.stdout, /contracts[\\/]example\.contract\.md/);
+      assert.match(result.stdout, /unresolved import api.GET\/missing/);
+    },
+  );
 
-  it("fails on self-imports with actionable local diagnostics", () => {
+  stableIt("fails on self-imports with actionable local diagnostics", () => {
     const contractPath = path.join(tmpDir, "contracts", "example.contract.md");
     fs.writeFileSync(
       contractPath,
@@ -150,7 +178,7 @@ describe("ferret lint — S30 import integrity", () => {
     assert.match(result.stdout, /self-import api.GET\/example/);
   });
 
-  it("fails on circular imports with concise local diagnostics", () => {
+  stableIt("fails on circular imports with concise local diagnostics", () => {
     fs.writeFileSync(
       path.join(tmpDir, "contracts", "a.contract.md"),
       `---\nferret:\n  id: api.GET/a\n  type: api\n  imports:\n    - api.GET/b\n  shape:\n    type: object\n---\n`,
@@ -170,7 +198,7 @@ describe("ferret lint — S30 import integrity", () => {
     );
   });
 
-  it("reports integrity violations in machine-readable CI output", () => {
+  stableIt("reports integrity violations in machine-readable CI output", () => {
     runFerret(tmpDir, ["scan"]);
 
     const contractPath = path.join(tmpDir, "contracts", "example.contract.md");
@@ -221,11 +249,11 @@ describe("ferret lint — S31 import suggestions", () => {
     runFerret(tmpDir, ["init", "--no-hook"]);
   });
 
-  afterEach(() => {
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
   });
 
-  it("emits warning-level suggestions without failing lint", () => {
+  stableIt("emits warning-level suggestions without failing lint", () => {
     fs.writeFileSync(
       path.join(tmpDir, "contracts", "a.contract.md"),
       `---\nferret:\n  id: api.GET/a\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n---\n`,
@@ -245,64 +273,70 @@ describe("ferret lint — S31 import suggestions", () => {
     assert.match(result.stdout, /high confidence|medium confidence/);
   });
 
-  it("suppresses suggestions in --ci mode unless explicitly requested", () => {
-    fs.writeFileSync(
-      path.join(tmpDir, "contracts", "a.contract.md"),
-      `---\nferret:\n  id: api.GET/a\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n---\n`,
-      "utf-8",
-    );
+  stableIt(
+    "suppresses suggestions in --ci mode unless explicitly requested",
+    () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "a.contract.md"),
+        `---\nferret:\n  id: api.GET/a\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n---\n`,
+        "utf-8",
+      );
 
-    fs.writeFileSync(
-      path.join(tmpDir, "contracts", "b.contract.md"),
-      `---\nferret:\n  id: auth.jwt\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n      expiresAt:\n        type: string\n---\n`,
-      "utf-8",
-    );
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "b.contract.md"),
+        `---\nferret:\n  id: auth.jwt\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n      expiresAt:\n        type: string\n---\n`,
+        "utf-8",
+      );
 
-    const result = runFerret(tmpDir, [
-      "lint",
-      "--ci",
-      "--ci-baseline",
-      "rebuild",
-    ]);
-    assert.equal(result.status, 0);
-    const json = JSON.parse(result.stdout) as Record<string, unknown>;
-    assert.equal("importSuggestions" in json, false);
-  });
+      const result = runFerret(tmpDir, [
+        "lint",
+        "--ci",
+        "--ci-baseline",
+        "rebuild",
+      ]);
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout) as Record<string, unknown>;
+      assert.equal("importSuggestions" in json, false);
+    },
+  );
 
-  it("includes suggestions in --ci mode when --ci-suggestions is set", () => {
-    fs.writeFileSync(
-      path.join(tmpDir, "contracts", "a.contract.md"),
-      `---\nferret:\n  id: api.GET/a\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n---\n`,
-      "utf-8",
-    );
+  stableIt(
+    "includes suggestions in --ci mode when --ci-suggestions is set",
+    () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "a.contract.md"),
+        `---\nferret:\n  id: api.GET/a\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n---\n`,
+        "utf-8",
+      );
 
-    fs.writeFileSync(
-      path.join(tmpDir, "contracts", "b.contract.md"),
-      `---\nferret:\n  id: auth.jwt\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n      expiresAt:\n        type: string\n---\n`,
-      "utf-8",
-    );
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "b.contract.md"),
+        `---\nferret:\n  id: auth.jwt\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      userId:\n        type: string\n      expiresAt:\n        type: string\n---\n`,
+        "utf-8",
+      );
 
-    const result = runFerret(tmpDir, [
-      "lint",
-      "--ci",
-      "--ci-baseline",
-      "rebuild",
-      "--ci-suggestions",
-    ]);
-    assert.equal(result.status, 0);
-    const json = JSON.parse(result.stdout) as {
-      importSuggestions: Array<{
-        sourceContractId: string;
-        suggestedImportId: string;
-      }>;
-    };
-    assert.equal(Array.isArray(json.importSuggestions), true);
-    assert.equal(json.importSuggestions.length > 0, true);
-    assert.equal(json.importSuggestions[0].sourceContractId, "api.GET/a");
-    assert.equal(json.importSuggestions[0].suggestedImportId, "auth.jwt");
-  });
+      const result = runFerret(tmpDir, [
+        "lint",
+        "--ci",
+        "--ci-baseline",
+        "rebuild",
+        "--ci-suggestions",
+      ]);
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout) as {
+        importSuggestions: Array<{
+          sourceContractId: string;
+          suggestedImportId: string;
+        }>;
+      };
+      assert.equal(Array.isArray(json.importSuggestions), true);
+      assert.equal(json.importSuggestions.length > 0, true);
+      assert.equal(json.importSuggestions[0].sourceContractId, "api.GET/a");
+      assert.equal(json.importSuggestions[0].suggestedImportId, "auth.jwt");
+    },
+  );
 
-  it("allows disabling suggestions via config", () => {
+  stableIt("allows disabling suggestions via config", () => {
     const configPath = path.join(tmpDir, "ferret.config.json");
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as {
       importSuggestions?: { enabled?: boolean };

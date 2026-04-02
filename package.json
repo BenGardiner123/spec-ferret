@@ -9,6 +9,8 @@
   "scripts": {
     "test": "bun test",
     "build": "bun run --filter '*' build",
-    "bootstrap:validation": "bun scripts/bootstrap-validation-repo.ts"
+    "bootstrap:validation": "bun scripts/bootstrap-validation-repo.ts",
+    "smoke:s34": "bun scripts/smoke-s34.ts --mode clean --ferret-entry packages/cli/dist/bin/ferret.js",
+    "smoke:s34:drift": "bun scripts/smoke-s34.ts --mode drift --ferret-entry packages/cli/dist/bin/ferret.js"
   }
 }

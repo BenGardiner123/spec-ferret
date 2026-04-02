@@ -39,12 +39,13 @@ Gate target: G6.
 - `packages/cli/bin/commands/review.test.ts` (new)
 - `packages/core/src/store/sqlite.test.ts` (new sections if needed)
 
-**Status:** In Progress
-**Implemented Files So Far:**
+**Status:** ✓ Complete
+**Implemented Files:**
 
 - `packages/cli/bin/commands/review.ts`
 - `packages/cli/bin/commands/review.test.ts`
 - `packages/cli/bin/ferret.ts`
+- `README.md`
 
 ---
 
@@ -61,7 +62,34 @@ Gate target: G6.
 - Output is stable enough for CI/dev tooling consumption
 - No ANSI output appears in `--json` mode
 
-**Status:** Planned
+**Status:** ✓ Complete
+**Implemented Files:**
+
+- `packages/cli/bin/commands/review.ts`
+- `packages/cli/bin/commands/review.test.ts`
+
+---
+
+### S34 — GA smoke harness
+
+**As a** maintainer preparing GA,
+**I want** an automated end-to-end smoke harness,
+**so that** CI proves both the clean recovery path and the intentional drift block path.
+
+**Acceptance Criteria:**
+
+- Automated harness runs `init -> lint -> break -> block -> review -> green`
+- Automated harness separately verifies intentional drift block path
+- CI executes both harness modes against the compiled CLI
+- Drift-block step fails deterministically with lint exit code 1
+
+**Status:** ✓ Complete
+**Implemented Files:**
+
+- `scripts/smoke-s34.ts`
+- `.github/workflows/ci.yml`
+- `package.json`
+- `README.md`
 
 ---
 
