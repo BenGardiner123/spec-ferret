@@ -31,7 +31,7 @@ Flag it. Do not invent an answer.
 
 `.ferret/context.json` is the live contract graph for this repo.
 Read it before generating any code that touches contracts.
-Treat it as ground truth over any spec file.
+Treat it as ground truth over any contract file.
 
 ---
 
@@ -164,7 +164,7 @@ Pre-commit hook:
 ferret  checking staged files...
 
   BREAKING  auth.jwt shape changed
-  └── 3 downstream specs need review
+  └── 3 downstream contracts need review
 
   commit blocked  →  run ferret review
 ```
