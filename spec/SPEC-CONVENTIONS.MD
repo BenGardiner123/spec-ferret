@@ -5,6 +5,30 @@ Covers native SpecFerret projects, BMAD/spec-kit integration, and naming rules.
 
 ---
 
+## Privacy Rule (Non-Negotiable)
+
+Do not put personally identifiable information (PII) or secrets in any project documentation.
+
+This applies to `contracts/`, `docs/`, `spec/`, examples, screenshots, runbooks,
+release notes, and CI evidence links.
+
+Never commit real:
+
+- names, emails, phone numbers, addresses, government IDs
+- API keys, tokens, passwords, cookies, session IDs, JWTs
+- customer IDs or account IDs that can be traced to a real person
+
+Use synthetic placeholders only, for example:
+
+- `user@example.test`
+- `USER_ID_PLACEHOLDER`
+- `REDACTED_TOKEN`
+
+If a log or screenshot includes sensitive data, redact it before commit. If redaction
+is not possible, do not include it.
+
+---
+
 ## Part 1 — Folder Structure
 
 ### The Rule

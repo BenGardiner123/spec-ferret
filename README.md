@@ -555,6 +555,12 @@ bun test
 bun run build
 ```
 
+**Documentation safety rule**
+
+- Never include PII or secrets in docs, contracts, runbooks, screenshots, logs, or release evidence.
+- Always use synthetic placeholders (for example `user@example.test`, `REDACTED_TOKEN`).
+- Redact sensitive values before commit.
+
 **Monorepo packages**
 
 | Package                  | Path            | npm                                                                                                     |
