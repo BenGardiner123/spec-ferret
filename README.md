@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./docs/images/hero.svg" width="780" alt="SpecFerret keeps your specs honest." />
+</p>
+
 # SpecFerret keeps your specs honest.
 
 SpecFerret is a Bun-first CLI that detects contract drift before it breaks downstream consumers.
