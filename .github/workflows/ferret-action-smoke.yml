@@ -29,8 +29,8 @@ jobs:
         with:
           bun-version: 1.3.11
 
-      - name: Install ferret CLI for smoke fixture setup
-        run: bun install -g @specferret/cli
+      - name: Install ferret packages for smoke fixture setup
+        run: bun add -g @specferret/core @specferret/cli
 
       - name: Prepare smoke fixture
         id: fixture

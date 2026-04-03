@@ -14,7 +14,7 @@ inputs:
   install-command:
     description: "Command used to install the ferret CLI"
     required: false
-    default: "bun install -g @specferret/cli"
+    default: "bun add -g @specferret/core @specferret/cli"
   working-directory:
     description: "Directory where ferret lint --ci should run"
     required: false

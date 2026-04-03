@@ -8,7 +8,7 @@ The action validates `baseline-mode`, captures stderr, and appends parser/stderr
 
 - `baseline-mode`: `committed` or `rebuild` (default: `committed`)
 - `bun-version`: Bun version to install (default: `1.3.11`)
-- `install-command`: command to install CLI (default: `bun install -g @specferret/cli`)
+- `install-command`: command to install CLI packages (default: `bun add -g @specferret/core @specferret/cli`)
 - `working-directory`: run directory (default: `.`)
 - `include-suggestions`: include import suggestions (default: `false`)
 - `artifact-name`: artifact name (default: `ferret-lint-ci`)
