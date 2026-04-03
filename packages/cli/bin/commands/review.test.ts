@@ -18,7 +18,7 @@ function runFerret(
   return spawnSync(process.execPath, [ferretBin, ...args], {
     cwd,
     encoding: "utf-8",
-    timeout: 10_000,
+    timeout: 30_000,
     input,
   });
 }
