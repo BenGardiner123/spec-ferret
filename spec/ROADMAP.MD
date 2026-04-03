@@ -482,13 +482,24 @@ Goal: remove CI adoption friction to one line (`uses: specferret/action@v1`) whi
 
 Goal: detect and explain mismatches when implementation code changes but contract files are not updated.
 
-| Story | Gate | Scope                                                                                | Deliverable                                        | Acceptance Test                                                                |
-| ----- | ---- | ------------------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------ |
-| S50   | G9   | Deterministic code-shape baseline from annotated TypeScript                          | Code-shape snapshot model + fixtures               | Same commit produces byte-identical code snapshot hashes                       |
-| S51   | G9   | Upward drift classifier (code -> spec mismatch)                                      | Diff engine + breaking/non-breaking classification | Code-only breaking change without spec update is flagged reliably              |
-| S52   | G9   | Lint integration for upward drift diagnostics                                        | `ferret lint` / `--ci` output extensions           | CI fails with explicit code-origin drift context and impacted contract IDs     |
-| S53   | G9   | Guided resolution support for upward drift                                           | `ferret review` and `ferret review --json` updates | Review payload provides actionable options for code-origin drift remediation   |
-| S54   | G9   | Validation matrix additions and release evidence for bidirectional drift enforcement | External validation scenarios + evidence links     | Candidate release blocked when upward drift scenarios fail in validation repos |
+Required Sprint 7 validation branches (both validation repositories):
+
+- `main`
+- `scenario/upward-breaking-signature-change`
+- `scenario/upward-nonbreaking-optional-add`
+- `scenario/upward-review-resolution-flow`
+
+Sprint 7 closeout rule:
+
+- candidate closeout is blocked if any required Sprint 7 branch is missing or red in either validation repository.
+
+| Story | Gate | Scope                                                                                | Deliverable                                        | Acceptance Test                                                                                        |
+| ----- | ---- | ------------------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| S50   | G9   | Deterministic code-shape baseline from annotated TypeScript                          | Code-shape snapshot model + fixtures               | Same commit produces byte-identical code snapshot hashes                                               |
+| S51   | G9   | Upward drift classifier (code -> spec mismatch)                                      | Diff engine + breaking/non-breaking classification | Code-only breaking change without spec update is flagged reliably                                      |
+| S52   | G9   | Lint integration for upward drift diagnostics                                        | `ferret lint` / `--ci` output extensions           | CI fails with explicit code-origin drift context and impacted contract IDs                             |
+| S53   | G9   | Guided resolution support for upward drift                                           | `ferret review` and `ferret review --json` updates | Review payload provides actionable options for code-origin drift remediation                           |
+| S54   | G9   | Validation matrix additions and release evidence for bidirectional drift enforcement | External validation scenarios + evidence links     | Candidate release blocked when any required Sprint 7 validation branch fails in either validation repo |
 
 Sprint 5 status: Complete.
 
