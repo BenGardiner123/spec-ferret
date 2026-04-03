@@ -349,7 +349,7 @@ This section is an archived planning snapshot. Current implementation status for
 
 ---
 
-## Sprint 6 — Adoption Distribution (Planned)
+## Sprint 6 — Adoption Distribution (Complete)
 
 | Task | Description                                                                 |
 | ---- | --------------------------------------------------------------------------- |
@@ -469,11 +469,13 @@ Goal: formalize branch-based scenario coverage across existing validation reposi
 
 ### Sprint 6 — GitHub Action Adoption (Post-GA)
 
-Goal: remove CI adoption friction to one line (`uses: specferret/action@v1`) while preserving deterministic drift enforcement.
+Goal: remove CI adoption friction to one line (`uses: BenGardiner123/action@v1`) while preserving deterministic drift enforcement.
+
+Sprint 6 status: Complete.
 
 | Story | Gate | Scope                                                                      | Deliverable                                         | Acceptance Test                                                                                  |
 | ----- | ---- | -------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| S46   | G8   | Publish reusable GitHub Action for `ferret lint --ci`                      | `specferret/action` v1 with usage docs              | Fresh repo workflow uses Action with no custom shell script and receives pass/fail drift outcome |
+| S46   | G8   | Publish reusable GitHub Action for `ferret lint --ci`                      | `BenGardiner123/action` v1 with usage docs          | Fresh repo workflow uses Action with no custom shell script and receives pass/fail drift outcome |
 | S47   | G8   | Add machine- and human-friendly Action outputs                             | PR summary + JSON artifact + stable output contract | Action run exposes consistent output fields and links artifacts in workflow summary              |
 | S48   | G8   | Publish starter workflow templates for monorepo and single-package layouts | Copy-paste workflow snippets + docs                 | New maintainer can enable CI drift checks in under 10 minutes                                    |
 | S49   | G8   | Define Action release/versioning policy and support window                 | Versioning policy doc + release checklist           | `v1` consumers get non-breaking updates; breaking changes require explicit major tag rollout     |

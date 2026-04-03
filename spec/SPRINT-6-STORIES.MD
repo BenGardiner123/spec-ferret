@@ -6,14 +6,14 @@ This sprint targets G8 from ROADMAP.MD.
 
 ---
 
-## Status: Planned
+## Status: Complete
 
 Goal: make CI adoption one-line and deterministic through a reusable GitHub Action.
 Gate target: G8.
 
 ---
 
-### S46 — Reusable GitHub Action (`specferret/action@v1`)
+### S46 — Reusable GitHub Action (`BenGardiner123/action@v1`)
 
 **As a** repository maintainer,
 **I want** a reusable GitHub Action for `ferret lint --ci`,
@@ -27,7 +27,7 @@ Gate target: G8.
 - Action exits non-zero on drift exactly as CLI does
 - Action docs include minimal copy-paste workflow
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -44,7 +44,7 @@ Gate target: G8.
 - JSON artifact is preserved for every run
 - Output contract is documented for tooling/agent consumption
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -61,7 +61,7 @@ Gate target: G8.
 - Templates are validated by test repositories or fixture workflows
 - Docs include exact copy-paste examples
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -78,14 +78,14 @@ Gate target: G8.
 - Release checklist includes Action smoke validation before publish
 - Action docs state supported runtimes and deprecation policy
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
 ### Sprint Exit Criteria
 
 1. Stories S46-S49 are implemented or explicitly deferred with approved rationale.
-2. `uses: specferret/action@v1` works in a fresh repository without custom shell scripts.
+2. `uses: BenGardiner123/action@v1` works in a fresh repository without custom shell scripts.
 3. Action outputs are stable and documented for human and machine consumers.
 4. Starter templates are validated and linked from README/docs.
 5. Documentation updates land in the same PR set:
@@ -127,48 +127,48 @@ Use this ordered list to execute S46-S49 with no ambiguity.
 
 Populate all fields before changing Sprint 6 status to Complete.
 
-- Candidate version/tag: `TODO`
-- Candidate commit SHA: `TODO`
-- Action release tag: `TODO` (expected format: `v1.x.y`)
-- Action major tag alias update (`v1`): `TODO` (yes/no + commit)
-- Action repository URL: `TODO`
-- Action repository commit SHA: `TODO`
+- Candidate version/tag: `0.1.3`
+- Candidate commit SHA: `ec977d93adc1b6d76d5a271a5d60f104a2314f57`
+- Action release tag: `v1.0.1`
+- Action major tag alias update (`v1`): `yes -> 4cc9769089b30eb3569e4662d919278b8b3cbd88`
+- Action repository URL: `https://github.com/BenGardiner123/action`
+- Action repository commit SHA: `4cc9769089b30eb3569e4662d919278b8b3cbd88`
 
 S46 evidence:
 
-- Action metadata file path: `TODO`
-- Smoke workflow run URL (single-package): `TODO`
-- Smoke workflow run URL (monorepo): `TODO`
-- Smoke workflow run URL (PR-only): `TODO`
-- Fixture repository 1 commit SHA: `TODO`
-- Fixture repository 2 commit SHA: `TODO`
+- Action metadata file path: `.github/actions/ferret-lint/action.yml`
+- Smoke workflow run URL (single-package): `https://github.com/BenGardiner123/spec-ferret/actions/runs/23965790753/job/69905345954`
+- Smoke workflow run URL (monorepo): `https://github.com/BenGardiner123/spec-ferret/actions/runs/23965790753/job/69905345965`
+- Smoke workflow run URL (PR-only): `https://github.com/BenGardiner123/spec-ferret/actions/runs/23965790753/job/69905346043`
+- Fixture repository 1 commit SHA: `BenGardiner123/spec-ferret-validation-spec-kit@bbe4cac9554902f93a6cca791bec8585d004f3b6`
+- Fixture repository 2 commit SHA: `BenGardiner123/specferret-validation-bmad@6ea519f0a978414e0dc57fd01c399637fb8b2fcb`
 
 S47 evidence:
 
-- Workflow summary screenshot/artifact link: `TODO`
-- JSON artifact example link: `TODO`
-- Output schema doc link: `TODO`
+- Workflow summary screenshot/artifact link: `https://github.com/BenGardiner123/spec-ferret/actions/runs/23965790753` (artifacts: `/artifacts/6266826762`, `/artifacts/6266826119`, `/artifacts/6266826727`)
+- JSON artifact example link: `docs/ci-templates/ferret-lint-ci-sample.json`
+- Output schema doc link: `docs/ci-templates/specferret-action-output-contract.md`
 
 S48 evidence:
 
-- Starter template (single-package) path/link: `TODO`
-- Starter template (monorepo) path/link: `TODO`
-- Starter template (PR-only) path/link: `TODO`
-- Template validation matrix summary link: `TODO`
+- Starter template (single-package) path/link: `docs/ci-templates/ferret-action-single-package.yml`
+- Starter template (monorepo) path/link: `docs/ci-templates/ferret-action-monorepo.yml`
+- Starter template (PR-only) path/link: `docs/ci-templates/ferret-action-pr-only.yml`
+- Template validation matrix summary link: `.github/workflows/ferret-action-smoke.yml`
 
 S49 evidence:
 
-- Versioning/support policy doc link: `TODO`
-- Breaking-change migration template link: `TODO`
-- Release checklist update link: `TODO`
+- Versioning/support policy doc link: `docs/ci-templates/specferret-action-versioning-policy.md`
+- Breaking-change migration template link: `docs/ci-templates/specferret-action-versioning-policy.md`
+- Release checklist update link: `docs/ci-templates/specferret-action-release-checklist.md`
 
 Final sign-off:
 
-- Reviewer: `TODO`
-- Sign-off date (UTC): `TODO`
+- Reviewer: `BenGardiner123`
+- Sign-off date (UTC): `2026-04-04`
 - Sprint 6 status set to Complete in:
-  - `spec/ROADMAP.MD`: `TODO`
-  - `spec/MASTER-STORIES.MD`: `TODO`
+  - `spec/ROADMAP.MD`: `Complete`
+  - `spec/MASTER-STORIES.MD`: `Complete`
 
 ---
 

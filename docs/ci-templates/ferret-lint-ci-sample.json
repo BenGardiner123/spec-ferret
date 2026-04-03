@@ -1,0 +1,14 @@
+﻿{
+  "version": "2.0",
+  "consistent": true,
+  "breaking": 0,
+  "nonBreaking": 0,
+  "flagged": [],
+  "integrityViolations": {
+    "unresolvedImports": [],
+    "selfImports": [],
+    "circularImports": []
+  },
+  "timestamp": "2026-04-03T22:50:55.064Z"
+}
+

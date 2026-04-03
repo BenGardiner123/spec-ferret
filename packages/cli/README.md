@@ -42,10 +42,25 @@ ferret review
 ferret lint --ci
 ```
 
+Reusable GitHub Action:
+
+```yaml
+- name: SpecFerret CI
+	uses: BenGardiner123/action@v1
+	with:
+		baseline-mode: committed
+```
+
 Supports CI baseline modes:
 
 - `--ci-baseline committed` (default)
 - `--ci-baseline rebuild`
+
+Starter templates:
+
+- `docs/ci-templates/ferret-action-single-package.yml`
+- `docs/ci-templates/ferret-action-monorepo.yml`
+- `docs/ci-templates/ferret-action-pr-only.yml`
 
 ## Validation status
 

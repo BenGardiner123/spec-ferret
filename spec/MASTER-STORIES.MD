@@ -258,14 +258,14 @@ Detailed acceptance criteria: `spec/SPRINT-5-STORIES.MD`.
 
 ---
 
-## Sprint 6 — GitHub Action Adoption (Planned)
+## Sprint 6 — GitHub Action Adoption (Complete)
 
-| Story | Description                                                                  |
-| ----- | ---------------------------------------------------------------------------- |
-| S46   | Reusable GitHub Action for `ferret lint --ci` (`uses: specferret/action@v1`) |
-| S47   | Stable Action outputs, workflow summary, and artifact linkage                |
-| S48   | Starter workflow templates for monorepo and single-package adoption          |
-| S49   | Action release/version policy and compatibility strategy                     |
+| Story | Description                                                                      |
+| ----- | -------------------------------------------------------------------------------- |
+| S46   | Reusable GitHub Action for `ferret lint --ci` (`uses: BenGardiner123/action@v1`) |
+| S47   | Stable Action outputs, workflow summary, and artifact linkage                    |
+| S48   | Starter workflow templates for monorepo and single-package adoption              |
+| S49   | Action release/version policy and compatibility strategy                         |
 
 Detailed acceptance criteria: `spec/SPRINT-6-STORIES.MD`.
 

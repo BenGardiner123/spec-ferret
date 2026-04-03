@@ -8,6 +8,11 @@ Single entry point for SpecFerret planning and GA validation documentation.
 
 - `README.md` — install, daily workflow, BMAD/spec-kit integration, GA validation pointers
 - `docs/QUICKSTART.md` — single onboarding path, first drift block, troubleshooting
+- `docs/ci-templates/` — starter GitHub Actions templates (single-package, monorepo, PR-only)
+- `docs/ci-templates/ferret-lint-ci-sample.json` — sample `ferret lint --ci` JSON artifact
+- `docs/ci-templates/specferret-action-versioning-policy.md` — Sprint 6 action version/support policy
+- `docs/ci-templates/specferret-action-output-contract.md` — Sprint 6 stable action output schema contract
+- `docs/ci-templates/specferret-action-release-checklist.md` — Sprint 6 action release checklist
 - `spec/CONTRACT-SCHEMA.MD` — contract frontmatter and JSON Schema subset
 - `spec/SPEC-CONVENTIONS.MD` — contract tree conventions and workflow integration
 - `spec/MASTER-ARCHITECTURE.MD` — architecture rules and layer boundaries
@@ -33,6 +38,8 @@ Single entry point for SpecFerret planning and GA validation documentation.
 
 - `spec/GA-VALIDATION-REPOS.MD` — branch-matrix GA policy for external proof repos
 - `spec/GA-VALIDATION-RUNBOOK.MD` — branch-matrix execution and evidence capture runbook
+- `.github/workflows/ferret-action-smoke.yml` — local reusable-action smoke validation workflow
+- `.github/actions/ferret-lint/README.md` — reusable action contract, inputs/outputs, usage
 - `spec/validation-repo-templates/spec-kit/` — spec-kit validation template and CI workflow
 - `spec/validation-repo-templates/bmad/` — BMAD validation template and CI workflow
 

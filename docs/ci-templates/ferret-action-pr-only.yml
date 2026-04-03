@@ -1,0 +1,19 @@
+name: Ferret CI (PR only)
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  ferret:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SpecFerret CI
+        uses: BenGardiner123/action@v1
+        with:
+          baseline-mode: rebuild
+          artifact-name: ferret-lint-ci-pr-only

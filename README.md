@@ -389,11 +389,13 @@ Run `ferret review` to step through each breaking drift, choose an action (accep
 
 ## 🧪 CI Integration
 
-**Minimal GitHub Actions step**
+**Minimal GitHub Actions step (reusable action)**
 
 ```yaml
-- name: Check contract drift
-  run: ferret lint --ci
+- name: SpecFerret CI
+  uses: BenGardiner123/action@v1
+  with:
+    baseline-mode: committed
 ```
 
 **Full job example**
@@ -404,12 +406,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - name: SpecFerret CI
+        uses: BenGardiner123/action@v1
         with:
-          bun-version: latest
-      - run: bun install -g @specferret/cli
-      - run: ferret lint --ci
+          baseline-mode: committed
+          artifact-name: ferret-lint-ci
 ```
+
+Starter templates:
+
+- `docs/ci-templates/ferret-action-single-package.yml`
+- `docs/ci-templates/ferret-action-monorepo.yml`
+- `docs/ci-templates/ferret-action-pr-only.yml`
 
 > [!TIP]
 > Commit `.ferret/context.json` to your repo. The default `--ci-baseline committed` mode reads from it, so CI passes on the first run without a rebuild step.
@@ -524,7 +532,7 @@ PRs welcome. The codebase is intentionally small and readable.
 - [ ] **`ferret upgrade`** — SQLite → Postgres migration command
 - [ ] **`ferret place`** — AI-powered feature placement against the graph
 - [ ] **`ferret benchmark`** — provider benchmarking for AI-assisted review
-- [ ] **GitHub Action adoption (Sprint 6)** — one-line CI enforcement via `uses: specferret/action@v1`
+- [x] **GitHub Action adoption (Sprint 6)** — one-line CI enforcement via `uses: BenGardiner123/action@v1`
 - [ ] **Upward code-to-spec drift (Sprint 7)** — catch implementation drift when specs are not updated
 - [ ] **Tree-sitter extraction** — TypeScript shape extraction without annotations (Phase 5)
 - [ ] **Multi-language support** — Go, Python, OpenAPI (post Phase 5)

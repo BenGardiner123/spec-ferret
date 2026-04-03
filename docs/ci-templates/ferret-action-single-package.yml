@@ -1,0 +1,17 @@
+name: Ferret CI (single package)
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  ferret:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SpecFerret CI
+        uses: BenGardiner123/action@v1
+        with:
+          baseline-mode: committed
+          artifact-name: ferret-lint-ci-single-package
