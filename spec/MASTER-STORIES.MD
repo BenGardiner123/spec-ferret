@@ -1,7 +1,8 @@
 # MASTER-STORIES.MD
 
 User stories for SpecFerret. Acceptance criteria map directly to the test suite.
-Sprint boundary is enforced — do not build roadmap items in Sprint 1.
+This file contains both historical planning snapshots and implemented story records.
+For current feature status, prefer the dedicated sprint story docs and README over archived roadmap headings.
 
 ---
 
@@ -209,7 +210,10 @@ Do not build these in Sprint 1. They are listed here for scope clarity only.
 
 ---
 
-## Sprint 3 — Roadmap (Not Yet Built)
+## Sprint 3 — Historical Roadmap Snapshot
+
+This section predates the later G4/G5 story breakdown. It should not be read as current status.
+`ferret extract` is implemented and documented in `spec/SPRINT-3-STORIES.MD` under S28.
 
 | Story | Description                                                           |
 | ----- | --------------------------------------------------------------------- |
@@ -235,7 +239,9 @@ Do not build these in Sprint 1. They are listed here for scope clarity only.
 
 ---
 
-## Sprint 5 — Branch-Matrix Dogfooding (Planned)
+## Sprint 5 — Branch-Matrix Dogfooding (Complete)
+
+Sprint 5 branch-matrix validation is complete. Detailed acceptance criteria and evidence live in `spec/SPRINT-5-STORIES.MD`.
 
 | Story | Description                                                                                    |
 | ----- | ---------------------------------------------------------------------------------------------- |

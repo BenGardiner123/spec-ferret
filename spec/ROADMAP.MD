@@ -320,7 +320,10 @@ Do not build these in Sprint 1.
 
 ---
 
-## Sprint 3 — Roadmap
+## Sprint 3 — Historical Roadmap Snapshot
+
+This section is an archived planning snapshot. Current implementation status for Sprint 3 bootstrap work lives in the G4/G5 execution breakdown below and in `spec/SPRINT-3-STORIES.MD`.
+`ferret extract` is implemented and tracked there as complete.
 
 | Task | Description                                                                                           |
 | ---- | ----------------------------------------------------------------------------------------------------- |
