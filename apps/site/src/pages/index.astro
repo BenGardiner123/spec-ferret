@@ -1,0 +1,230 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="SpecFerret | Keep Your Specs Honest"
+  description="SpecFerret finds drift between contracts and reality before production does."
+>
+  <main>
+    <header class="topbar">
+      <div class="brand mono">specferret.dev</div>
+      <a class="repo" href="https://github.com/BenGardiner123/spec-ferret"
+        >GitHub</a
+      >
+    </header>
+
+    <section class="hero">
+      <p class="pill mono">Open source CLI • npm: @specferret/cli</p>
+      <h1>SpecFerret keeps your specs honest.</h1>
+      <p class="subhead">
+        Catch contract drift fast. Surface downstream impact. Block risky
+        commits before they break consumers.
+      </p>
+      <div class="cta-row">
+        <a
+          class="cta primary"
+          href="https://www.npmjs.com/package/@specferret/cli">Install CLI</a
+        >
+        <a class="cta" href="https://github.com/BenGardiner123/spec-ferret"
+          >Read the code</a
+        >
+      </div>
+    </section>
+
+    <section class="proof-grid">
+      <article>
+        <h2>Deterministic checks</h2>
+        <p>
+          Run <span class="mono">ferret lint</span> locally and in CI with reproducible
+          drift detection and clear failure output.
+        </p>
+      </article>
+      <article>
+        <h2>Contract-aware impact</h2>
+        <p>
+          Review mode reports direct and transitive affected contracts so teams
+          know exactly what to update.
+        </p>
+      </article>
+      <article>
+        <h2>Production-ready publishing</h2>
+        <p>
+          Trusted publishing with OIDC from GitHub Actions, versioned releases
+          on npm, and evidence-backed validation runs.
+        </p>
+      </article>
+    </section>
+
+    <section class="quickstart">
+      <h2>Quickstart</h2>
+      <pre
+        class="mono"><code>bun install -g @specferret/cli
+ferret init
+ferret scan
+ferret lint</code></pre>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1.25rem 1rem 4rem;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .brand {
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .repo {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.5rem 0.9rem;
+    text-decoration: none;
+    font-size: 0.9rem;
+    background: color-mix(in oklab, var(--paper) 90%, white);
+  }
+
+  .hero {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 1.6rem;
+    box-shadow: 0 10px 30px rgba(23, 32, 53, 0.08);
+    animation: rise 550ms ease-out;
+  }
+
+  .pill {
+    display: inline-block;
+    margin: 0;
+    border: 1px solid color-mix(in oklab, var(--brand) 45%, var(--line));
+    color: var(--brand);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+    background: var(--brand-ink);
+  }
+
+  h1 {
+    margin: 0.8rem 0 0.6rem;
+    font-size: clamp(2rem, 7vw, 4.2rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+
+  .subhead {
+    margin: 0;
+    max-width: 42ch;
+    color: var(--muted);
+    font-size: 1.05rem;
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.3rem;
+  }
+
+  .cta {
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.72rem 1rem;
+    font-weight: 500;
+    background: #ffffffcf;
+  }
+
+  .cta.primary {
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand);
+  }
+
+  .proof-grid {
+    margin-top: 1.2rem;
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  article {
+    background: #ffffffc9;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 1rem;
+    animation: rise 650ms ease-out;
+  }
+
+  article h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+  }
+
+  article p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .quickstart {
+    margin-top: 1rem;
+    background: #142132;
+    color: #edf2ff;
+    border-radius: 16px;
+    border: 1px solid #23324a;
+    padding: 1rem;
+    animation: rise 780ms ease-out;
+  }
+
+  .quickstart h2 {
+    margin: 0 0 0.7rem;
+    font-size: 1rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #ffc861;
+  }
+
+  pre {
+    margin: 0;
+    overflow-x: auto;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 640px) {
+    main {
+      padding-top: 0.9rem;
+    }
+
+    .hero {
+      padding: 1.2rem;
+    }
+
+    .repo {
+      font-size: 0.82rem;
+    }
+  }
+</style>

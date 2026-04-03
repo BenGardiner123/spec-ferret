@@ -4,11 +4,15 @@
   "private": true,
   "workspaces": [
     "packages/core",
-    "packages/cli"
+    "packages/cli",
+    "apps/site"
   ],
   "scripts": {
     "test": "bun test",
     "build": "bun run --filter '*' build",
+    "site:dev": "bun run --filter @specferret/site dev",
+    "site:build": "bun run --filter @specferret/site build",
+    "site:preview": "bun run --filter @specferret/site preview",
     "bootstrap:validation": "bun scripts/bootstrap-validation-repo.ts",
     "smoke:s34": "bun scripts/smoke-s34.ts --mode clean --ferret-entry packages/cli/dist/bin/ferret.js",
     "smoke:s34:drift": "bun scripts/smoke-s34.ts --mode drift --ferret-entry packages/cli/dist/bin/ferret.js"
