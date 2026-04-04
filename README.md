@@ -22,7 +22,7 @@
 
 ## 📢 News
 
-- **2026-04-04** 🎉 Released **v0.1.2** — Sprint 5 branch-matrix validation hardening, S40/S41/S42 explicit assertions, and npm packages published. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.2).
+- **2026-04-04** 🎉 Released **v0.1.3** — publish-safe Bun exports, smoke-fixture hardening, and npm packages refreshed. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.3).
 - **2026-04-03** 🎉 Released **v0.1.1** — package READMEs, trusted publishing via OIDC, and specferret.dev launched. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.1).
 - **2026-03-15** 🚀 Released **v0.1.0** — initial public release. `ferret init`, `ferret scan`, `ferret lint`, `ferret review`. Full BMAD and spec-kit validation runs passing.
 - **2026-03-01** 🛠️ Monorepo scaffolded: `@specferret/core` (store, extractor, reconciler) and `@specferret/cli` (commands) published.
@@ -552,14 +552,14 @@ Latest validated evidence (post explicit S40/S41/S42 assertions):
 | spec-kit matrix run | [actions/runs/23962649755](https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/23962649755) |
 | BMAD matrix run     | [actions/runs/23962652352](https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/23962652352)      |
 
-Release evidence (v0.1.2 publish window):
+Release evidence (v0.1.3 publish window):
 
 | Validation                      | Link                                                                                                                   |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | spec-kit validation run         | [actions/runs/23962649755](https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/23962649755) |
 | BMAD validation run             | [actions/runs/23962652352](https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/23962652352)      |
-| `@specferret/core@0.1.2` on npm | [npmjs.com/package/@specferret/core](https://www.npmjs.com/package/@specferret/core)                                   |
-| `@specferret/cli@0.1.2` on npm  | [npmjs.com/package/@specferret/cli](https://www.npmjs.com/package/@specferret/cli)                                     |
+| `@specferret/core@0.1.3` on npm | [npmjs.com/package/@specferret/core](https://www.npmjs.com/package/@specferret/core)                                   |
+| `@specferret/cli@0.1.3` on npm  | [npmjs.com/package/@specferret/cli](https://www.npmjs.com/package/@specferret/cli)                                     |
 
 Sprint 5 expands this from a single smoke path to a branch matrix.
 Operational details live in [spec/GA-VALIDATION-REPOS.MD](spec/GA-VALIDATION-REPOS.MD) and [spec/GA-VALIDATION-RUNBOOK.MD](spec/GA-VALIDATION-RUNBOOK.MD).
