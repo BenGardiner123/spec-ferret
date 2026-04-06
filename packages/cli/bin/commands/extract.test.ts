@@ -56,6 +56,8 @@ export interface GetUsersResponse {
     const content = fs.readFileSync(outPath, "utf-8");
     assert.ok(content.includes("id: api.GET/users"));
     assert.ok(content.includes("type: api"));
+    assert.ok(result.stdout.includes("inferred=0"));
+    assert.ok(result.stdout.includes("annotated=1"));
   });
 
   it("is deterministic across repeated runs with unchanged source", () => {
@@ -121,6 +123,8 @@ export interface TeamMember {
     const content = fs.readFileSync(outPath, "utf-8");
     assert.ok(content.includes("id: type.src/member/teammember"));
     assert.ok(content.includes("type: type"));
+    assert.ok(result.stdout.includes("inferred=1"));
+    assert.ok(result.stdout.includes("annotated=0"));
   });
 
   it("fails with actionable diagnostic on output path collision", () => {
@@ -164,6 +168,8 @@ export interface userprofile {
     assert.equal(result.status, 0);
     assert.ok(result.stdout.includes("created=2"));
     assert.ok(result.stdout.includes("failed=0"));
+    assert.ok(result.stdout.includes("inferred=2"));
+    assert.ok(result.stdout.includes("annotated=0"));
     assert.ok(result.stderr.includes("Inferred id collision"));
     assert.ok(result.stderr.includes("userprofile-2"));
 
@@ -183,14 +189,14 @@ export interface userprofile {
     assert.ok(fs.existsSync(firstPath));
     assert.ok(fs.existsSync(secondPath));
     assert.ok(
-      fs.readFileSync(firstPath, "utf-8").includes(
-        "id: type.src/collision/userprofile",
-      ),
+      fs
+        .readFileSync(firstPath, "utf-8")
+        .includes("id: type.src/collision/userprofile"),
     );
     assert.ok(
-      fs.readFileSync(secondPath, "utf-8").includes(
-        "id: type.src/collision/userprofile-2",
-      ),
+      fs
+        .readFileSync(secondPath, "utf-8")
+        .includes("id: type.src/collision/userprofile-2"),
     );
   });
 

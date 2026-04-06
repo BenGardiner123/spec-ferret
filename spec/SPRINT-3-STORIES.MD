@@ -15,19 +15,20 @@ Gate target: G4, G5.
 
 ### S28 — `ferret extract` Deterministic Bootstrap
 
-**As a** developer with annotated TypeScript source,
+**As a** developer with TypeScript source,
 **I want** SpecFerret to scaffold contract files deterministically,
 **so that** I can bootstrap contract coverage without hand-writing every schema.
 
 **Acceptance Criteria:**
 
-- `ferret extract` reads TypeScript files with `@ferret-contract` annotations
+- `ferret extract` reads exported TypeScript declarations without requiring annotations
+- `@ferret-contract` is supported as a compatibility override for explicit `id` and `type`
 - Extraction is deterministic (same input -> byte-identical contract output)
 - Generated files use `.contract.md` extension and valid `ferret:` frontmatter
 - Generated frontmatter includes `id`, `type`, and `shape`
 - Extracted shape supports API request/response and object/array structures
-- Command exits non-zero when extraction fails for any annotated symbol
-- Command prints per-file/per-symbol diagnostics
+- Command exits non-zero on hard extraction errors (e.g., malformed annotation declarations, invalid IDs, path collisions)
+- Command prints per-file/per-symbol diagnostics and summary counts (`inferred`, `annotated`)
 
 **Implementation Notes:**
 
@@ -37,7 +38,7 @@ Gate target: G4, G5.
 
 **Test Plan:**
 
-- Fixture-based integration tests for annotated TS inputs
+- Fixture-based integration tests for inferred and annotation-override TS inputs
 - Determinism test: run extract twice and compare output hashes
 - Error path tests for malformed annotations and unsupported symbols
 
