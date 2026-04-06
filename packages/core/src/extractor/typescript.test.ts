@@ -268,10 +268,38 @@ export interface userprofile {
     const result = extractContractsFromTypeScript("src/collision.ts", src);
 
     assert.equal(result.contracts.length, 2);
-    const ids = result.contracts.map((contract) => contract.id).sort();
-    assert.deepEqual(ids, [
-      "type.src/collision/userprofile",
-      "type.src/collision/userprofile-2",
-    ]);
+    const bySymbol = new Map(
+      result.contracts.map((contract) => [contract.sourceSymbol, contract.id]),
+    );
+    assert.equal(bySymbol.get("UserProfile"), "type.src/collision/userprofile");
+    assert.equal(bySymbol.get("userprofile"), "type.src/collision/userprofile-2");
+  });
+
+  it("suffixes inferred id when explicit override already uses base id", () => {
+    const src = `
+// @ferret-contract: type.src/collision/userprofile type
+export interface Explicit {
+  id: string;
+}
+
+export interface UserProfile {
+  id: string;
+}
+`;
+
+    const result = extractContractsFromTypeScript("src/collision.ts", src);
+
+    assert.equal(result.contracts.length, 2);
+    const bySymbol = new Map(
+      result.contracts.map((contract) => [contract.sourceSymbol, contract.id]),
+    );
+
+    assert.equal(bySymbol.get("Explicit"), "type.src/collision/userprofile");
+    assert.equal(bySymbol.get("UserProfile"), "type.src/collision/userprofile-2");
+    assert.ok(
+      result.diagnostics.some((d) =>
+        d.includes("Inferred id collision") && d.includes("userprofile-2"),
+      ),
+    );
   });
 });

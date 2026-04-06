@@ -93,22 +93,27 @@ function inferContractId(filePath: string, symbol: string): string {
 function allocateDeterministicInferredId(
   baseId: string,
   seenCounts: Map<string, number>,
+  allocatedIds: Map<string, string>,
   diagnostics: string[],
   filePath: string,
   symbol: string,
 ): string {
-  const count = (seenCounts.get(baseId) ?? 0) + 1;
-  seenCounts.set(baseId, count);
-  if (count === 1) {
-    return baseId;
+  let count = (seenCounts.get(baseId) ?? 0) + 1;
+  let allocatedId = count === 1 ? baseId : `${baseId}-${count}`;
+
+  while (allocatedIds.has(allocatedId)) {
+    count += 1;
+    allocatedId = `${baseId}-${count}`;
   }
 
-  // Deterministic suffixing to avoid silent overwrites when multiple exported
-  // declarations normalize to the same inferred id in one extraction pass.
-  const allocatedId = `${baseId}-${count}`;
-  diagnostics.push(
-    `${filePath} (${symbol}): Inferred id collision for '${baseId}'. Assigned deterministic suffix '${allocatedId}'.`,
-  );
+  seenCounts.set(baseId, count);
+  if (allocatedId !== baseId) {
+    diagnostics.push(
+      `${filePath} (${symbol}): Inferred id collision for '${baseId}'. Assigned deterministic suffix '${allocatedId}'.`,
+    );
+  }
+
+  allocatedIds.set(allocatedId, symbol);
   return allocatedId;
 }
 
@@ -635,6 +640,7 @@ export function extractContractsFromTypeScript(
   const annotationOverrides = annotationResult.overrides;
   const contracts: ExtractedCodeContract[] = [];
   const inferredIdCounts = new Map<string, number>();
+  const allocatedIds = new Map<string, string>();
   const errors: string[] = [...annotationResult.errors];
   const diagnostics: string[] = [];
 
@@ -659,16 +665,29 @@ export function extractContractsFromTypeScript(
   for (const declaration of declarations) {
     const shape = parseDeclarationShape(filePath, declaration, diagnostics);
     const override = annotationOverrides.get(declaration.symbol);
-    const inferredId = inferContractId(filePath, declaration.symbol);
-    const allocatedId = override?.id
-      ? override.id
-      : allocateDeterministicInferredId(
-          inferredId,
-          inferredIdCounts,
-          diagnostics,
-          filePath,
-          declaration.symbol,
+    let allocatedId: string;
+
+    if (override?.id) {
+      const existingOwner = allocatedIds.get(override.id);
+      if (existingOwner && existingOwner !== declaration.symbol) {
+        errors.push(
+          `${filePath} (${declaration.symbol}): Annotation id '${override.id}' duplicates id already used by '${existingOwner}'.`,
         );
+        continue;
+      }
+      allocatedId = override.id;
+      allocatedIds.set(allocatedId, declaration.symbol);
+    } else {
+      const inferredId = inferContractId(filePath, declaration.symbol);
+      allocatedId = allocateDeterministicInferredId(
+        inferredId,
+        inferredIdCounts,
+        allocatedIds,
+        diagnostics,
+        filePath,
+        declaration.symbol,
+      );
+    }
 
     contracts.push({
       id: allocatedId,
