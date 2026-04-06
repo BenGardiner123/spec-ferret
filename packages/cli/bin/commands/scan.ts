@@ -77,12 +77,15 @@ export const scanCommand = new Command("scan")
           failed++;
           const reason = error instanceof Error ? error.message : String(error);
           const diagnostic = `ferret: scan failed for ${relFile} — ${reason}`;
-          process.stderr.write(diagnostic + "\n");
 
           if (!options.allowPartialSuccess) {
+            // Throw only — caller (ferret.ts or lint) will emit to stderr.
+            // Writing here would cause the message to appear twice.
             throw new Error(diagnostic);
           }
 
+          // Partial-success: log the failure and continue to next file.
+          process.stderr.write(diagnostic + "\n");
           continue;
         }
 

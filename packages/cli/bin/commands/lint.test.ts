@@ -404,6 +404,13 @@ describe("ferret lint — #31 fail-fast scan errors", () => {
       /scan failed for contracts[\\/]bad\.contract\.md/,
     );
     assert.match(result.stderr, /Missing required frontmatter fields/i);
+    // Diagnostic must appear exactly once — no double-write from scan + lint
+    assert.equal(
+      (result.stderr.match(/scan failed for/g) ?? []).length,
+      1,
+      "diagnostic should appear exactly once on stderr",
+    );
+    assert.doesNotMatch(result.stderr, /ferret: ferret:/);
   });
 
   stableIt("fails with actionable diagnostics on parser failures", () => {
@@ -424,6 +431,7 @@ describe("ferret lint — #31 fail-fast scan errors", () => {
       result.stderr,
       /YAML|end of the stream|missed comma|unexpected/i,
     );
+    assert.doesNotMatch(result.stderr, /ferret: ferret:/);
   });
 });
 

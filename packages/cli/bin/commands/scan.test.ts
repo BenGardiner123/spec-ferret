@@ -56,6 +56,14 @@ describe("ferret scan — #31 error handling", () => {
     assert.equal(result.status, 2);
     assert.match(result.stderr, /scan failed for contracts[\\/]bad\.contract\.md/);
     assert.match(result.stderr, /Missing required frontmatter fields/i);
+    // Diagnostic must appear exactly once — no double-write
+    assert.equal(
+      (result.stderr.match(/scan failed for/g) ?? []).length,
+      1,
+      "diagnostic should appear exactly once on stderr",
+    );
+    // Prefix must not be doubled
+    assert.doesNotMatch(result.stderr, /ferret: ferret:/);
   });
 
   it("fails fast on YAML parser errors by default", () => {
@@ -73,6 +81,7 @@ describe("ferret scan — #31 error handling", () => {
       /scan failed for contracts[\\/]broken-yaml\.contract\.md/,
     );
     assert.match(result.stderr, /YAML|end of the stream|missed comma|unexpected/i);
+    assert.doesNotMatch(result.stderr, /ferret: ferret:/);
   });
 
   it("allows explicit partial success with --allow-partial-success", () => {
