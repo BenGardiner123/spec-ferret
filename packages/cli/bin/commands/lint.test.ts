@@ -399,7 +399,10 @@ describe("ferret lint — #31 fail-fast scan errors", () => {
     const result = runFerret(tmpDir, ["lint"]);
 
     assert.equal(result.status, 2);
-    assert.match(result.stderr, /scan failed for contracts[\\/]bad\.contract\.md/);
+    assert.match(
+      result.stderr,
+      /scan failed for contracts[\\/]bad\.contract\.md/,
+    );
     assert.match(result.stderr, /Missing required frontmatter fields/i);
   });
 
@@ -417,7 +420,10 @@ describe("ferret lint — #31 fail-fast scan errors", () => {
       result.stderr,
       /scan failed for contracts[\\/]broken-yaml\.contract\.md/,
     );
-    assert.match(result.stderr, /YAML|end of the stream|missed comma|unexpected/i);
+    assert.match(
+      result.stderr,
+      /YAML|end of the stream|missed comma|unexpected/i,
+    );
   });
 });
 
@@ -458,7 +464,12 @@ describe("ferret lint — #30 severity classification", () => {
         "utf-8",
       );
 
-      const result = runFerret(tmpDir, ["lint", "--ci", "--ci-baseline", "rebuild"]);
+      const result = runFerret(tmpDir, [
+        "lint",
+        "--ci",
+        "--ci-baseline",
+        "rebuild",
+      ]);
       const json = JSON.parse(result.stdout) as {
         breaking: number;
         nonBreaking: number;
@@ -474,51 +485,45 @@ describe("ferret lint — #30 severity classification", () => {
     },
   );
 
-  stableIt(
-    "human output counts match trigger severity for mixed drift",
-    () => {
-      // Baseline: two independent contracts
-      fs.writeFileSync(
-        path.join(tmpDir, "contracts", "auth.contract.md"),
-        `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n    required:\n      - token\n---\n`,
-        "utf-8",
-      );
-      fs.writeFileSync(
-        path.join(tmpDir, "contracts", "profile.contract.md"),
-        `---\nferret:\n  id: api.profile\n  type: api\n  imports:\n    - api.auth\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n---\n`,
-        "utf-8",
-      );
+  stableIt("human output counts match trigger severity for mixed drift", () => {
+    // Baseline: two independent contracts
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "auth.contract.md"),
+      `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n    required:\n      - token\n---\n`,
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "profile.contract.md"),
+      `---\nferret:\n  id: api.profile\n  type: api\n  imports:\n    - api.auth\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n---\n`,
+      "utf-8",
+    );
 
-      runFerret(tmpDir, ["scan"]);
+    runFerret(tmpDir, ["scan"]);
 
-      // Breaking change to auth (add required field)
-      fs.writeFileSync(
-        path.join(tmpDir, "contracts", "auth.contract.md"),
-        `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      refreshToken:\n        type: string\n    required:\n      - token\n      - refreshToken\n---\n`,
-        "utf-8",
-      );
+    // Breaking change to auth (add required field)
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "auth.contract.md"),
+      `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      refreshToken:\n        type: string\n    required:\n      - token\n      - refreshToken\n---\n`,
+      "utf-8",
+    );
 
-      const result = runFerret(tmpDir, ["lint"]);
-      assert.equal(result.status, 1);
-      // All flagged nodes are downstream of a breaking trigger
-      assert.match(result.stdout, /1 breaking\s+0 non-breaking/);
-    },
-  );
+    const result = runFerret(tmpDir, ["lint"]);
+    assert.equal(result.status, 1);
+    // All flagged nodes are downstream of a breaking trigger
+    assert.match(result.stdout, /1 breaking\s+0 non-breaking/);
+  });
 
-  stableIt(
-    "no false non-zero exit on clean state after re-scan",
-    () => {
-      fs.writeFileSync(
-        path.join(tmpDir, "contracts", "stable.contract.md"),
-        `---\nferret:\n  id: api.stable\n  type: api\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
-        "utf-8",
-      );
+  stableIt("no false non-zero exit on clean state after re-scan", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "stable.contract.md"),
+      `---\nferret:\n  id: api.stable\n  type: api\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
+      "utf-8",
+    );
 
-      runFerret(tmpDir, ["scan"]);
-      // Re-scan with identical content should remain clean
-      const result = runFerret(tmpDir, ["lint"]);
-      assert.equal(result.status, 0);
-      assert.match(result.stdout, /0 drift/);
-    },
-  );
+    runFerret(tmpDir, ["scan"]);
+    // Re-scan with identical content should remain clean
+    const result = runFerret(tmpDir, ["lint"]);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /0 drift/);
+  });
 });

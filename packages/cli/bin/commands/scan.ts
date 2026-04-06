@@ -75,8 +75,7 @@ export const scanCommand = new Command("scan")
           result = extractFromSpecFile(relFile, content);
         } catch (error: unknown) {
           failed++;
-          const reason =
-            error instanceof Error ? error.message : String(error);
+          const reason = error instanceof Error ? error.message : String(error);
           const diagnostic = `ferret: scan failed for ${relFile} — ${reason}`;
           process.stderr.write(diagnostic + "\n");
 

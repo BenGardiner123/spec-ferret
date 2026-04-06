@@ -3,13 +3,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
+import type { SpawnSyncReturns } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { describe, it, beforeEach, afterEach } from "bun:test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, "../ferret.ts");
 
-function runFerret(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
+function runFerret(cwd: string, args: string[]): SpawnSyncReturns<string> {
   return spawnSync(process.execPath, [ferretBin, ...args], {
     cwd,
     encoding: "utf-8",
