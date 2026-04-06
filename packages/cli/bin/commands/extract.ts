@@ -121,6 +121,8 @@ export const extractCommand = new Command("extract")
     let updated = 0;
     let skipped = 0;
     let failed = 0;
+    let inferred = 0;
+    let annotated = 0;
     const pathToContractId = new Map<string, string>();
 
     for (const relFile of [...files].sort()) {
@@ -138,6 +140,12 @@ export const extractCommand = new Command("extract")
       }
 
       for (const contract of result.contracts) {
+        if (contract.idSource === "annotated") {
+          annotated++;
+        } else {
+          inferred++;
+        }
+
         if (
           !CONTRACT_ID_PATTERN.test(contract.id) ||
           !contract.id.includes(".")
@@ -211,7 +219,7 @@ export const extractCommand = new Command("extract")
     }
 
     process.stdout.write(
-      `ferret extract  created=${created}  updated=${updated}  skipped=${skipped}  failed=${failed}\n`,
+      `ferret extract  created=${created}  updated=${updated}  skipped=${skipped}  failed=${failed}  inferred=${inferred}  annotated=${annotated}\n`,
     );
 
     for (const d of diagnostics) {

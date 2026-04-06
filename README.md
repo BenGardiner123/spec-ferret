@@ -64,7 +64,7 @@
 
 🤖 **CI Mode** — `ferret lint --ci` exits non-zero on drift, with JSON output for downstream tooling and agents.
 
-🛠️ **TypeScript Extraction** — Annotate TypeScript declarations with `// @ferret-contract:` and `ferret extract` scaffolds contract files automatically.
+🛠️ **TypeScript Extraction** — `ferret extract` infers contracts from exported TypeScript declarations by default, with `// @ferret-contract:` available as an override for explicit `id` and `type`.
 
 ---
 
@@ -162,7 +162,7 @@ Code-first TypeScript path:
 ferret extract
 ```
 
-`ferret extract` reads `@ferret-contract` annotations and scaffolds deterministic `.contract.md` files.
+`ferret extract` uses Tree-sitter to infer contracts from exported TypeScript declarations and scaffolds deterministic `.contract.md` files. `@ferret-contract` remains supported as a compatibility override for explicit `id` and `type`.
 
 **4. Lint (default daily command)**
 
@@ -272,7 +272,7 @@ Now if `auth.jwt` shape changes, `api.POST/search` is flagged as an impacted con
 <details>
 <summary><b>Code-first: extract contracts from TypeScript</b></summary>
 
-Annotate TypeScript declarations:
+SpecFerret extracts contracts from TypeScript by default — no annotations needed. Use `@ferret-contract` as an override:
 
 ```ts
 // @ferret-contract: api.GET/users api
@@ -288,7 +288,7 @@ Then run:
 ferret extract
 ```
 
-This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Exits non-zero if extraction fails.
+This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Summary output includes `inferred=<n>` and `annotated=<n>`. The command exits non-zero only for hard extraction errors.
 
 </details>
 
@@ -296,16 +296,16 @@ This scaffolds `.contract.md` files under `contracts/` using deterministic mappi
 
 ## 💻 CLI Reference
 
-| Command                 | Purpose                                                   |
-| ----------------------- | --------------------------------------------------------- |
-| `ferret init`           | Scaffold `.ferret/` state, config, and pre-commit hook    |
-| `ferret init --no-hook` | Scaffold without installing the pre-commit hook           |
-| `ferret scan`           | Parse contracts and refresh `.ferret/context.json`        |
-| `ferret lint`           | Detect and classify contract drift                        |
-| `ferret lint --ci`      | CI mode — JSON output, exits non-zero on drift            |
-| `ferret review`         | Resolve blocking drift interactively                      |
-| `ferret review --json`  | Emit review context as JSON (for tooling and agents)      |
-| `ferret extract`        | Generate contracts from annotated TypeScript declarations |
+| Command                 | Purpose                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `ferret init`           | Scaffold `.ferret/` state, config, and pre-commit hook                       |
+| `ferret init --no-hook` | Scaffold without installing the pre-commit hook                              |
+| `ferret scan`           | Parse contracts and refresh `.ferret/context.json`                           |
+| `ferret lint`           | Detect and classify contract drift                                           |
+| `ferret lint --ci`      | CI mode — JSON output, exits non-zero on drift                               |
+| `ferret review`         | Resolve blocking drift interactively                                         |
+| `ferret review --json`  | Emit review context as JSON (for tooling and agents)                         |
+| `ferret extract`        | Generate contracts from exported TypeScript (annotation override compatible) |
 
 <details>
 <summary><b>Pre-commit hook behaviour</b></summary>
@@ -534,7 +534,7 @@ PRs welcome. The codebase is intentionally small and readable.
 - [ ] **`ferret benchmark`** — provider benchmarking for AI-assisted review
 - [x] **GitHub Action adoption (Sprint 6)** — one-line CI enforcement via `uses: BenGardiner123/action@v1`
 - [ ] **Upward code-to-spec drift (Sprint 7)** — catch implementation drift when specs are not updated
-- [ ] **Tree-sitter extraction** — TypeScript shape extraction without annotations (Phase 5)
+- [x] **Tree-sitter extraction** — TypeScript shape extraction without annotations (shipped)
 - [ ] **Multi-language support** — Go, Python, OpenAPI (post Phase 5)
 - [ ] **Hosted dashboard** — team-wide contract health, analytics, SSO/RBAC
 - [x] **Branch-matrix dogfooding (Sprint 5)** — scenario branches across spec-kit and BMAD validation repos
