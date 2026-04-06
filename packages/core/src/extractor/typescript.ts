@@ -15,7 +15,7 @@ export interface ExtractedCodeContract {
   shape: Record<string, unknown>;
   sourceSymbol: string;
   filePath: string;
-  idSource: "inferred" | "annotated";
+  idSource?: "inferred" | "annotated";
 }
 
 export interface TypeScriptExtractionResult {

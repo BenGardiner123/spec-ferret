@@ -272,7 +272,7 @@ Now if `auth.jwt` shape changes, `api.POST/search` is flagged as an impacted con
 <details>
 <summary><b>Code-first: extract contracts from TypeScript</b></summary>
 
-Annotate TypeScript declarations:
+SpecFerret extracts contracts from TypeScript by default — no annotations needed. Use `@ferret-contract` as an override:
 
 ```ts
 // @ferret-contract: api.GET/users api
