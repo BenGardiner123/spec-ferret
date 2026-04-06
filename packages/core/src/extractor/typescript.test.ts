@@ -191,4 +191,66 @@ export function getUser(id: string, active: boolean): void {}
     });
     assert.deepEqual(shape.properties.params.required, ["id", "active"]);
   });
+
+  it("normalizes absolute paths to deterministic ids", () => {
+    const src = `
+export interface ProfileResponse {
+  id: string;
+}
+`;
+
+    const windowsPath =
+      "C:/Users/alice/work/specferret/src/contracts/profile.ts";
+    const unixPath =
+      "/home/bob/work/specferret/src/contracts/profile.ts";
+
+    const windowsResult = extractContractsFromTypeScript(windowsPath, src);
+    const unixResult = extractContractsFromTypeScript(unixPath, src);
+
+    assert.equal(windowsResult.contracts.length, 1);
+    assert.equal(unixResult.contracts.length, 1);
+    assert.equal(
+      windowsResult.contracts[0].id,
+      "type.src/contracts/profile/profileresponse",
+    );
+    assert.equal(
+      unixResult.contracts[0].id,
+      "type.src/contracts/profile/profileresponse",
+    );
+  });
+
+  it("falls back to last 3 path segments for absolute paths without src/", () => {
+    const src = `
+export interface Config {
+  debug: boolean;
+}
+`;
+
+    // Without a recognizable src/ segment the normalizer falls back to the
+    // last 3 path segments.  This limits machine-specific prefix noise but
+    // does NOT guarantee cross-machine determinism (usernames may differ).
+    const result = extractContractsFromTypeScript(
+      "/home/bob/myproject/config.ts",
+      src,
+    );
+
+    assert.equal(result.contracts.length, 1);
+    assert.equal(
+      result.contracts[0].id,
+      "type.bob/myproject/config/config",
+    );
+  });
+
+  it("falls back to core contract type for inferred declarations", () => {
+    const src = `
+export interface Team {
+  id: string;
+}
+`;
+
+    const result = extractContractsFromTypeScript("src/team.ts", src);
+
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].type, "type");
+  });
 });
