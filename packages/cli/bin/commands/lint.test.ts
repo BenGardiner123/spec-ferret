@@ -377,6 +377,50 @@ describe("ferret lint — S31 import suggestions", () => {
   });
 });
 
+describe("ferret lint — #31 fail-fast scan errors", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-lint-fail-fast-"));
+    runFerret(tmpDir, ["init", "--no-hook"]);
+  });
+
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
+  });
+
+  stableIt("fails with actionable diagnostics on malformed frontmatter", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "bad.contract.md"),
+      `---\nferret:\n  id: api.bad\n  type: api\n---\n`,
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["lint"]);
+
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /scan failed for contracts[\\/]bad\.contract\.md/);
+    assert.match(result.stderr, /Missing required frontmatter fields/i);
+  });
+
+  stableIt("fails with actionable diagnostics on parser failures", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "broken-yaml.contract.md"),
+      `---\nferret:\n  id: api.broken\n  type: api\n  shape:\n    type: object\n    properties:\n      bad: [unclosed\n---\n`,
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["lint"]);
+
+    assert.equal(result.status, 2);
+    assert.match(
+      result.stderr,
+      /scan failed for contracts[\\/]broken-yaml\.contract\.md/,
+    );
+    assert.match(result.stderr, /YAML|end of the stream|missed comma|unexpected/i);
+  });
+});
+
 describe("ferret lint — #30 severity classification", () => {
   let tmpDir: string;
 

@@ -197,7 +197,7 @@ export const lintCommand = new Command("lint")
       if (options.ci) {
         process.stderr.write(JSON.stringify({ error: String(err) }) + "\n");
       } else {
-        process.stderr.write(`ferret: configuration error — ${err.message}\n`);
+        process.stderr.write(`ferret: ${err.message}\n`);
       }
       process.exit(2);
     } finally {
@@ -308,8 +308,6 @@ async function runScan(
   process.stdout.write = () => true;
   try {
     await scanCommand.parseAsync(args, { from: "node" });
-  } catch {
-    // Scan errors are non-fatal for lint
   } finally {
     process.stdout.write = savedWrite;
   }
