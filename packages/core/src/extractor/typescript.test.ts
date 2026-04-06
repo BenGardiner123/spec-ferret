@@ -219,6 +219,28 @@ export interface ProfileResponse {
     );
   });
 
+  it("falls back to last 3 path segments for absolute paths without src/", () => {
+    const src = `
+export interface Config {
+  debug: boolean;
+}
+`;
+
+    // Without a recognizable src/ segment the normalizer falls back to the
+    // last 3 path segments.  This limits machine-specific prefix noise but
+    // does NOT guarantee cross-machine determinism (usernames may differ).
+    const result = extractContractsFromTypeScript(
+      "/home/bob/myproject/config.ts",
+      src,
+    );
+
+    assert.equal(result.contracts.length, 1);
+    assert.equal(
+      result.contracts[0].id,
+      "type.bob/myproject/config/config",
+    );
+  });
+
   it("falls back to core contract type for inferred declarations", () => {
     const src = `
 export interface Team {
