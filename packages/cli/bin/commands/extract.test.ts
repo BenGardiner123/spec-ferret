@@ -147,6 +147,53 @@ export interface B {
     assert.ok(result.stderr.includes("get-users.contract.md"));
   });
 
+  it("deterministically suffixes inferred ids and warns on inferred collisions", () => {
+    const source = `
+export interface UserProfile {
+  id: string;
+}
+
+export interface userprofile {
+  id: string;
+}
+`;
+    fs.writeFileSync(path.join(tmpDir, "src", "collision.ts"), source, "utf-8");
+
+    const result = runFerret(tmpDir, ["extract"]);
+
+    assert.equal(result.status, 0);
+    assert.ok(result.stdout.includes("created=2"));
+    assert.ok(result.stdout.includes("failed=0"));
+    assert.ok(result.stderr.includes("Inferred id collision"));
+    assert.ok(result.stderr.includes("userprofile-2"));
+
+    const firstPath = path.join(
+      tmpDir,
+      "contracts",
+      "type",
+      "src-collision-userprofile.contract.md",
+    );
+    const secondPath = path.join(
+      tmpDir,
+      "contracts",
+      "type",
+      "src-collision-userprofile-2.contract.md",
+    );
+
+    assert.ok(fs.existsSync(firstPath));
+    assert.ok(fs.existsSync(secondPath));
+    assert.ok(
+      fs.readFileSync(firstPath, "utf-8").includes(
+        "id: type.src/collision/userprofile",
+      ),
+    );
+    assert.ok(
+      fs.readFileSync(secondPath, "utf-8").includes(
+        "id: type.src/collision/userprofile-2",
+      ),
+    );
+  });
+
   it("normalizes required arrays in canonical sorted order", () => {
     const source = `
 // @ferret-contract: api.GET/canonical api

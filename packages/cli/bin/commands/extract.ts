@@ -214,10 +214,11 @@ export const extractCommand = new Command("extract")
       `ferret extract  created=${created}  updated=${updated}  skipped=${skipped}  failed=${failed}\n`,
     );
 
+    for (const d of diagnostics) {
+      process.stderr.write(`⚠ ${d}\n`);
+    }
+
     if (failed > 0) {
-      for (const d of diagnostics) {
-        process.stderr.write(`⚠ ${d}\n`);
-      }
       process.exit(1);
       return;
     }

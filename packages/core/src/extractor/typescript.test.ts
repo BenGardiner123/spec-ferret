@@ -253,4 +253,25 @@ export interface Team {
     assert.equal(result.contracts.length, 1);
     assert.equal(result.contracts[0].type, "type");
   });
+
+  it("deterministically suffixes inferred ids when collisions occur", () => {
+    const src = `
+export interface UserProfile {
+  id: string;
+}
+
+export interface userprofile {
+  id: string;
+}
+`;
+
+    const result = extractContractsFromTypeScript("src/collision.ts", src);
+
+    assert.equal(result.contracts.length, 2);
+    const ids = result.contracts.map((contract) => contract.id).sort();
+    assert.deepEqual(ids, [
+      "type.src/collision/userprofile",
+      "type.src/collision/userprofile-2",
+    ]);
+  });
 });

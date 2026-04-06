@@ -90,6 +90,28 @@ function inferContractId(filePath: string, symbol: string): string {
   return `type.${pathPart}/${symbolPart}`;
 }
 
+function allocateDeterministicInferredId(
+  baseId: string,
+  seenCounts: Map<string, number>,
+  diagnostics: string[],
+  filePath: string,
+  symbol: string,
+): string {
+  const count = (seenCounts.get(baseId) ?? 0) + 1;
+  seenCounts.set(baseId, count);
+  if (count === 1) {
+    return baseId;
+  }
+
+  // Deterministic suffixing to avoid silent overwrites when multiple exported
+  // declarations normalize to the same inferred id in one extraction pass.
+  const allocatedId = `${baseId}-${count}`;
+  diagnostics.push(
+    `${filePath} (${symbol}): Inferred id collision for '${baseId}'. Assigned deterministic suffix '${allocatedId}'.`,
+  );
+  return allocatedId;
+}
+
 function toSchemaType(text: string): Schema {
   switch (text) {
     case "string":
@@ -612,6 +634,7 @@ export function extractContractsFromTypeScript(
   const annotationResult = extractAnnotationOverrides(filePath, content);
   const annotationOverrides = annotationResult.overrides;
   const contracts: ExtractedCodeContract[] = [];
+  const inferredIdCounts = new Map<string, number>();
   const errors: string[] = [...annotationResult.errors];
   const diagnostics: string[] = [];
 
@@ -636,9 +659,19 @@ export function extractContractsFromTypeScript(
   for (const declaration of declarations) {
     const shape = parseDeclarationShape(filePath, declaration, diagnostics);
     const override = annotationOverrides.get(declaration.symbol);
+    const inferredId = inferContractId(filePath, declaration.symbol);
+    const allocatedId = override?.id
+      ? override.id
+      : allocateDeterministicInferredId(
+          inferredId,
+          inferredIdCounts,
+          diagnostics,
+          filePath,
+          declaration.symbol,
+        );
 
     contracts.push({
-      id: override?.id ?? inferContractId(filePath, declaration.symbol),
+      id: allocatedId,
       type: override?.type ?? inferContractType(),
       shape,
       sourceSymbol: declaration.symbol,
