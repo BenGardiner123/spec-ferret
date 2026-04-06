@@ -376,3 +376,105 @@ describe("ferret lint — S31 import suggestions", () => {
     assert.equal("importSuggestions" in json, false);
   });
 });
+
+describe("ferret lint — #30 severity classification", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-lint-severity-"));
+    runFerret(tmpDir, ["init", "--no-hook"]);
+  });
+
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
+  });
+
+  stableIt(
+    "CI breaking/nonBreaking counts reflect trigger severity, not graph depth",
+    () => {
+      // Baseline: two contracts, downstream imports upstream
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "upstream.contract.md"),
+        `---\nferret:\n  id: api.upstream\n  type: api\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n    required:\n      - name\n---\n`,
+        "utf-8",
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "downstream.contract.md"),
+        `---\nferret:\n  id: api.downstream\n  type: api\n  imports:\n    - api.upstream\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
+        "utf-8",
+      );
+
+      // Scan baseline
+      runFerret(tmpDir, ["scan"]);
+
+      // Now introduce a breaking change to upstream (add a required field)
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "upstream.contract.md"),
+        `---\nferret:\n  id: api.upstream\n  type: api\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n      email:\n        type: string\n    required:\n      - name\n      - email\n---\n`,
+        "utf-8",
+      );
+
+      const result = runFerret(tmpDir, ["lint", "--ci", "--ci-baseline", "rebuild"]);
+      const json = JSON.parse(result.stdout) as {
+        breaking: number;
+        nonBreaking: number;
+        flagged: Array<{ triggeredByContractId: string; depth: number }>;
+      };
+
+      // The downstream node is flagged because upstream changed (breaking).
+      // Old bug: depth=1 counted as "breaking", depth>1 as "nonBreaking".
+      // Correct: the trigger contract (api.upstream) has status=needs-review,
+      // so ALL nodes it flagged are "breaking" regardless of depth.
+      assert.equal(json.breaking, json.flagged.length);
+      assert.equal(json.nonBreaking, 0);
+    },
+  );
+
+  stableIt(
+    "human output counts match trigger severity for mixed drift",
+    () => {
+      // Baseline: two independent contracts
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "auth.contract.md"),
+        `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n    required:\n      - token\n---\n`,
+        "utf-8",
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "profile.contract.md"),
+        `---\nferret:\n  id: api.profile\n  type: api\n  imports:\n    - api.auth\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n---\n`,
+        "utf-8",
+      );
+
+      runFerret(tmpDir, ["scan"]);
+
+      // Breaking change to auth (add required field)
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "auth.contract.md"),
+        `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      refreshToken:\n        type: string\n    required:\n      - token\n      - refreshToken\n---\n`,
+        "utf-8",
+      );
+
+      const result = runFerret(tmpDir, ["lint"]);
+      assert.equal(result.status, 1);
+      // All flagged nodes are downstream of a breaking trigger
+      assert.match(result.stdout, /1 breaking\s+0 non-breaking/);
+    },
+  );
+
+  stableIt(
+    "no false non-zero exit on clean state after re-scan",
+    () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "stable.contract.md"),
+        `---\nferret:\n  id: api.stable\n  type: api\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
+        "utf-8",
+      );
+
+      runFerret(tmpDir, ["scan"]);
+      // Re-scan with identical content should remain clean
+      const result = runFerret(tmpDir, ["lint"]);
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /0 drift/);
+    },
+  );
+});

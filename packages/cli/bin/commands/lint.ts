@@ -88,10 +88,20 @@ export const lintCommand = new Command("lint")
         report.integrityViolations.selfImports.length > 0 ||
         report.integrityViolations.circularImports.length > 0;
 
+      // Contract IDs whose schema change was classified as breaking by scan.
+      // Used by both CI and human output so counts align with tree labels.
+      const breakingTriggerIds = new Set(
+        contracts.filter((c) => c.status === "needs-review").map((c) => c.id),
+      );
+
       if (options.ci) {
         // CI mode: JSON to stdout, zero ANSI codes
-        const breaking = report.flagged.filter((f) => f.depth === 1).length;
-        const nonBreaking = report.flagged.filter((f) => f.depth > 1).length;
+        const breaking = report.flagged.filter((f) =>
+          breakingTriggerIds.has(f.triggeredByContractId),
+        ).length;
+        const nonBreaking = report.flagged.filter(
+          (f) => !breakingTriggerIds.has(f.triggeredByContractId),
+        ).length;
         const output: Record<string, unknown> = {
           version: "2.0",
           consistent: report.consistent,
@@ -165,14 +175,14 @@ export const lintCommand = new Command("lint")
         process.stdout.write("\n");
       }
 
-      const breakingCount = report.flagged.filter(
-        (f) => f.impact === "direct",
+      const breakingCount = report.flagged.filter((f) =>
+        breakingTriggerIds.has(f.triggeredByContractId),
       ).length;
-      const transitiveCount = report.flagged.filter(
-        (f) => f.impact === "transitive",
+      const nonBreakingCount = report.flagged.filter(
+        (f) => !breakingTriggerIds.has(f.triggeredByContractId),
       ).length;
       process.stdout.write(
-        `  ${breakingCount} breaking  ${transitiveCount} non-breaking\n`,
+        `  ${breakingCount} breaking  ${nonBreakingCount} non-breaking\n`,
       );
       process.stdout.write(
         `\n  ${pc.cyan("→")} Run ferret review to resolve\n\n`,
