@@ -22,6 +22,10 @@ export const scanCommand = new Command("scan")
   .argument("[files...]", "Specific files to scan (optional)")
   .option("--changed", "Scan only git-staged files")
   .option("--force", "Re-extract all files regardless of hash")
+  .option(
+    "--allow-partial-success",
+    "Continue scanning after extraction failures (explicit opt-in)",
+  )
   .option("--ci", "Machine-readable output, no colours")
   .action(async (files: string[], options) => {
     const root = findProjectRoot();
@@ -54,6 +58,7 @@ export const scanCommand = new Command("scan")
       let scanned = 0;
       let changed = 0;
       let skipped = 0;
+      let failed = 0;
 
       for (const relFile of filesToScan) {
         const absFile = path.resolve(root, relFile);
@@ -64,7 +69,25 @@ export const scanCommand = new Command("scan")
         }
 
         const content = fs.readFileSync(absFile, "utf-8");
-        const result = extractFromSpecFile(relFile, content);
+
+        let result: ReturnType<typeof extractFromSpecFile>;
+        try {
+          result = extractFromSpecFile(relFile, content);
+        } catch (error: unknown) {
+          failed++;
+          const reason = error instanceof Error ? error.message : String(error);
+          const diagnostic = `ferret: scan failed for ${relFile} — ${reason}`;
+
+          if (!options.allowPartialSuccess) {
+            // Throw only — caller (ferret.ts or lint) will emit to stderr.
+            // Writing here would cause the message to appear twice.
+            throw new Error(diagnostic);
+          }
+
+          // Partial-success: log the failure and continue to next file.
+          process.stderr.write(diagnostic + "\n");
+          continue;
+        }
 
         if (result.warning === "no-frontmatter") {
           const msg = `⚠ ${relFile} has no ferret frontmatter — skipped\n`;
@@ -147,8 +170,14 @@ export const scanCommand = new Command("scan")
       // Always write context.json after scan
       await writeContext(store, root);
 
-      const summary = `${scanned} file${scanned !== 1 ? "s" : ""} scanned. ${changed} changed. ${changed} contract${changed !== 1 ? "s" : ""} updated.`;
+      const summary = `${scanned} file${scanned !== 1 ? "s" : ""} scanned. ${changed} changed. ${changed} contract${changed !== 1 ? "s" : ""} updated. ${failed} failed.`;
       process.stdout.write(summary + "\n");
+
+      if (failed > 0 && options.allowPartialSuccess) {
+        process.stderr.write(
+          `ferret: scan completed with ${failed} extraction error(s) under --allow-partial-success\n`,
+        );
+      }
     } finally {
       await store.close();
     }

@@ -39,4 +39,11 @@ async function main(): Promise<void> {
   await program.parseAsync(process.argv);
 }
 
-void main();
+void main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  const diagnostic = message.startsWith("ferret:")
+    ? message
+    : `ferret: ${message}`;
+  process.stderr.write(diagnostic + "\n");
+  process.exit(2);
+});

@@ -193,11 +193,15 @@ export const lintCommand = new Command("lint")
       }
 
       process.exit(1);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const diagnostic = message.startsWith("ferret:")
+        ? message
+        : `ferret: ${message}`;
       if (options.ci) {
-        process.stderr.write(JSON.stringify({ error: String(err) }) + "\n");
+        process.stderr.write(JSON.stringify({ error: diagnostic }) + "\n");
       } else {
-        process.stderr.write(`ferret: configuration error — ${err.message}\n`);
+        process.stderr.write(diagnostic + "\n");
       }
       process.exit(2);
     } finally {
@@ -308,8 +312,6 @@ async function runScan(
   process.stdout.write = () => true;
   try {
     await scanCommand.parseAsync(args, { from: "node" });
-  } catch {
-    // Scan errors are non-fatal for lint
   } finally {
     process.stdout.write = savedWrite;
   }
