@@ -191,4 +191,44 @@ export function getUser(id: string, active: boolean): void {}
     });
     assert.deepEqual(shape.properties.params.required, ["id", "active"]);
   });
+
+  it("normalizes absolute paths to deterministic ids", () => {
+    const src = `
+export interface ProfileResponse {
+  id: string;
+}
+`;
+
+    const windowsPath =
+      "C:/Users/alice/work/specferret/src/contracts/profile.ts";
+    const unixPath =
+      "/home/bob/work/specferret/src/contracts/profile.ts";
+
+    const windowsResult = extractContractsFromTypeScript(windowsPath, src);
+    const unixResult = extractContractsFromTypeScript(unixPath, src);
+
+    assert.equal(windowsResult.contracts.length, 1);
+    assert.equal(unixResult.contracts.length, 1);
+    assert.equal(
+      windowsResult.contracts[0].id,
+      "type.src/contracts/profile/profileresponse",
+    );
+    assert.equal(
+      unixResult.contracts[0].id,
+      "type.src/contracts/profile/profileresponse",
+    );
+  });
+
+  it("falls back to core contract type for inferred declarations", () => {
+    const src = `
+export interface Team {
+  id: string;
+}
+`;
+
+    const result = extractContractsFromTypeScript("src/team.ts", src);
+
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].type, "type");
+  });
 });

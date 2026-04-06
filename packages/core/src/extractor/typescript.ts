@@ -57,9 +57,35 @@ function normalizeIdSegment(value: string): string {
     .replace(/(^[-./_]+)|([-./_]+$)/g, "");
 }
 
+function normalizeFilePathForId(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, "/").replace(/\.[cm]?tsx?$/i, "");
+
+  // Prefer repository-relative paths for deterministic ids. When absolute
+  // paths are passed, keep from the first src/ segment when available.
+  if (/^[a-z]:\//i.test(normalized) || normalized.startsWith("/")) {
+    const segments = normalized.split("/").filter(Boolean);
+    const srcIndex = segments.findIndex((segment) => segment.toLowerCase() === "src");
+
+    if (srcIndex >= 0) {
+      return segments.slice(srcIndex).join("/");
+    }
+
+    // Fallback to the last 3 path segments to reduce machine-specific prefixes.
+    return segments.slice(-3).join("/");
+  }
+
+  return normalized;
+}
+
+function inferContractType(): ContractType {
+  // Inferred extraction currently emits the strict six-core-type set and
+  // defaults to `type` unless an annotation override supplies another type.
+  return "type";
+}
+
 function inferContractId(filePath: string, symbol: string): string {
-  const withoutExt = filePath.replace(/\.[cm]?tsx?$/i, "").replace(/\\/g, "/");
-  const pathPart = normalizeIdSegment(withoutExt) || "source";
+  const normalizedPath = normalizeFilePathForId(filePath);
+  const pathPart = normalizeIdSegment(normalizedPath) || "source";
   const symbolPart = normalizeIdSegment(symbol) || "contract";
   return `type.${pathPart}/${symbolPart}`;
 }
@@ -613,7 +639,7 @@ export function extractContractsFromTypeScript(
 
     contracts.push({
       id: override?.id ?? inferContractId(filePath, declaration.symbol),
-      type: override?.type ?? "type",
+      type: override?.type ?? inferContractType(),
       shape,
       sourceSymbol: declaration.symbol,
       filePath,
