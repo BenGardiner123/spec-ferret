@@ -1,0 +1,18 @@
+{
+  "contracts": [
+    {
+      "id": "type.src/fixtures/intersections/useridentity",
+      "type": "type",
+      "shape": {
+        "type": "object"
+      },
+      "sourceSymbol": "UserIdentity",
+      "filePath": "src/fixtures/intersections.ts",
+      "idSource": "inferred"
+    }
+  ],
+  "errors": [],
+  "diagnostics": [
+    "src/fixtures/intersections.ts (UserIdentity): Intersection types are not supported in extraction. Falling back to object."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "contracts": [
+    {
+      "id": "type.src/fixtures/generics/paginatedresponse",
+      "type": "type",
+      "shape": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "nextCursor": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ]
+      },
+      "sourceSymbol": "PaginatedResponse",
+      "filePath": "src/fixtures/generics.ts",
+      "idSource": "inferred"
+    }
+  ],
+  "errors": [],
+  "diagnostics": [
+    "src/fixtures/generics.ts (PaginatedResponse): Unsupported referenced type 'T'. Falling back to object."
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "contracts": [
+    {
+      "id": "type.src/fixtures/optional-nested/searchresult",
+      "type": "type",
+      "shape": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "score": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "score"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "sourceSymbol": "SearchResult",
+      "filePath": "src/fixtures/optional-nested.ts",
+      "idSource": "inferred"
+    }
+  ],
+  "errors": [],
+  "diagnostics": []
+}

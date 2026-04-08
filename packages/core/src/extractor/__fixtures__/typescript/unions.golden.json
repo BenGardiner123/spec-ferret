@@ -1,0 +1,30 @@
+{
+  "contracts": [
+    {
+      "id": "type.src/fixtures/unions/maybeuser",
+      "type": "type",
+      "shape": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "object"
+          },
+          "displayName": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "sourceSymbol": "MaybeUser",
+      "filePath": "src/fixtures/unions.ts",
+      "idSource": "inferred"
+    }
+  ],
+  "errors": [],
+  "diagnostics": [
+    "src/fixtures/unions.ts (MaybeUser): Union types are not supported in extraction. Falling back to object.",
+    "src/fixtures/unions.ts (MaybeUser): Union types are not supported in extraction. Falling back to object."
+  ]
+}

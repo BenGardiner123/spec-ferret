@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { describe, it } from "bun:test";
 import { extractContractsFromTypeScript } from "./typescript.js";
 
@@ -301,5 +303,75 @@ export interface UserProfile {
         d.includes("Inferred id collision") && d.includes("userprofile-2"),
       ),
     );
+  });
+
+  it("matches golden outputs for fixture-driven regression cases", () => {
+    const fixtureDir = path.join(
+      import.meta.dir,
+      "__fixtures__",
+      "typescript",
+    );
+    const fixtureFiles = fs
+      .readdirSync(fixtureDir)
+      .filter((name) => name.endsWith(".ts"))
+      .sort();
+
+    assert.ok(fixtureFiles.length > 0, "expected at least one fixture file");
+
+    for (const fixtureFile of fixtureFiles) {
+      const fixturePath = path.join(fixtureDir, fixtureFile);
+      const goldenPath = path.join(
+        fixtureDir,
+        fixtureFile.replace(/\.ts$/, ".golden.json"),
+      );
+
+      assert.ok(
+        fs.existsSync(goldenPath),
+        `missing golden snapshot for ${fixtureFile}`,
+      );
+
+      const source = fs.readFileSync(fixturePath, "utf-8");
+      const logicalPath = `src/fixtures/${fixtureFile}`;
+
+      const first = extractContractsFromTypeScript(logicalPath, source);
+      const second = extractContractsFromTypeScript(logicalPath, source);
+      const golden = JSON.parse(fs.readFileSync(goldenPath, "utf-8"));
+
+      assert.deepEqual(
+        first,
+        golden,
+        `fixture output mismatch for ${fixtureFile}`,
+      );
+      assert.deepEqual(
+        second,
+        golden,
+        `fixture output was non-deterministic for ${fixtureFile}`,
+      );
+    }
+  });
+
+  it("captures unsupported syntax as deterministic diagnostics without crashing", () => {
+    const fixtureDir = path.join(
+      import.meta.dir,
+      "__fixtures__",
+      "typescript",
+    );
+    const filePath = path.join(fixtureDir, "unsupported-syntax.ts");
+    const source = fs.readFileSync(filePath, "utf-8");
+
+    const first = extractContractsFromTypeScript("src/fixtures/unsupported-syntax.ts", source);
+    const second = extractContractsFromTypeScript("src/fixtures/unsupported-syntax.ts", source);
+
+    assert.equal(first.errors.length, 0);
+    assert.ok(first.contracts.length > 0);
+    assert.ok(
+      first.diagnostics.some((d) =>
+        d.includes("Unsupported node type") ||
+        d.includes("Unsupported object member type") ||
+        d.includes("Intersection types are not supported") ||
+        d.includes("Union types are not supported"),
+      ),
+    );
+    assert.deepEqual(first.diagnostics, second.diagnostics);
   });
 });
