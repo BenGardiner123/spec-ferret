@@ -168,7 +168,7 @@ ferret extract
 Example summary from inferred extraction:
 
 ```text
-✓ ferret extract  7 files scanned  inferred=12  annotated=2  143ms
+ferret extract  created=7  updated=0  skipped=0  failed=0  inferred=12  annotated=2  143ms
 ```
 
 **4. Lint (default daily command)**
