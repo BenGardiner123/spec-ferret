@@ -305,7 +305,7 @@ This scaffolds `.contract.md` files under `contracts/` using deterministic mappi
 | `ferret lint`           | Detect and classify contract drift                                           |
 | `ferret lint --ci`      | CI mode — JSON output, exits non-zero on drift                               |
 | `ferret review`         | Resolve blocking drift interactively                                         |
-| `ferret review --json`  | Emit review context as JSON (for tooling and agents)                         |
+| `ferret review --json`  | Emit versioned review JSON with suggested actions and dependency context      |
 | `ferret extract`        | Generate contracts from exported TypeScript (annotation override compatible) |
 
 <details>
@@ -439,6 +439,27 @@ The impact report shows:
 - Depth of the transitive chain
 
 Run `ferret review` to step through each breaking drift, choose an action (accept / update / reject), and write resolution notes back to the contract file.
+
+<details>
+<summary><b>End-to-end agent loop (`ferret review --json`)</b></summary>
+
+1. Ask your agent to run:
+
+```bash
+ferret review --json
+```
+
+2. Agent reads each review item and prioritizes `suggestedActions` by `confidence`.
+3. Agent uses `dependencyContext` and the direct/transitive `impact` lists to update downstream files in blast-radius order.
+4. Agent re-runs:
+
+```bash
+ferret lint --ci
+```
+
+5. If clean, agent proceeds with commit/PR. If drift remains, it repeats the review loop with the new JSON payload.
+
+</details>
 
 ---
 

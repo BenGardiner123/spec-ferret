@@ -153,6 +153,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
 
     const json = JSON.parse(result.stdout) as {
       version: string;
+      reviewSchemaVersion: string;
       diagnosticsSchemaVersion: string;
       diagnostics: Array<{
         code: string;
@@ -169,6 +170,16 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
         };
         recommendedAction: string;
         availableActions: string[];
+        suggestedActions: Array<{
+          action: string;
+          confidence: number;
+          reason: string;
+        }>;
+        dependencyContext: {
+          directDependents: number;
+          transitiveDependents: number;
+          maxDepth: number;
+        };
       }>;
       selected: string[];
       action: null;
@@ -176,6 +187,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     };
 
     assert.equal(json.version, '2.0');
+    assert.equal(json.reviewSchemaVersion, '1.1.0');
     assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.equal(json.diagnostics.length >= 1, true);
     assert.equal(typeof json.diagnostics[0].code, 'string');
@@ -186,6 +198,12 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     assert.equal(json.action, null);
     assert.equal(json.result, null);
     assert.equal(json.reviewable[0].availableActions.includes('accept'), true);
+    assert.equal(json.reviewable[0].suggestedActions.length >= 1, true);
+    assert.equal(typeof json.reviewable[0].suggestedActions[0].confidence, 'number');
+    assert.equal(typeof json.reviewable[0].suggestedActions[0].reason, 'string');
+    assert.equal(json.reviewable[0].dependencyContext.directDependents >= 0, true);
+    assert.equal(json.reviewable[0].dependencyContext.transitiveDependents >= 0, true);
+    assert.equal(json.reviewable[0].dependencyContext.maxDepth >= 0, true);
     assert.equal(
       json.reviewable.some((item) => item.impact.direct.length > 0),
       true,
@@ -200,6 +218,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     assert.equal(result.stderr, '');
 
     const json = JSON.parse(result.stdout) as {
+      reviewSchemaVersion: string;
       diagnosticsSchemaVersion: string;
       diagnostics: Array<{
         code: string;
@@ -216,6 +235,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
       };
     };
 
+    assert.equal(json.reviewSchemaVersion, '1.1.0');
     assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.equal(json.diagnostics.length >= 1, true);
     assert.deepEqual(json.selected, ['auth.jwt']);
