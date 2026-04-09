@@ -216,13 +216,39 @@ BMAD validation repo:
 - Result: `success`
 - Matrix jobs: 12/12 successful
 
+---
+
+### Recorded Execution Evidence (2026-04-09 — 0.1.4, 12-scenario matrix + expectedTriggerContracts assertions)
+
+Candidate under test:
+
+- `@specferret/cli@0.1.4` installed from npm
+- All 11 scenario branches (+ main) upgraded to assert-scenario.sh v2 with `expectedTriggerContracts` block
+- Breaking scenarios (`breaking-required-field`, `breaking-type-change`, `transitive-impact-depth`, `breaking-required-field-added`, `depth-3-chain`) now declare `"expectedTriggerContracts": ["auth.jwt"]` in their manifests
+- The script reads `flagged[].triggeredByContractId` from `lint --ci` JSON and throws if any expected trigger ID is absent — proves WHICH contract caused the drift, not just that drift occurred
+- Non-breaking scenario branches carry the new script (the `expectedTriggerContracts` block is a no-op when the field is absent)
+
+spec-kit validation repo:
+
+- Workflow run (trigger-contracts verified): https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/24218834579
+- Result: `success`
+- Matrix jobs: 12/12 successful
+
+BMAD validation repo:
+
+- Workflow run (trigger-contracts verified): https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/24218835475
+- Result: `success`
+- Matrix jobs: 12/12 successful
+
 ### Previous Evidence (2026-04-09 — 0.1.4 npm install, 9-scenario matrix)
 
 spec-kit:
+
 - Workflow run: https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/24217228972
 - Head SHA: `9dfdee94132590bdbf0fc3b2ce3ca9cdebb3b164` · 9/9 successful
 
 BMAD:
+
 - Workflow run: https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/24217230401
 - Head SHA: `b87a5dc1edb1ed6b68f2d7c327416b182b89705b` · 9/9 successful
 
