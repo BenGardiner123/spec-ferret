@@ -1,13 +1,7 @@
-import Parser from "tree-sitter";
-import tsLanguage from "tree-sitter-typescript";
+import Parser from 'tree-sitter';
+import tsLanguage from 'tree-sitter-typescript';
 
-export type ContractType =
-  | "api"
-  | "table"
-  | "type"
-  | "event"
-  | "flow"
-  | "config";
+export type ContractType = 'api' | 'table' | 'type' | 'event' | 'flow' | 'config';
 
 export interface ExtractedCodeContract {
   id: string;
@@ -15,7 +9,7 @@ export interface ExtractedCodeContract {
   shape: Record<string, unknown>;
   sourceSymbol: string;
   filePath: string;
-  idSource?: "inferred" | "annotated";
+  idSource?: 'inferred' | 'annotated';
 }
 
 export interface TypeScriptExtractionResult {
@@ -33,7 +27,7 @@ interface Annotation {
 }
 
 interface ExportedDeclaration {
-  kind: "interface" | "type" | "enum" | "function";
+  kind: 'interface' | 'type' | 'enum' | 'function';
   symbol: string;
   node: Parser.SyntaxNode;
 }
@@ -45,7 +39,7 @@ interface AnnotationOverridesResult {
   errors: string[];
 }
 
-type TreeSitterLanguage = Parameters<Parser["setLanguage"]>[0];
+type TreeSitterLanguage = Parameters<Parser['setLanguage']>[0];
 
 const parser = new Parser();
 parser.setLanguage(tsLanguage.typescript as TreeSitterLanguage);
@@ -53,26 +47,26 @@ parser.setLanguage(tsLanguage.typescript as TreeSitterLanguage);
 function normalizeIdSegment(value: string): string {
   return value
     .toLowerCase()
-    .replace(/[^a-z0-9/._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/(^[-./_]+)|([-./_]+$)/g, "");
+    .replace(/[^a-z0-9/._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/(^[-./_]+)|([-./_]+$)/g, '');
 }
 
 function normalizeFilePathForId(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, "/").replace(/\.[cm]?tsx?$/i, "");
+  const normalized = filePath.replace(/\\/g, '/').replace(/\.[cm]?tsx?$/i, '');
 
   // Prefer repository-relative paths for deterministic ids. When absolute
   // paths are passed, keep from the first src/ segment when available.
-  if (/^[a-z]:\//i.test(normalized) || normalized.startsWith("/")) {
-    const segments = normalized.split("/").filter(Boolean);
-    const srcIndex = segments.findIndex((segment) => segment.toLowerCase() === "src");
+  if (/^[a-z]:\//i.test(normalized) || normalized.startsWith('/')) {
+    const segments = normalized.split('/').filter(Boolean);
+    const srcIndex = segments.findIndex((segment) => segment.toLowerCase() === 'src');
 
     if (srcIndex >= 0) {
-      return segments.slice(srcIndex).join("/");
+      return segments.slice(srcIndex).join('/');
     }
 
     // Fallback to the last 3 path segments to reduce machine-specific prefixes.
-    return segments.slice(-3).join("/");
+    return segments.slice(-3).join('/');
   }
 
   return normalized;
@@ -81,13 +75,13 @@ function normalizeFilePathForId(filePath: string): string {
 function inferContractType(): ContractType {
   // Inferred extraction currently emits the strict six-core-type set and
   // defaults to `type` unless an annotation override supplies another type.
-  return "type";
+  return 'type';
 }
 
 function inferContractId(filePath: string, symbol: string): string {
   const normalizedPath = normalizeFilePathForId(filePath);
-  const pathPart = normalizeIdSegment(normalizedPath) || "source";
-  const symbolPart = normalizeIdSegment(symbol) || "contract";
+  const pathPart = normalizeIdSegment(normalizedPath) || 'source';
+  const symbolPart = normalizeIdSegment(symbol) || 'contract';
   return `type.${pathPart}/${symbolPart}`;
 }
 
@@ -109,9 +103,7 @@ function allocateDeterministicInferredId(
 
   seenCounts.set(baseId, count);
   if (allocatedId !== baseId) {
-    diagnostics.push(
-      `${filePath} (${symbol}): Inferred id collision for '${baseId}'. Assigned deterministic suffix '${allocatedId}'.`,
-    );
+    diagnostics.push(`${filePath} (${symbol}): Inferred id collision for '${baseId}'. Assigned deterministic suffix '${allocatedId}'.`);
   }
 
   allocatedIds.set(allocatedId, symbol);
@@ -120,48 +112,38 @@ function allocateDeterministicInferredId(
 
 function toSchemaType(text: string): Schema {
   switch (text) {
-    case "string":
-      return { type: "string" };
-    case "number":
-    case "bigint":
-      return { type: "number" };
-    case "boolean":
-      return { type: "boolean" };
-    case "null":
-      return { type: "null" };
-    case "Date":
-      return { type: "string", format: "date-time" };
-    case "unknown":
-    case "any":
-      return { type: "object" };
+    case 'string':
+      return { type: 'string' };
+    case 'number':
+    case 'bigint':
+      return { type: 'number' };
+    case 'boolean':
+      return { type: 'boolean' };
+    case 'null':
+      return { type: 'null' };
+    case 'Date':
+      return { type: 'string', format: 'date-time' };
+    case 'unknown':
+    case 'any':
+      return { type: 'object' };
     default:
-      return { type: "object" };
+      return { type: 'object' };
   }
 }
 
 function getIdentifierText(node: Parser.SyntaxNode | null): string | null {
   if (!node) return null;
-  if (
-    node.type === "identifier" ||
-    node.type === "property_identifier" ||
-    node.type === "type_identifier"
-  ) {
+  if (node.type === 'identifier' || node.type === 'property_identifier' || node.type === 'type_identifier') {
     return node.text;
   }
 
   const idNode = node.namedChildren.find(
-    (child) =>
-      child.type === "identifier" ||
-      child.type === "property_identifier" ||
-      child.type === "type_identifier",
+    (child) => child.type === 'identifier' || child.type === 'property_identifier' || child.type === 'type_identifier',
   );
   return idNode ? idNode.text : null;
 }
 
-function extractAnnotationOverrides(
-  filePath: string,
-  content: string,
-): AnnotationOverridesResult {
+function extractAnnotationOverrides(filePath: string, content: string): AnnotationOverridesResult {
   const annotations = parseAnnotations(content);
   const overrides = new Map<string, Annotation>();
   const errors: string[] = [];
@@ -179,257 +161,206 @@ function extractAnnotationOverrides(
   return { overrides, errors };
 }
 
-function collectExportedDeclarations(
-  root: Parser.SyntaxNode,
-): ExportedDeclaration[] {
+function collectExportedDeclarations(root: Parser.SyntaxNode): ExportedDeclaration[] {
   const declarations: ExportedDeclaration[] = [];
 
   for (const node of root.namedChildren) {
-    if (node.type !== "export_statement") {
+    if (node.type !== 'export_statement') {
       continue;
     }
 
     const declaration = node.namedChildren.find((child) =>
-      [
-        "interface_declaration",
-        "type_alias_declaration",
-        "enum_declaration",
-        "function_declaration",
-      ].includes(child.type),
+      ['interface_declaration', 'type_alias_declaration', 'enum_declaration', 'function_declaration'].includes(child.type),
     );
 
     if (!declaration) {
       continue;
     }
 
-    const symbolNode = declaration.childForFieldName("name");
+    const symbolNode = declaration.childForFieldName('name');
     const symbol = getIdentifierText(symbolNode);
     if (!symbol) {
       continue;
     }
 
-    if (declaration.type === "interface_declaration") {
-      declarations.push({ kind: "interface", symbol, node: declaration });
+    if (declaration.type === 'interface_declaration') {
+      declarations.push({ kind: 'interface', symbol, node: declaration });
       continue;
     }
 
-    if (declaration.type === "type_alias_declaration") {
-      declarations.push({ kind: "type", symbol, node: declaration });
+    if (declaration.type === 'type_alias_declaration') {
+      declarations.push({ kind: 'type', symbol, node: declaration });
       continue;
     }
 
-    if (declaration.type === "enum_declaration") {
-      declarations.push({ kind: "enum", symbol, node: declaration });
+    if (declaration.type === 'enum_declaration') {
+      declarations.push({ kind: 'enum', symbol, node: declaration });
       continue;
     }
 
-    declarations.push({ kind: "function", symbol, node: declaration });
+    declarations.push({ kind: 'function', symbol, node: declaration });
   }
 
   return declarations;
 }
 
-function findChildByType(
-  node: Parser.SyntaxNode,
-  types: string[],
-): Parser.SyntaxNode | null {
+function findChildByType(node: Parser.SyntaxNode, types: string[]): Parser.SyntaxNode | null {
   return node.namedChildren.find((child) => types.includes(child.type)) ?? null;
 }
 
-function parseTypeNode(
-  filePath: string,
-  symbol: string,
-  node: Parser.SyntaxNode,
-  diagnostics: string[],
-): Schema {
-  if (node.type === "type_annotation") {
+function parseTypeNode(filePath: string, symbol: string, node: Parser.SyntaxNode, diagnostics: string[]): Schema {
+  if (node.type === 'type_annotation') {
     const inner = node.namedChildren[0];
     if (!inner) {
-      return { type: "object" };
+      return { type: 'object' };
     }
     return parseTypeNode(filePath, symbol, inner, diagnostics);
   }
 
-  if (node.type === "predefined_type") {
+  if (node.type === 'predefined_type') {
     return toSchemaType(node.text);
   }
 
-  if (node.type === "type_identifier") {
-    if (node.text === "Date") {
-      return { type: "string", format: "date-time" };
+  if (node.type === 'type_identifier') {
+    if (node.text === 'Date') {
+      return { type: 'string', format: 'date-time' };
     }
 
-    diagnostics.push(
-      `${filePath} (${symbol}): Unsupported referenced type '${node.text}'. Falling back to object.`,
-    );
-    return { type: "object" };
+    diagnostics.push(`${filePath} (${symbol}): Unsupported referenced type '${node.text}'. Falling back to object.`);
+    return { type: 'object' };
   }
 
-  if (node.type === "array_type") {
+  if (node.type === 'array_type') {
     const element = node.namedChildren[0];
     if (!element) {
-      diagnostics.push(
-        `${filePath} (${symbol}): Unable to parse array element type. Falling back to object items.`,
-      );
-      return { type: "array", items: { type: "object" } };
+      diagnostics.push(`${filePath} (${symbol}): Unable to parse array element type. Falling back to object items.`);
+      return { type: 'array', items: { type: 'object' } };
     }
 
     return {
-      type: "array",
+      type: 'array',
       items: parseTypeNode(filePath, symbol, element, diagnostics),
     };
   }
 
-  if (node.type === "union_type") {
-    diagnostics.push(
-      `${filePath} (${symbol}): Union types are not supported in extraction. Falling back to object.`,
-    );
-    return { type: "object" };
+  if (node.type === 'union_type') {
+    diagnostics.push(`${filePath} (${symbol}): Union types are not supported in extraction. Falling back to object.`);
+    return { type: 'object' };
   }
 
-  if (node.type === "intersection_type") {
-    diagnostics.push(
-      `${filePath} (${symbol}): Intersection types are not supported in extraction. Falling back to object.`,
-    );
-    return { type: "object" };
+  if (node.type === 'intersection_type') {
+    diagnostics.push(`${filePath} (${symbol}): Intersection types are not supported in extraction. Falling back to object.`);
+    return { type: 'object' };
   }
 
-  if (node.type === "literal_type") {
+  if (node.type === 'literal_type') {
     const valueNode = node.namedChildren[0];
     if (!valueNode) {
-      return { type: "object" };
+      return { type: 'object' };
     }
 
-    if (valueNode.type === "string") {
-      return { type: "string", enum: [valueNode.text.slice(1, -1)] };
+    if (valueNode.type === 'string') {
+      return { type: 'string', enum: [valueNode.text.slice(1, -1)] };
     }
 
-    if (valueNode.type === "number") {
-      return { type: "number", enum: [Number(valueNode.text)] };
+    if (valueNode.type === 'number') {
+      return { type: 'number', enum: [Number(valueNode.text)] };
     }
 
-    if (valueNode.type === "true" || valueNode.type === "false") {
-      return { type: "boolean", enum: [valueNode.type === "true"] };
+    if (valueNode.type === 'true' || valueNode.type === 'false') {
+      return { type: 'boolean', enum: [valueNode.type === 'true'] };
     }
 
-    return { type: "object" };
+    return { type: 'object' };
   }
 
-  if (node.type === "parenthesized_type") {
+  if (node.type === 'parenthesized_type') {
     const inner = node.namedChildren[0];
     if (!inner) {
-      return { type: "object" };
+      return { type: 'object' };
     }
     return parseTypeNode(filePath, symbol, inner, diagnostics);
   }
 
-  if (node.type === "object_type" || node.type === "interface_body") {
+  if (node.type === 'object_type' || node.type === 'interface_body') {
     return parseObjectShape(filePath, symbol, node, diagnostics);
   }
 
-  if (node.type === "function_type") {
-    const parameters = node.childForFieldName("parameters");
-    const returnType = node.childForFieldName("return_type");
+  if (node.type === 'function_type') {
+    const parameters = node.childForFieldName('parameters');
+    const returnType = node.childForFieldName('return_type');
 
     return {
-      type: "object",
+      type: 'object',
       properties: {
         params: parseParametersShape(filePath, symbol, parameters, diagnostics),
-        returns: returnType
-          ? parseTypeNode(filePath, symbol, returnType, diagnostics)
-          : { type: "object" },
+        returns: returnType ? parseTypeNode(filePath, symbol, returnType, diagnostics) : { type: 'object' },
       },
-      required: ["params", "returns"],
+      required: ['params', 'returns'],
     };
   }
 
-  diagnostics.push(
-    `${filePath} (${symbol}): Unsupported node type '${node.type}'. Falling back to object.`,
-  );
-  return { type: "object" };
+  diagnostics.push(`${filePath} (${symbol}): Unsupported node type '${node.type}'. Falling back to object.`);
+  return { type: 'object' };
 }
 
-function parseObjectShape(
-  filePath: string,
-  symbol: string,
-  node: Parser.SyntaxNode,
-  diagnostics: string[],
-): Schema {
+function parseObjectShape(filePath: string, symbol: string, node: Parser.SyntaxNode, diagnostics: string[]): Schema {
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
 
   const members = node.namedChildren;
 
   for (const member of members) {
-    if (!["property_signature", "method_signature"].includes(member.type)) {
-      diagnostics.push(
-        `${filePath} (${symbol}): Unsupported object member type '${member.type}'. Falling back by skipping this member.`,
-      );
+    if (!['property_signature', 'method_signature'].includes(member.type)) {
+      diagnostics.push(`${filePath} (${symbol}): Unsupported object member type '${member.type}'. Falling back by skipping this member.`);
       continue;
     }
 
-    const nameNode =
-      member.childForFieldName("name") ??
-      findChildByType(member, ["property_identifier", "identifier", "string"]);
-    const propertyName =
-      getIdentifierText(nameNode) ??
-      nameNode?.text?.replace(/^['"]|['"]$/g, "");
+    const nameNode = member.childForFieldName('name') ?? findChildByType(member, ['property_identifier', 'identifier', 'string']);
+    const propertyName = getIdentifierText(nameNode) ?? nameNode?.text?.replace(/^['"]|['"]$/g, '');
 
     if (!propertyName) {
-      diagnostics.push(
-        `${filePath} (${symbol}): Unable to parse property name in object type.`,
-      );
+      diagnostics.push(`${filePath} (${symbol}): Unable to parse property name in object type.`);
       continue;
     }
 
     // Check for a '?' token that is a direct (unnamed) child of the member node.
     // This correctly distinguishes optional properties (bar?: string) from required
     // methods that happen to have optional parameters (fn(x?: string): void).
-    const optional = member.children.some(
-      (child) => !child.isNamed && child.text === "?",
-    );
+    const optional = member.children.some((child) => !child.isNamed && child.text === '?');
     let schema: Schema;
 
-    if (member.type === "method_signature") {
-      const parameters = member.childForFieldName("parameters");
-      const returnType = member.childForFieldName("return_type");
+    if (member.type === 'method_signature') {
+      const parameters = member.childForFieldName('parameters');
+      const returnType = member.childForFieldName('return_type');
       schema = {
-        type: "object",
+        type: 'object',
         properties: {
-          params: parseParametersShape(
-            filePath,
-            symbol,
-            parameters,
-            diagnostics,
-          ),
-          returns: returnType
-            ? parseTypeNode(filePath, symbol, returnType, diagnostics)
-            : { type: "object" },
+          params: parseParametersShape(filePath, symbol, parameters, diagnostics),
+          returns: returnType ? parseTypeNode(filePath, symbol, returnType, diagnostics) : { type: 'object' },
         },
-        required: ["params", "returns"],
+        required: ['params', 'returns'],
       };
     } else {
       const typeNode =
-        member.childForFieldName("type") ??
-        member.childForFieldName("value") ??
+        member.childForFieldName('type') ??
+        member.childForFieldName('value') ??
         findChildByType(member, [
-          "type_annotation",
-          "predefined_type",
-          "type_identifier",
-          "array_type",
-          "union_type",
-          "intersection_type",
-          "object_type",
-          "literal_type",
-          "parenthesized_type",
-          "function_type",
+          'type_annotation',
+          'predefined_type',
+          'type_identifier',
+          'array_type',
+          'union_type',
+          'intersection_type',
+          'object_type',
+          'literal_type',
+          'parenthesized_type',
+          'function_type',
         ]);
 
       if (!typeNode) {
-        diagnostics.push(
-          `${filePath} (${symbol}): Unable to parse type expression for property '${propertyName}'.`,
-        );
-        schema = { type: "object" };
+        diagnostics.push(`${filePath} (${symbol}): Unable to parse type expression for property '${propertyName}'.`);
+        schema = { type: 'object' };
       } else {
         schema = parseTypeNode(filePath, symbol, typeNode, diagnostics);
       }
@@ -442,96 +373,76 @@ function parseObjectShape(
   }
 
   return {
-    type: "object",
+    type: 'object',
     properties,
     required,
   };
 }
 
-function parseParametersShape(
-  filePath: string,
-  symbol: string,
-  parametersNode: Parser.SyntaxNode | null,
-  diagnostics: string[],
-): Schema {
+function parseParametersShape(filePath: string, symbol: string, parametersNode: Parser.SyntaxNode | null, diagnostics: string[]): Schema {
   if (!parametersNode) {
-    return { type: "object", properties: {}, required: [] };
+    return { type: 'object', properties: {}, required: [] };
   }
 
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
 
   for (const parameter of parametersNode.namedChildren) {
-    if (
-      !["required_parameter", "optional_parameter", "rest_parameter"].includes(
-        parameter.type,
-      )
-    ) {
+    if (!['required_parameter', 'optional_parameter', 'rest_parameter'].includes(parameter.type)) {
       continue;
     }
 
     const nameNode =
-      parameter.childForFieldName("pattern") ??
-      parameter.childForFieldName("name") ??
+      parameter.childForFieldName('pattern') ??
+      parameter.childForFieldName('name') ??
       // rest_parameter exposes its identifier as a direct named child with no field name
-      parameter.namedChildren.find((c) => c.type === "identifier") ??
+      parameter.namedChildren.find((c) => c.type === 'identifier') ??
       null;
-    const parameterName = getIdentifierText(nameNode) ?? "arg";
+    const parameterName = getIdentifierText(nameNode) ?? 'arg';
     const typeNode =
-      parameter.childForFieldName("type") ??
+      parameter.childForFieldName('type') ??
       findChildByType(parameter, [
-        "type_annotation",
-        "predefined_type",
-        "type_identifier",
-        "array_type",
-        "union_type",
-        "intersection_type",
-        "object_type",
+        'type_annotation',
+        'predefined_type',
+        'type_identifier',
+        'array_type',
+        'union_type',
+        'intersection_type',
+        'object_type',
       ]);
 
-    properties[parameterName] = typeNode
-      ? parseTypeNode(filePath, symbol, typeNode, diagnostics)
-      : { type: "object" };
+    properties[parameterName] = typeNode ? parseTypeNode(filePath, symbol, typeNode, diagnostics) : { type: 'object' };
 
     // A rest parameter is represented as required_parameter with a rest_pattern child.
     // It can be called with zero arguments, so it must not appear in required[].
-    const isRestParameter = parameter.namedChildren.some(
-      (c) => c.type === "rest_pattern",
-    );
-    if (
-      parameter.type !== "optional_parameter" &&
-      parameter.type !== "rest_parameter" &&
-      !isRestParameter
-    ) {
+    const isRestParameter = parameter.namedChildren.some((c) => c.type === 'rest_pattern');
+    if (parameter.type !== 'optional_parameter' && parameter.type !== 'rest_parameter' && !isRestParameter) {
       required.push(parameterName);
     }
   }
 
   return {
-    type: "object",
+    type: 'object',
     properties,
     required,
   };
 }
 
 function parseEnumShape(node: Parser.SyntaxNode): Schema {
-  const body =
-    node.childForFieldName("body") ?? findChildByType(node, ["enum_body"]);
+  const body = node.childForFieldName('body') ?? findChildByType(node, ['enum_body']);
   if (!body) {
-    return { type: "string", enum: [] };
+    return { type: 'string', enum: [] };
   }
 
   const values = body.namedChildren
     .map((child) => {
       // Bare member: Admin
-      if (child.type === "property_identifier" || child.type === "identifier") {
+      if (child.type === 'property_identifier' || child.type === 'identifier') {
         return child.text;
       }
       // Valued member: Admin = "admin" or Admin = 1
-      if (child.type === "enum_assignment") {
-        const nameChild = child.namedChildren.find(
-          (c) => c.type === "property_identifier" || c.type === "identifier",
-        );
+      if (child.type === 'enum_assignment') {
+        const nameChild = child.namedChildren.find((c) => c.type === 'property_identifier' || c.type === 'identifier');
         return nameChild?.text ?? null;
       }
       return null;
@@ -539,71 +450,51 @@ function parseEnumShape(node: Parser.SyntaxNode): Schema {
     .filter((v): v is string => v !== null);
 
   return {
-    type: "string",
+    type: 'string',
     enum: values,
   };
 }
 
-function parseDeclarationShape(
-  filePath: string,
-  declaration: ExportedDeclaration,
-  diagnostics: string[],
-): Schema {
-  if (declaration.kind === "interface") {
-    const body =
-      declaration.node.childForFieldName("body") ??
-      findChildByType(declaration.node, ["interface_body"]);
+function parseDeclarationShape(filePath: string, declaration: ExportedDeclaration, diagnostics: string[]): Schema {
+  if (declaration.kind === 'interface') {
+    const body = declaration.node.childForFieldName('body') ?? findChildByType(declaration.node, ['interface_body']);
     if (!body) {
-      diagnostics.push(
-        `${filePath} (${declaration.symbol}): Interface body was not found. Falling back to object.`,
-      );
-      return { type: "object", properties: {}, required: [] };
+      diagnostics.push(`${filePath} (${declaration.symbol}): Interface body was not found. Falling back to object.`);
+      return { type: 'object', properties: {}, required: [] };
     }
 
     return parseObjectShape(filePath, declaration.symbol, body, diagnostics);
   }
 
-  if (declaration.kind === "type") {
-    const valueNode =
-      declaration.node.childForFieldName("value") ??
-      declaration.node.namedChildren.at(-1);
+  if (declaration.kind === 'type') {
+    const valueNode = declaration.node.childForFieldName('value') ?? declaration.node.namedChildren.at(-1);
     if (!valueNode) {
-      diagnostics.push(
-        `${filePath} (${declaration.symbol}): Type alias value was not found. Falling back to object.`,
-      );
-      return { type: "object" };
+      diagnostics.push(`${filePath} (${declaration.symbol}): Type alias value was not found. Falling back to object.`);
+      return { type: 'object' };
     }
 
     return parseTypeNode(filePath, declaration.symbol, valueNode, diagnostics);
   }
 
-  if (declaration.kind === "enum") {
+  if (declaration.kind === 'enum') {
     return parseEnumShape(declaration.node);
   }
 
-  const parameters = declaration.node.childForFieldName("parameters");
-  const returnType = declaration.node.childForFieldName("return_type");
+  const parameters = declaration.node.childForFieldName('parameters');
+  const returnType = declaration.node.childForFieldName('return_type');
 
   return {
-    type: "object",
+    type: 'object',
     properties: {
-      params: parseParametersShape(
-        filePath,
-        declaration.symbol,
-        parameters,
-        diagnostics,
-      ),
-      returns: returnType
-        ? parseTypeNode(filePath, declaration.symbol, returnType, diagnostics)
-        : { type: "object" },
+      params: parseParametersShape(filePath, declaration.symbol, parameters, diagnostics),
+      returns: returnType ? parseTypeNode(filePath, declaration.symbol, returnType, diagnostics) : { type: 'object' },
     },
-    required: ["params", "returns"],
+    required: ['params', 'returns'],
   };
 }
 
 function parseAnnotations(content: string): Annotation[] {
-  const pattern =
-    /^\s*\/\/\s*@ferret-contract:\s*([^\s]+)\s+(api|table|type|event|flow|config)\s*$/gm;
+  const pattern = /^\s*\/\/\s*@ferret-contract:\s*([^\s]+)\s+(api|table|type|event|flow|config)\s*$/gm;
   const out: Annotation[] = [];
   let match: RegExpExecArray | null;
 
@@ -630,18 +521,15 @@ function extractDeclaration(
 
   if (!decl) {
     return {
-      symbol: "unknown",
-      error: "No interface/type declaration found after annotation.",
+      symbol: 'unknown',
+      error: 'No interface/type declaration found after annotation.',
     };
   }
 
   return { symbol: decl[2] };
 }
 
-export function extractContractsFromTypeScript(
-  filePath: string,
-  content: string,
-): TypeScriptExtractionResult {
+export function extractContractsFromTypeScript(filePath: string, content: string): TypeScriptExtractionResult {
   const annotationResult = extractAnnotationOverrides(filePath, content);
   const annotationOverrides = annotationResult.overrides;
   const contracts: ExtractedCodeContract[] = [];
@@ -654,16 +542,13 @@ export function extractContractsFromTypeScript(
   try {
     tree = parser.parse(content);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unknown parse error.";
+    const message = error instanceof Error ? error.message : 'Unknown parse error.';
     errors.push(`${filePath}: Tree-sitter parse failed: ${message}`);
     return { contracts, errors, diagnostics };
   }
 
   if (tree.rootNode.hasError) {
-    diagnostics.push(
-      `${filePath}: Tree-sitter detected syntax errors; extraction may be partial.`,
-    );
+    diagnostics.push(`${filePath}: Tree-sitter detected syntax errors; extraction may be partial.`);
   }
 
   const declarations = collectExportedDeclarations(tree.rootNode);
@@ -676,23 +561,14 @@ export function extractContractsFromTypeScript(
     if (override?.id) {
       const existingOwner = allocatedIds.get(override.id);
       if (existingOwner && existingOwner !== declaration.symbol) {
-        errors.push(
-          `${filePath} (${declaration.symbol}): Annotation id '${override.id}' duplicates id already used by '${existingOwner}'.`,
-        );
+        errors.push(`${filePath} (${declaration.symbol}): Annotation id '${override.id}' duplicates id already used by '${existingOwner}'.`);
         continue;
       }
       allocatedId = override.id;
       allocatedIds.set(allocatedId, declaration.symbol);
     } else {
       const inferredId = inferContractId(filePath, declaration.symbol);
-      allocatedId = allocateDeterministicInferredId(
-        inferredId,
-        inferredIdCounts,
-        allocatedIds,
-        diagnostics,
-        filePath,
-        declaration.symbol,
-      );
+      allocatedId = allocateDeterministicInferredId(inferredId, inferredIdCounts, allocatedIds, diagnostics, filePath, declaration.symbol);
     }
 
     contracts.push({
@@ -701,7 +577,7 @@ export function extractContractsFromTypeScript(
       shape,
       sourceSymbol: declaration.symbol,
       filePath,
-      idSource: override?.id ? "annotated" : "inferred",
+      idSource: override?.id ? 'annotated' : 'inferred',
     });
   }
 
@@ -710,16 +586,10 @@ export function extractContractsFromTypeScript(
       continue;
     }
 
-    errors.push(
-      `${filePath}: Annotation for '${annotation.id}' did not match an exported declaration.`,
-    );
+    errors.push(`${filePath}: Annotation for '${annotation.id}' did not match an exported declaration.`);
   }
 
-  contracts.sort((a, b) =>
-    a.id === b.id
-      ? a.sourceSymbol.localeCompare(b.sourceSymbol)
-      : a.id.localeCompare(b.id),
-  );
+  contracts.sort((a, b) => (a.id === b.id ? a.sourceSymbol.localeCompare(b.sourceSymbol) : a.id.localeCompare(b.id)));
 
   return { contracts, errors, diagnostics };
 }
