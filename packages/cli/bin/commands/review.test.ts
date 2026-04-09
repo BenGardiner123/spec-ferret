@@ -153,6 +153,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
 
     const json = JSON.parse(result.stdout) as {
       version: string;
+      reviewSchemaVersion: string;
       diagnosticsSchemaVersion: string;
       diagnostics: Array<{
         code: string;
@@ -167,6 +168,15 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
           direct: Array<{ filePath: string }>;
           transitive: Array<{ filePath: string }>;
         };
+        suggestedActions: Array<{
+          action: string;
+          confidence: string;
+          reason: string;
+        }>;
+        dependencyContext: {
+          directDependents: Array<{ filePath: string; depth: number }>;
+          transitiveDependents: Array<{ filePath: string; depth: number }>;
+        };
         recommendedAction: string;
         availableActions: string[];
       }>;
@@ -176,6 +186,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     };
 
     assert.equal(json.version, '2.0');
+  assert.equal(json.reviewSchemaVersion, '1.1.0');
     assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.equal(json.diagnostics.length >= 1, true);
     assert.equal(typeof json.diagnostics[0].code, 'string');
@@ -186,6 +197,10 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     assert.equal(json.action, null);
     assert.equal(json.result, null);
     assert.equal(json.reviewable[0].availableActions.includes('accept'), true);
+    assert.equal(json.reviewable[0].suggestedActions.length >= 1, true);
+    assert.equal(typeof json.reviewable[0].suggestedActions[0].confidence, 'string');
+    assert.equal(json.reviewable[0].dependencyContext.directDependents.length >= 0, true);
+    assert.equal(json.reviewable[0].dependencyContext.transitiveDependents.length >= 0, true);
     assert.equal(
       json.reviewable.some((item) => item.impact.direct.length > 0),
       true,
@@ -200,12 +215,20 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     assert.equal(result.stderr, '');
 
     const json = JSON.parse(result.stdout) as {
+      reviewSchemaVersion: string;
       diagnosticsSchemaVersion: string;
       diagnostics: Array<{
         code: string;
         severity: string;
         location: Record<string, unknown>;
         remediation: string;
+      }>;
+      reviewable: Array<{
+        suggestedActions: Array<{ action: string; confidence: string; reason: string }>;
+        dependencyContext: {
+          directDependents: Array<{ filePath: string; depth: number }>;
+          transitiveDependents: Array<{ filePath: string; depth: number }>;
+        };
       }>;
       selected: string[];
       action: string;
@@ -216,8 +239,12 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
       };
     };
 
+    assert.equal(json.reviewSchemaVersion, '1.1.0');
     assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.equal(json.diagnostics.length >= 1, true);
+    assert.equal(json.reviewable[0].suggestedActions.length >= 1, true);
+    assert.equal(typeof json.reviewable[0].suggestedActions[0].reason, 'string');
+    assert.equal(json.reviewable[0].dependencyContext.directDependents.length >= 0, true);
     assert.deepEqual(json.selected, ['auth.jwt']);
     assert.equal(json.action, 'accept');
     assert.equal(json.result.repoBlocked, false);
