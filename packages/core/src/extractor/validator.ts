@@ -28,7 +28,7 @@ export function validateContractType(contractType: unknown, filePath: string): C
 
   return {
     valid: false,
-    error: `Invalid contract type '${String(contractType)}' in ${filePath}. ` + `Allowed types: ${formatAllowedContractTypes()}.`,
+    error: `Invalid contract type '${String(contractType)}' in ${filePath}. Allowed types: ${formatAllowedContractTypes()}.`,
   };
 }
 
