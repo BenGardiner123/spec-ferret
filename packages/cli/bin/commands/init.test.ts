@@ -113,7 +113,7 @@ describe('ferret init — S01 acceptance criteria', () => {
     assert.equal(content, sentinel);
   });
 
-  it('second run prints \'Already initialised.\' and exits 0', () => {
+  it("second run prints 'Already initialised.' and exits 0", () => {
     runInit(tmpDir);
     const second = runInit(tmpDir);
     assert.equal(second.status, 0);
