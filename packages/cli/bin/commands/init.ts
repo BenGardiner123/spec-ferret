@@ -124,6 +124,13 @@ export const initCommand = new Command('init')
     // Idempotency check — already initialised
     if (alreadyInitialised) {
       process.stdout.write('Already initialised.\n');
+      process.stdout.write('✓ ferret initialised (existing project)\n');
+    } else {
+      process.stdout.write('✓ ferret initialised\n');
+      process.stdout.write('  .ferret/graph.db     created\n');
+      process.stdout.write('  contracts/example.contract.md  created\n');
+      process.stdout.write('  CLAUDE.md            created\n');
+      process.stdout.write('  ferret.config.json   created\n');
     }
 
     if (!alreadyInitialised) {
@@ -200,16 +207,6 @@ export const initCommand = new Command('init')
       }
     }
 
-    if (!alreadyInitialised) {
-      process.stdout.write('✓ ferret initialised\n');
-      process.stdout.write('  .ferret/graph.db     created\n');
-      process.stdout.write('  contracts/example.contract.md  created\n');
-      process.stdout.write('  CLAUDE.md            created\n');
-      process.stdout.write('  ferret.config.json   created\n');
-    } else {
-      process.stdout.write('✓ ferret initialised (existing project)\n');
-    }
-
     // 7. Pre-commit hook — installed by default, explicit opt-out via --no-hook
     if (options.hook !== false) {
       const hookResult = installHook(root);
@@ -275,14 +272,14 @@ function generateAdapterArtifact(target: AdapterTarget, canonicalRules: string):
   }
 
   if (target === 'copilot') {
-    return `${managedHeader}\n---\ndescription: "Generated Copilot adapter from SpecFerret canonical rules."\napplyTo: "**"\n---\n\n# Copilot Adapter\n\nThis adapter is generated from canonical SpecFerret rules.\n\n${canonicalBlock}\n`;
+    return `---\ndescription: "Generated Copilot adapter from SpecFerret canonical rules."\napplyTo: "**"\n---\n\n${managedHeader}\n# Copilot Adapter\n\nThis adapter is generated from canonical SpecFerret rules.\n\n${canonicalBlock}\n`;
   }
 
   return `${managedHeader}\n# Gemini Adapter\n\nThis adapter is generated from canonical SpecFerret rules.\n\n${canonicalBlock}\n`;
 }
 
 function writeManagedAdapter(filePath: string, target: AdapterTarget, nextContent: string): AdapterWriteResult {
-  const managedPrefix = `<!-- specferret:generated-adapter target=${target} version=1 -->`;
+  const managedToken = `specferret:generated-adapter target=${target} version=1`;
 
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, nextContent, 'utf-8');
@@ -290,7 +287,7 @@ function writeManagedAdapter(filePath: string, target: AdapterTarget, nextConten
   }
 
   const existing = fs.readFileSync(filePath, 'utf-8');
-  if (!existing.startsWith(managedPrefix)) {
+  if (!existing.includes(managedToken)) {
     return 'skipped-unmanaged';
   }
 
