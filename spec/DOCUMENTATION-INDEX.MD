@@ -38,6 +38,7 @@ Single entry point for SpecFerret planning and GA validation documentation.
 
 - `spec/GA-VALIDATION-REPOS.MD` — branch-matrix GA policy for external proof repos
 - `spec/GA-VALIDATION-RUNBOOK.MD` — branch-matrix execution and evidence capture runbook
+- `spec/RELEASE-GATE-CHECKLIST.MD` — release enforcement checklist for performance, CI schema, and docs/runtime alignment
 - `.github/workflows/ferret-action-smoke.yml` — local reusable-action smoke validation workflow
 - `.github/actions/ferret-lint/README.md` — reusable action contract, inputs/outputs, usage
 - `spec/validation-repo-templates/spec-kit/` — spec-kit validation template and CI workflow
