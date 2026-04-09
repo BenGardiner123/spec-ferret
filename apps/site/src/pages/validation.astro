@@ -1,0 +1,373 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+type ExpectedOutcome = {
+  exitCode: number;
+  driftClass: 'clean' | 'breaking' | 'nonbreaking';
+  reviewRequired: boolean;
+  depthAssertions?: { directAtLeast: number; transitiveAtLeast: number; maxDepthAtLeast: number };
+  proofArtifacts?: string[];
+  extractDeterminism?: boolean;
+};
+
+type ScenarioManifest = {
+  scenario: { name: string; branch: string; description: string };
+  expected: ExpectedOutcome;
+};
+
+type RunEntry = { html_url: string; created_at: string } | null;
+
+const REPO_SK = 'BenGardiner123/spec-ferret-validation-spec-kit';
+const REPO_BMAD = 'BenGardiner123/specferret-validation-bmad';
+
+const BRANCHES = [
+  'main',
+  'scenario/breaking-required-field',
+  'scenario/breaking-type-change',
+  'scenario/nonbreaking-optional-add',
+  'scenario/transitive-impact-depth',
+  'scenario/review-resolution-flow',
+  'scenario/code-first-extract',
+  'scenario/specferret-opinionated-layout',
+  'scenario/agent-mode-init',
+];
+
+async function fetchManifest(branch: string): Promise<ScenarioManifest | null> {
+  try {
+    const res = await fetch(
+      `https://raw.githubusercontent.com/${REPO_SK}/${branch}/SCENARIO-MANIFEST.json`,
+    );
+    if (!res.ok) return null;
+    return res.json() as Promise<ScenarioManifest>;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLatestRun(repo: string): Promise<RunEntry> {
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${repo}/actions/workflows/specferret-validation.yml/runs?status=success&per_page=1`,
+      { headers: { Accept: 'application/vnd.github+json' } },
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { workflow_runs?: RunEntry[] };
+    return data.workflow_runs?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const [manifests, skRun, bmadRun] = await Promise.all([
+  Promise.all(BRANCHES.map(fetchManifest)),
+  fetchLatestRun(REPO_SK),
+  fetchLatestRun(REPO_BMAD),
+]);
+
+const scenarios = manifests.filter((m): m is ScenarioManifest => m !== null);
+
+const LABELS: Record<string, string> = {
+  'main-baseline': 'Main Baseline',
+  'breaking-required-field': 'Breaking: Required Field',
+  'breaking-type-change': 'Breaking: Type Change',
+  'nonbreaking-optional-add': 'Non-breaking: Optional Field',
+  'transitive-impact-depth': 'Transitive Impact Depth',
+  'review-resolution-flow': 'Review Resolution Flow',
+  'code-first-extract': 'Code-First Extraction',
+  'specferret-opinionated-layout': 'Opinionated Layout',
+  'agent-mode-init': 'Agent Mode Init',
+};
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+---
+
+<BaseLayout
+  title="Validation Matrix · SpecFerret"
+  description="9-scenario validation matrix for @specferret/cli. Run against spec-kit and BMAD repos on every release to prove correctness before publish."
+>
+  <main>
+    <header class="topbar">
+      <a class="brand mono" href="/">specferret.dev</a>
+      <a class="repo" href="https://github.com/BenGardiner123/spec-ferret">GitHub</a>
+    </header>
+
+    <section class="hero">
+      <p class="pill mono">@specferret/cli@0.1.4 · 9 scenarios · 2 repos</p>
+      <h1>Validation Matrix</h1>
+      <p class="subhead">
+        Every release must pass all 9 scenarios against the live npm package in two external
+        validation repositories before publish. Manifests are fetched live from GitHub at build
+        time.
+      </p>
+      <div class="run-row">
+        {
+          skRun && (
+            <a class="run-badge" href={skRun.html_url} target="_blank" rel="noopener noreferrer">
+              ✓ spec-kit · {formatDate(skRun.created_at)} →
+            </a>
+          )
+        }
+        {
+          bmadRun && (
+            <a class="run-badge" href={bmadRun.html_url} target="_blank" rel="noopener noreferrer">
+              ✓ BMAD · {formatDate(bmadRun.created_at)} →
+            </a>
+          )
+        }
+      </div>
+    </section>
+
+    <section class="matrix">
+      {
+        scenarios.map((s) => {
+          const isBreaking = s.expected.driftClass === 'breaking';
+          const depth = s.expected.depthAssertions;
+          const proof = s.expected.proofArtifacts;
+          const hasTags =
+            s.expected.reviewRequired || depth || proof || s.expected.extractDeterminism;
+          return (
+            <article class={`card ${isBreaking ? 'card-breaking' : 'card-clean'}`}>
+              <div class="card-meta">
+                <span class={`badge ${isBreaking ? 'badge-amber' : 'badge-green'}`}>
+                  {s.expected.driftClass}
+                </span>
+                <code class="exit">exit {s.expected.exitCode}</code>
+              </div>
+              <h3>{LABELS[s.scenario.name] ?? s.scenario.name}</h3>
+              <p class="desc">{s.scenario.description}</p>
+              {hasTags && (
+                <div class="tags">
+                  {s.expected.reviewRequired && <span class="tag">review required</span>}
+                  {depth && <span class="tag">max depth ≥{depth.maxDepthAtLeast}</span>}
+                  {depth && <span class="tag">direct ≥{depth.directAtLeast}</span>}
+                  {depth && <span class="tag">transitive ≥{depth.transitiveAtLeast}</span>}
+                  {proof && <span class="tag">{proof.length} proof artifacts</span>}
+                  {s.expected.extractDeterminism && <span class="tag">extract determinism</span>}
+                </div>
+              )}
+              <code class="branch">{s.scenario.branch}</code>
+            </article>
+          );
+        })
+      }
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1.25rem 1rem 4rem;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .brand {
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .repo {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.5rem 0.9rem;
+    text-decoration: none;
+    font-size: 0.9rem;
+    background: color-mix(in oklab, var(--paper) 90%, white);
+  }
+
+  .hero {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 1.6rem;
+    box-shadow: 0 10px 30px rgba(23, 32, 53, 0.08);
+    animation: rise 550ms ease-out;
+    margin-bottom: 1.2rem;
+  }
+
+  .pill {
+    display: inline-block;
+    margin: 0;
+    border: 1px solid color-mix(in oklab, var(--brand) 45%, var(--line));
+    color: var(--brand);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+    background: var(--brand-ink);
+  }
+
+  h1 {
+    margin: 0.8rem 0 0.6rem;
+    font-size: clamp(2rem, 7vw, 3.4rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+
+  .subhead {
+    margin: 0;
+    max-width: 56ch;
+    color: var(--muted);
+    font-size: 1.05rem;
+  }
+
+  .run-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+  }
+
+  .run-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    text-decoration: none;
+    border: 1px solid color-mix(in oklab, var(--brand) 35%, var(--line));
+    border-radius: 12px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--brand);
+    background: var(--brand-ink);
+    transition: background 150ms;
+  }
+
+  .run-badge:hover {
+    background: color-mix(in oklab, var(--brand-ink) 80%, var(--brand));
+  }
+
+  /* ── Matrix grid ───────────────────────────────────────────── */
+
+  .matrix {
+    display: grid;
+    gap: 0.8rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    animation: rise 700ms ease-out;
+  }
+
+  .card {
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    animation: rise 650ms ease-out;
+  }
+
+  .card-clean {
+    background: color-mix(in oklab, var(--brand-ink) 60%, white);
+    border-color: color-mix(in oklab, var(--brand) 20%, var(--line));
+  }
+
+  .card-breaking {
+    background: color-mix(in oklab, #fff8e8 80%, white);
+    border-color: color-mix(in oklab, #f59f00 25%, var(--line));
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .badge {
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .badge-green {
+    background: var(--brand-ink);
+    color: var(--brand);
+    border: 1px solid color-mix(in oklab, var(--brand) 30%, transparent);
+  }
+
+  .badge-amber {
+    background: #fff3d0;
+    color: #946300;
+    border: 1px solid color-mix(in oklab, #f59f00 35%, transparent);
+  }
+
+  .exit {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .card h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--ink);
+  }
+
+  .desc {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.45;
+    flex: 1;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.1rem;
+  }
+
+  .tag {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .branch {
+    font-size: 0.75rem;
+    color: color-mix(in oklab, var(--muted) 70%, transparent);
+    margin-top: auto;
+    padding-top: 0.2rem;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 640px) {
+    main {
+      padding-top: 0.9rem;
+    }
+
+    .matrix {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

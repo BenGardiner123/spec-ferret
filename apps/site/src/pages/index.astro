@@ -9,7 +9,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <main>
     <header class="topbar">
       <div class="brand mono">specferret.dev</div>
-      <a class="repo" href="https://github.com/BenGardiner123/spec-ferret">GitHub</a>
+      <nav class="topnav">
+        <a class="nav-link" href="/validation">Validation</a>
+        <a class="repo" href="https://github.com/BenGardiner123/spec-ferret">GitHub</a>
+      </nav>
     </header>
 
     <section class="hero">
@@ -122,6 +125,25 @@ ferret init --agent-targets claude,copilot,gemini</code></pre>
     justify-content: space-between;
     align-items: center;
     margin-bottom: 2rem;
+  }
+
+  .topnav {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .nav-link {
+    text-decoration: none;
+    font-size: 0.9rem;
+    color: var(--muted);
+    padding: 0.5rem 0.7rem;
+    border-radius: 8px;
+    transition: color 150ms;
+  }
+
+  .nav-link:hover {
+    color: var(--ink);
   }
 
   .brand {
