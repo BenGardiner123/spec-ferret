@@ -4,6 +4,7 @@
 export * from "./extractor/frontmatter.js";
 export * from "./extractor/typescript.js";
 export * from "./extractor/validator.js";
+export * from "./extractor/contract-types.js";
 export * from "./extractor/hash.js";
 export * from "./context/index.js";
 export * from "./store/types.js";

@@ -65,7 +65,7 @@ export function extractFromSpecFile(filePath: string, fileContent: string): Extr
     contracts: [
       {
         id: ferret.id as string,
-        type: typeValidation.value!,
+        type: typeValidation.value,
         shape: ferret.shape as object,
         shape_hash: hashSchema(ferret.shape),
         imports: Array.isArray(ferret.imports) ? (ferret.imports as string[]) : [],

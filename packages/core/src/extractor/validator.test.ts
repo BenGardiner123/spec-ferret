@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'bun:test';
-import { validateFerretSchema, compareSchemas, validateContractType, getAllowedContractTypes } from './validator.js';
+import { validateFerretSchema, compareSchemas, validateContractType } from './validator.js';
 import { CONTRACT_TYPES } from './contract-types.js';
 
 // ─── validateFerretSchema ────────────────────────────────────────────────────
@@ -62,8 +62,9 @@ describe('validateContractType', () => {
     for (const contractType of CONTRACT_TYPES) {
       const result = validateContractType(contractType, 'contracts/test.contract.md');
       assert.equal(result.valid, true);
-      assert.equal(result.value, contractType);
-      assert.equal(result.error, undefined);
+      if (result.valid) {
+        assert.equal(result.value, contractType);
+      }
     }
   });
 
@@ -74,8 +75,8 @@ describe('validateContractType', () => {
     assert.match(result.error ?? '', /Allowed types: api, table, type, event, flow, config/);
   });
 
-  it('uses the same contract type set as extractor shared constants', () => {
-    assert.deepEqual(getAllowedContractTypes(), CONTRACT_TYPES);
+  it('keeps shared constants aligned with expected six core types', () => {
+    assert.deepEqual(CONTRACT_TYPES, ['api', 'table', 'type', 'event', 'flow', 'config']);
   });
 });
 

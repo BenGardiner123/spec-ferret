@@ -15,11 +15,9 @@ export interface SchemaComparisonResult {
   reason: string;
 }
 
-export interface ContractTypeValidationResult {
-  valid: boolean;
-  value?: ContractType;
-  error?: string;
-}
+export type ContractTypeValidationResult =
+  | { valid: true; value: ContractType }
+  | { valid: false; error: string };
 
 export function validateContractType(contractType: unknown, filePath: string): ContractTypeValidationResult {
   if (isContractType(contractType)) {
@@ -30,10 +28,6 @@ export function validateContractType(contractType: unknown, filePath: string): C
     valid: false,
     error: `Invalid contract type '${String(contractType)}' in ${filePath}. Allowed types: ${formatAllowedContractTypes()}.`,
   };
-}
-
-export function getAllowedContractTypes(): readonly ContractType[] {
-  return CONTRACT_TYPES;
 }
 
 /**
