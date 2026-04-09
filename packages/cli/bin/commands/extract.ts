@@ -102,7 +102,22 @@ export const extractCommand = new Command("extract")
     "Deterministically scaffold .contract.md files from exported TypeScript declarations (annotation overrides supported).",
   )
   .option("--write", "Write generated contracts to disk (default: true)", true)
-  .action(async () => {
+  .option(
+    "--perf-budget-ms <ms>",
+    "Fail (exit 1) if extract runtime exceeds this budget in milliseconds",
+  )
+  .action(async (options) => {
+    const start = performance.now();
+    const perfBudgetMs = parsePositiveMsBudget(options.perfBudgetMs);
+
+    if (perfBudgetMs === null) {
+      process.stderr.write(
+        "ferret: invalid --perf-budget-ms value. Use a positive number.\n",
+      );
+      process.exit(2);
+      return;
+    }
+
     const root = findProjectRoot();
     const config = loadConfig();
 
@@ -218,18 +233,40 @@ export const extractCommand = new Command("extract")
       }
     }
 
+    const ms = Math.round(performance.now() - start);
+    const perfExceeded = perfBudgetMs !== undefined && ms > perfBudgetMs;
+
     process.stdout.write(
-      `ferret extract  created=${created}  updated=${updated}  skipped=${skipped}  failed=${failed}  inferred=${inferred}  annotated=${annotated}\n`,
+      `ferret extract  created=${created}  updated=${updated}  skipped=${skipped}  failed=${failed}  inferred=${inferred}  annotated=${annotated}  ${ms}ms\n`,
     );
 
     for (const d of diagnostics) {
       process.stderr.write(`⚠ ${d}\n`);
     }
 
-    if (failed > 0) {
+    if (perfExceeded) {
+      process.stderr.write(
+        `ferret: performance budget exceeded for extract (${ms}ms > ${perfBudgetMs}ms).\n`,
+      );
+    }
+
+    if (failed > 0 || perfExceeded) {
       process.exit(1);
       return;
     }
 
     process.exit(0);
   });
+
+function parsePositiveMsBudget(raw: unknown): number | undefined | null {
+  if (raw === undefined || raw === null || raw === "") {
+    return undefined;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return Math.round(parsed);
+}

@@ -574,6 +574,20 @@ bun test
 bun run build
 ```
 
+**Performance benchmark guardrails**
+
+Use explicit performance budgets when validating contributor changes:
+
+```bash
+# Lint clean-run budget (project baseline target)
+ferret lint --perf-budget-ms 500
+
+# Extract runtime budget (tune per fixture/repo size in CI)
+ferret extract --perf-budget-ms 1000
+```
+
+If a budget is exceeded, the command exits non-zero and prints an actionable diagnostic.
+
 **Documentation safety rule**
 
 - Never include PII or secrets in docs, contracts, runbooks, screenshots, logs, or release evidence.

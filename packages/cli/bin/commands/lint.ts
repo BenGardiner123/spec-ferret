@@ -27,9 +27,22 @@ export const lintCommand = new Command("lint")
     "--ci-suggestions",
     "Include non-blocking import suggestions in --ci output",
   )
+  .option(
+    "--perf-budget-ms <ms>",
+    "Fail (exit 1) if lint runtime exceeds this budget in milliseconds",
+  )
   .option("--force", "Re-extract all files before linting")
   .action(async (options) => {
     const start = performance.now();
+    const perfBudgetMs = parsePositiveMsBudget(options.perfBudgetMs);
+
+    if (perfBudgetMs === null) {
+      process.stderr.write(
+        "ferret: invalid --perf-budget-ms value. Use a positive number.\n",
+      );
+      process.exit(2);
+      return;
+    }
 
     const root = findProjectRoot();
     const config = loadConfig();
@@ -83,6 +96,7 @@ export const lintCommand = new Command("lint")
       const contracts = await store.getContracts();
       const contractCount = contracts.length;
       const ms = Math.round(performance.now() - start);
+      const perfExceeded = perfBudgetMs !== undefined && ms > perfBudgetMs;
       const hasIntegrityViolations =
         report.integrityViolations.unresolvedImports.length > 0 ||
         report.integrityViolations.selfImports.length > 0 ||
@@ -107,15 +121,22 @@ export const lintCommand = new Command("lint")
           consistent: report.consistent,
           breaking,
           nonBreaking,
+          durationMs: ms,
           flagged: report.flagged,
           integrityViolations: report.integrityViolations,
           timestamp: report.timestamp,
         };
+        if (perfBudgetMs !== undefined) {
+          output.performanceBudgetMs = perfBudgetMs;
+          output.performanceExceeded = perfExceeded;
+        }
         if (options.ciSuggestions && suggestionsEnabled) {
           output.importSuggestions = report.importSuggestions;
         }
         process.stdout.write(JSON.stringify(output, null, 2) + "\n");
-        process.exit(hasIntegrityViolations ? 2 : report.consistent ? 0 : 1);
+        process.exit(
+          hasIntegrityViolations ? 2 : perfExceeded ? 1 : report.consistent ? 0 : 1,
+        );
         return;
       }
 
@@ -137,6 +158,13 @@ export const lintCommand = new Command("lint")
         );
         if (suggestionsEnabled) {
           renderImportSuggestions(report.importSuggestions, true);
+        }
+        if (perfExceeded) {
+          process.stderr.write(
+            `ferret: performance budget exceeded for lint (${ms}ms > ${perfBudgetMs}ms).\n`,
+          );
+          process.exit(1);
+          return;
         }
         process.exit(0);
         return;
@@ -208,6 +236,19 @@ export const lintCommand = new Command("lint")
       await store.close();
     }
   });
+
+function parsePositiveMsBudget(raw: unknown): number | undefined | null {
+  if (raw === undefined || raw === null || raw === "") {
+    return undefined;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return Math.round(parsed);
+}
 
 type CommittedContext = {
   contracts: Array<{
