@@ -295,12 +295,12 @@ Then run:
 ferret extract
 ```
 
-This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Summary output includes `inferred=<n>` and `annotated=<n>`. The command exits non-zero only for hard extraction errors.
+This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Summary output includes `created=<n>`, `updated=<n>`, `skipped=<n>`, and `failed=<n>`. The command exits non-zero for hard extraction errors, when `--perf-budget-ms` is exceeded, and with exit code `2` when `--perf-budget-ms` is invalid.
 
 Inferred output example:
 
 ```text
-✓ ferret extract  3 files scanned  inferred=5  annotated=1  87ms
+ferret extract  created=5  updated=1  skipped=0  failed=0  87ms
 ```
 
 Migration from annotation-first repositories:
