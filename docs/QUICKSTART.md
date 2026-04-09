@@ -145,8 +145,14 @@ ferret lint
 Use these when needed:
 
 - `ferret review` for drift resolution
-- `ferret extract` to scaffold contracts from annotated TypeScript
+- `ferret extract` to scaffold contracts from exported TypeScript with inferred ids/types by default
 - `ferret scan` only for manual graph/debug workflows
+
+Migration note for annotation-first repositories:
+
+- existing `@ferret-contract` annotations remain valid as explicit overrides
+- inferred and annotated contracts can run together during migration
+- remove annotations gradually after confirming inferred ids/types are stable
 
 ---
 

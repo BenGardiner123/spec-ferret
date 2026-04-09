@@ -163,7 +163,13 @@ Code-first TypeScript path:
 ferret extract
 ```
 
-`ferret extract` uses Tree-sitter to infer contracts from exported TypeScript declarations and scaffolds deterministic `.contract.md` files. `@ferret-contract` remains supported as a compatibility override for explicit `id` and `type`.
+`ferret extract` uses Tree-sitter to infer contracts from exported TypeScript declarations and scaffolds deterministic `.contract.md` files with no annotations required. `@ferret-contract` remains supported as a compatibility override for explicit `id` and `type`.
+
+Example summary from inferred extraction:
+
+```text
+ferret extract  created=7  updated=0  skipped=0  failed=0  inferred=12  annotated=2  143ms
+```
 
 **4. Lint (default daily command)**
 
@@ -273,7 +279,7 @@ Now if `auth.jwt` shape changes, `api.POST/search` is flagged as an impacted con
 <details>
 <summary><b>Code-first: extract contracts from TypeScript</b></summary>
 
-SpecFerret extracts contracts from TypeScript by default — no annotations needed. Use `@ferret-contract` as an override:
+SpecFerret extracts contracts from TypeScript by default, so no annotations are required for normal workflows. Use `@ferret-contract` only when you need an explicit `id` or `type` override:
 
 ```ts
 // @ferret-contract: api.GET/users api
@@ -289,7 +295,22 @@ Then run:
 ferret extract
 ```
 
-This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Summary output includes `inferred=<n>` and `annotated=<n>`. The command exits non-zero only for hard extraction errors.
+This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Summary output includes `created=<n>`, `updated=<n>`, `skipped=<n>`, and `failed=<n>`. The command exits non-zero for hard extraction errors, when `--perf-budget-ms` is exceeded, and with exit code `2` when `--perf-budget-ms` is invalid.
+
+Inferred output example:
+
+```text
+ferret extract  created=5  updated=1  skipped=0  failed=0  inferred=5  annotated=1  87ms
+```
+
+Migration from annotation-first repositories:
+
+1. Keep existing `@ferret-contract` annotations in place initially.
+2. Run `ferret extract` and verify generated ids/types match expected contracts.
+3. Remove annotations incrementally where inferred ids/types are already correct.
+4. Retain annotations only for files that need explicit overrides.
+
+Mixed repository mode is fully supported: inferred and annotated contracts can coexist in the same run.
 
 </details>
 
@@ -305,7 +326,7 @@ This scaffolds `.contract.md` files under `contracts/` using deterministic mappi
 | `ferret lint`           | Detect and classify contract drift                                           |
 | `ferret lint --ci`      | CI mode — JSON output, exits non-zero on drift                               |
 | `ferret review`         | Resolve blocking drift interactively                                         |
-| `ferret review --json`  | Emit versioned review JSON with suggested actions and dependency context      |
+| `ferret review --json`  | Emit versioned review JSON with suggested actions and dependency context     |
 | `ferret extract`        | Generate contracts from exported TypeScript (annotation override compatible) |
 
 <details>
@@ -389,8 +410,10 @@ End-to-end agent example (`ferret review --json`):
 1. Run `ferret lint --ci` and collect diagnostics.
 2. If drift is detected, run `ferret review --json`.
 3. For each `reviewable[]` item:
-  - Use `suggestedActions[]` ordered by `confidence` to pick a default action.
-  - Use `dependencyContext.directDependents` and `dependencyContext.transitiveDependents` to scope impacted files.
+
+- Use `suggestedActions[]` ordered by `confidence` to pick a default action.
+- Use `dependencyContext.directDependents` and `dependencyContext.transitiveDependents` to scope impacted files.
+
 4. Apply the selected action with `ferret review --contract <id> --action <accept|update|reject> --json`.
 5. Re-run `ferret lint --ci` and confirm `consistent: true` before merge.
 
