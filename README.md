@@ -163,7 +163,13 @@ Code-first TypeScript path:
 ferret extract
 ```
 
-`ferret extract` uses Tree-sitter to infer contracts from exported TypeScript declarations and scaffolds deterministic `.contract.md` files. `@ferret-contract` remains supported as a compatibility override for explicit `id` and `type`.
+`ferret extract` uses Tree-sitter to infer contracts from exported TypeScript declarations and scaffolds deterministic `.contract.md` files with no annotations required. `@ferret-contract` remains supported as a compatibility override for explicit `id` and `type`.
+
+Example summary from inferred extraction:
+
+```text
+✓ ferret extract  7 files scanned  inferred=12  annotated=2  143ms
+```
 
 **4. Lint (default daily command)**
 
@@ -273,7 +279,7 @@ Now if `auth.jwt` shape changes, `api.POST/search` is flagged as an impacted con
 <details>
 <summary><b>Code-first: extract contracts from TypeScript</b></summary>
 
-SpecFerret extracts contracts from TypeScript by default — no annotations needed. Use `@ferret-contract` as an override:
+SpecFerret extracts contracts from TypeScript by default, so no annotations are required for normal workflows. Use `@ferret-contract` only when you need an explicit `id` or `type` override:
 
 ```ts
 // @ferret-contract: api.GET/users api
@@ -290,6 +296,21 @@ ferret extract
 ```
 
 This scaffolds `.contract.md` files under `contracts/` using deterministic mapping. Summary output includes `inferred=<n>` and `annotated=<n>`. The command exits non-zero only for hard extraction errors.
+
+Inferred output example:
+
+```text
+✓ ferret extract  3 files scanned  inferred=5  annotated=1  87ms
+```
+
+Migration from annotation-first repositories:
+
+1. Keep existing `@ferret-contract` annotations in place initially.
+2. Run `ferret extract` and verify generated ids/types match expected contracts.
+3. Remove annotations incrementally where inferred ids/types are already correct.
+4. Retain annotations only for files that need explicit overrides.
+
+Mixed repository mode is fully supported: inferred and annotated contracts can coexist in the same run.
 
 </details>
 
