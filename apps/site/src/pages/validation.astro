@@ -34,9 +34,7 @@ const BRANCHES = [
 
 async function fetchManifest(branch: string): Promise<ScenarioManifest | null> {
   try {
-    const res = await fetch(
-      `https://raw.githubusercontent.com/${REPO_SK}/${branch}/SCENARIO-MANIFEST.json`,
-    );
+    const res = await fetch(`https://raw.githubusercontent.com/${REPO_SK}/${branch}/SCENARIO-MANIFEST.json`);
     if (!res.ok) return null;
     return res.json() as Promise<ScenarioManifest>;
   } catch {
@@ -46,23 +44,18 @@ async function fetchManifest(branch: string): Promise<ScenarioManifest | null> {
 
 async function fetchLatestRun(repo: string): Promise<RunEntry> {
   try {
-    const res = await fetch(
-      `https://api.github.com/repos/${repo}/actions/workflows/specferret-validation.yml/runs?status=success&per_page=1`,
-      { headers: { Accept: 'application/vnd.github+json' } },
-    );
+    const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/specferret-validation.yml/runs?status=success&per_page=1`, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
     if (!res.ok) return null;
-    const data = await res.json() as { workflow_runs?: RunEntry[] };
+    const data = (await res.json()) as { workflow_runs?: RunEntry[] };
     return data.workflow_runs?.[0] ?? null;
   } catch {
     return null;
   }
 }
 
-const [manifests, skRun, bmadRun] = await Promise.all([
-  Promise.all(BRANCHES.map(fetchManifest)),
-  fetchLatestRun(REPO_SK),
-  fetchLatestRun(REPO_BMAD),
-]);
+const [manifests, skRun, bmadRun] = await Promise.all([Promise.all(BRANCHES.map(fetchManifest)), fetchLatestRun(REPO_SK), fetchLatestRun(REPO_BMAD)]);
 
 const scenarios = manifests.filter((m): m is ScenarioManifest => m !== null);
 
@@ -101,9 +94,8 @@ function formatDate(iso: string) {
       <p class="pill mono">@specferret/cli@0.1.4 · 9 scenarios · 2 repos</p>
       <h1>Validation Matrix</h1>
       <p class="subhead">
-        Every release must pass all 9 scenarios against the live npm package in two external
-        validation repositories before publish. Manifests are fetched live from GitHub at build
-        time.
+        Every release must pass all 9 scenarios against the live npm package in two external validation repositories before publish. Manifests are
+        fetched live from GitHub at build time.
       </p>
       <div class="run-row">
         {
@@ -129,14 +121,11 @@ function formatDate(iso: string) {
           const isBreaking = s.expected.driftClass === 'breaking';
           const depth = s.expected.depthAssertions;
           const proof = s.expected.proofArtifacts;
-          const hasTags =
-            s.expected.reviewRequired || depth || proof || s.expected.extractDeterminism;
+          const hasTags = s.expected.reviewRequired || depth || proof || s.expected.extractDeterminism;
           return (
             <article class={`card ${isBreaking ? 'card-breaking' : 'card-clean'}`}>
               <div class="card-meta">
-                <span class={`badge ${isBreaking ? 'badge-amber' : 'badge-green'}`}>
-                  {s.expected.driftClass}
-                </span>
+                <span class={`badge ${isBreaking ? 'badge-amber' : 'badge-green'}`}>{s.expected.driftClass}</span>
                 <code class="exit">exit {s.expected.exitCode}</code>
               </div>
               <h3>{LABELS[s.scenario.name] ?? s.scenario.name}</h3>
