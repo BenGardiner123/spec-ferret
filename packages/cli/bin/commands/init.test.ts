@@ -79,6 +79,56 @@ describe("ferret init — S01 acceptance criteria", () => {
     );
   });
 
+  it("writes canonical agent rules source in project space", () => {
+    runInit(tmpDir);
+    assert.ok(
+      fs.existsSync(
+        path.join(tmpDir, ".github", "specferret", "canonical-agent-rules.md"),
+      ),
+      "missing canonical agent rules source",
+    );
+    assert.ok(
+      fs.existsSync(
+        path.join(
+          tmpDir,
+          ".github",
+          "instructions",
+          "specferret-agent.instructions.md",
+        ),
+      ),
+      "missing generated instruction pack",
+    );
+  });
+
+  it("generated agent content includes lifecycle and lint/review gate expectations", () => {
+    runInit(tmpDir);
+
+    const canonical = fs.readFileSync(
+      path.join(tmpDir, ".github", "specferret", "canonical-agent-rules.md"),
+      "utf-8",
+    );
+    const pack = fs.readFileSync(
+      path.join(
+        tmpDir,
+        ".github",
+        "instructions",
+        "specferret-agent.instructions.md",
+      ),
+      "utf-8",
+    );
+
+    assert.ok(canonical.includes("Contract Lifecycle"));
+    assert.ok(canonical.includes("needs-review"));
+    assert.ok(canonical.includes("Run `ferret lint`"));
+    assert.ok(canonical.includes("ferret review"));
+
+    assert.ok(pack.includes("ferret lint"));
+    assert.ok(pack.includes("ferret review"));
+    assert.ok(pack.includes("accept"));
+    assert.ok(pack.includes("update"));
+    assert.ok(pack.includes("reject"));
+  });
+
   it("sends all output to stdout — stderr is empty on a clean run", () => {
     const result = runInit(tmpDir);
     assert.equal(result.stderr, "");
@@ -111,5 +161,45 @@ describe("ferret init — S01 acceptance criteria", () => {
   it("--no-hook skips pre-commit hook installation and still exits 0", () => {
     const result = runInit(tmpDir, ["--no-hook"]);
     assert.equal(result.status, 0);
+  });
+
+  it("--no-agent-rules skips canonical rule scaffolding and still exits 0", () => {
+    const result = runInit(tmpDir, ["--no-hook", "--no-agent-rules"]);
+    assert.equal(result.status, 0);
+    assert.equal(
+      fs.existsSync(
+        path.join(tmpDir, ".github", "specferret", "canonical-agent-rules.md"),
+      ),
+      false,
+    );
+    assert.equal(
+      fs.existsSync(
+        path.join(
+          tmpDir,
+          ".github",
+          "instructions",
+          "specferret-agent.instructions.md",
+        ),
+      ),
+      false,
+    );
+  });
+
+  it("is idempotent for canonical rules scaffolding", () => {
+    runInit(tmpDir);
+
+    const canonicalPath = path.join(
+      tmpDir,
+      ".github",
+      "specferret",
+      "canonical-agent-rules.md",
+    );
+    const sentinel = "# sentinel canonical rules";
+    fs.writeFileSync(canonicalPath, sentinel, "utf-8");
+
+    runInit(tmpDir);
+
+    const content = fs.readFileSync(canonicalPath, "utf-8");
+    assert.equal(content, sentinel);
   });
 });

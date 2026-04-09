@@ -59,9 +59,49 @@ const PRE_COMMIT_HOOK = `#!/bin/sh
 ferret lint --changed
 `;
 
+const CANONICAL_AGENT_RULES = `# SpecFerret Canonical Agent Rules
+
+## Contract Lifecycle
+
+- \`stable\` means no active drift and no pending review action.
+- \`needs-review\` means drift exists and downstream impact must be reviewed.
+- \`roadmap\` means planned but not yet active for enforcement.
+- \`blocked\` means merge must not proceed until review or remediation is complete.
+
+## Enforcement Gates
+
+- Run \`ferret lint\` before proposing or merging contract-affecting changes.
+- Treat breaking drift as a merge blocker until resolved through \`ferret review\`.
+- Use \`ferret review --json\` for machine workflows and audit-safe automation.
+- Re-run \`ferret lint\` after review actions to confirm the repo returns to stable.
+
+## Agent Workflow Expectations
+
+- Read \`.ferret/context.json\` before making contract-sensitive changes.
+- Preserve deterministic contract IDs and avoid ad-hoc type categories.
+- Keep drift resolution explicit: \`accept\`, \`update\`, or \`reject\`.
+`;
+
+const COPILOT_INSTRUCTION_PACK = `---
+description: "SpecFerret agent guardrails for contract lifecycle and drift enforcement."
+applyTo: "**"
+---
+
+# SpecFerret Agent Instruction Pack
+
+When working in this repository:
+
+- Respect contract lifecycle states: \`stable\`, \`needs-review\`, \`roadmap\`, \`blocked\`.
+- Run \`ferret lint\` before and after contract-affecting edits.
+- If drift appears, use \`ferret review\` and document whether action is \`accept\`, \`update\`, or \`reject\`.
+- For automated flows, prefer machine output from \`ferret lint --ci\` and \`ferret review --json\`.
+- Keep contract changes deterministic and aligned with canonical type semantics.
+`;
+
 export const initCommand = new Command("init")
   .description("Initialise SpecFerret in the current project.")
   .option("--no-hook", "Skip pre-commit hook installation")
+  .option("--no-agent-rules", "Skip canonical agent rules scaffolding")
   .action(async (options) => {
     const root = process.cwd();
     const ferretDir = path.join(root, ".ferret");
@@ -106,13 +146,54 @@ export const initCommand = new Command("init")
       );
     }
 
+    // 6. Canonical agent rules source + instruction pack scaffolding
+    if (options.agentRules !== false) {
+      const canonicalRulesDir = path.join(root, ".github", "specferret");
+      if (!fs.existsSync(canonicalRulesDir)) {
+        fs.mkdirSync(canonicalRulesDir, { recursive: true });
+      }
+
+      const canonicalRulesPath = path.join(
+        canonicalRulesDir,
+        "canonical-agent-rules.md",
+      );
+      if (!fs.existsSync(canonicalRulesPath)) {
+        fs.writeFileSync(canonicalRulesPath, CANONICAL_AGENT_RULES, "utf-8");
+      }
+
+      const instructionsDir = path.join(root, ".github", "instructions");
+      if (!fs.existsSync(instructionsDir)) {
+        fs.mkdirSync(instructionsDir, { recursive: true });
+      }
+
+      const instructionPackPath = path.join(
+        instructionsDir,
+        "specferret-agent.instructions.md",
+      );
+      if (!fs.existsSync(instructionPackPath)) {
+        fs.writeFileSync(
+          instructionPackPath,
+          COPILOT_INSTRUCTION_PACK,
+          "utf-8",
+        );
+      }
+    }
+
     process.stdout.write("✓ ferret initialised\n");
     process.stdout.write("  .ferret/graph.db     created\n");
     process.stdout.write("  contracts/example.contract.md  created\n");
     process.stdout.write("  CLAUDE.md            created\n");
     process.stdout.write("  ferret.config.json   created\n");
+    if (options.agentRules !== false) {
+      process.stdout.write(
+        "  .github/specferret/canonical-agent-rules.md  scaffolded\n",
+      );
+      process.stdout.write(
+        "  .github/instructions/specferret-agent.instructions.md  scaffolded\n",
+      );
+    }
 
-    // 6. Pre-commit hook — installed by default, explicit opt-out via --no-hook
+    // 7. Pre-commit hook — installed by default, explicit opt-out via --no-hook
     if (options.hook !== false) {
       const hookResult = installHook(root);
       if (hookResult === "installed") {
