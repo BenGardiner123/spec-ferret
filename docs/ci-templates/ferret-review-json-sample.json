@@ -73,7 +73,29 @@
         ]
       },
       "recommendedAction": "update",
-      "availableActions": ["accept", "update", "reject"]
+      "availableActions": ["accept", "update", "reject"],
+      "suggestedActions": [
+        {
+          "action": "update",
+          "confidence": 0.95,
+          "reason": "Breaking drift has downstream dependents that need updates."
+        },
+        {
+          "action": "reject",
+          "confidence": 0.5,
+          "reason": "Use reject when the upstream contract change was accidental."
+        },
+        {
+          "action": "accept",
+          "confidence": 0.15,
+          "reason": "Accept only when downstream impact is intentionally waived."
+        }
+      ],
+      "dependencyContext": {
+        "directDependents": 1,
+        "transitiveDependents": 1,
+        "maxDepth": 2
+      }
     }
   ],
   "selected": [],
