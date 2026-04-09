@@ -170,6 +170,7 @@ This execution includes explicit S40 depth assertions, S41 proof-artifact assert
 Candidate under test:
 
 - vendored CLI bundle in validation repos (`bun vendor/ferret.bundle.js`)
+- **Note:** this run predates npm-install validation. The workflows now install `@specferret/cli` directly from npm via `bun add --global @specferret/cli@<version>`. The vendor bundle evidence is retained for historical record only.
 
 spec-kit validation repo:
 
