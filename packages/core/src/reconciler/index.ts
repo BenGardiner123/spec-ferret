@@ -13,6 +13,8 @@ export interface UnresolvedImportViolation {
   contractId: string;
   filePath: string;
   importPath: string;
+  expectedTargetId: string;
+  transitiveChain?: string[];
 }
 
 export interface SelfImportViolation {
@@ -28,10 +30,18 @@ export interface CircularImportViolation {
   cycle: string[];
 }
 
+export interface OrphanedContractViolation {
+  contractId: string;
+  filePath: string;
+  unresolvedImports: string[];
+  remediationHint: string;
+}
+
 export interface ImportIntegrityReport {
   unresolvedImports: UnresolvedImportViolation[];
   selfImports: SelfImportViolation[];
   circularImports: CircularImportViolation[];
+  orphanedContracts: OrphanedContractViolation[];
 }
 
 export interface ReconcileReport {
@@ -202,6 +212,7 @@ export class Reconciler {
     const unresolvedImports: UnresolvedImportViolation[] = [];
     const selfImports: SelfImportViolation[] = [];
     const adjacency = new Map<string, Set<string>>();
+    const importsBySourceContractId = new Map<string, string[]>();
 
     for (const contract of contracts) {
       adjacency.set(contract.id, new Set<string>());
@@ -217,12 +228,19 @@ export class Reconciler {
         continue;
       }
 
+      for (const sourceContract of sourceContracts) {
+        const existing = importsBySourceContractId.get(sourceContract.id) ?? [];
+        existing.push(dependency.target_contract_id);
+        importsBySourceContractId.set(sourceContract.id, existing);
+      }
+
       if (!targetContract) {
         for (const sourceContract of sourceContracts) {
           unresolvedImports.push({
             contractId: sourceContract.id,
             filePath: sourceNode.file_path,
             importPath: dependency.target_contract_id,
+            expectedTargetId: dependency.target_contract_id,
           });
         }
         continue;
@@ -253,11 +271,88 @@ export class Reconciler {
       nodeById,
     );
 
+    const reverseAdjacency = buildReverseAdjacency(adjacency);
+    for (const violation of unresolvedImports) {
+      const upstreamChain = this.findTransitiveChainToContract(
+        violation.contractId,
+        reverseAdjacency,
+      );
+      if (upstreamChain.length > 1) {
+        violation.transitiveChain = [...upstreamChain, violation.expectedTargetId];
+      }
+    }
+
+    const orphanedContracts: OrphanedContractViolation[] = [];
+    for (const contract of contracts) {
+      const imports = importsBySourceContractId.get(contract.id) ?? [];
+      if (imports.length === 0) {
+        continue;
+      }
+
+      const validResolvedCount = imports.filter((targetId) => {
+        if (targetId === contract.id) {
+          return false;
+        }
+        return contractById.has(targetId);
+      }).length;
+
+      const unresolvedForContract = imports.filter(
+        (targetId) => !contractById.has(targetId),
+      );
+
+      if (validResolvedCount === 0 && unresolvedForContract.length > 0) {
+        const sourceNode = nodeById.get(contract.node_id);
+        orphanedContracts.push({
+          contractId: contract.id,
+          filePath: sourceNode?.file_path ?? contract.id,
+          unresolvedImports: [...new Set(unresolvedForContract)].sort(),
+          remediationHint:
+            "Add or restore the expected target contract(s), or remove stale imports.",
+        });
+      }
+    }
+
     return {
       unresolvedImports,
       selfImports,
       circularImports,
+      orphanedContracts: orphanedContracts.sort((left, right) =>
+        left.contractId.localeCompare(right.contractId),
+      ),
     };
+  }
+
+  private findTransitiveChainToContract(
+    contractId: string,
+    reverseAdjacency: Map<string, Set<string>>,
+  ): string[] {
+    const visit = (currentId: string, seen: Set<string>): string[] => {
+      const parents = [...(reverseAdjacency.get(currentId) ?? [])]
+        .filter((parentId) => !seen.has(parentId))
+        .sort();
+      if (parents.length === 0) {
+        return [currentId];
+      }
+
+      let bestPath = [currentId];
+      for (const parentId of parents) {
+        const nextSeen = new Set(seen);
+        nextSeen.add(parentId);
+        const parentPath = visit(parentId, nextSeen);
+        const candidate = [...parentPath, currentId];
+        if (
+          candidate.length > bestPath.length ||
+          (candidate.length === bestPath.length &&
+            candidate.join("->") < bestPath.join("->"))
+        ) {
+          bestPath = candidate;
+        }
+      }
+
+      return bestPath;
+    };
+
+    return visit(contractId, new Set([contractId]));
   }
 
   private findCircularImports(
@@ -314,6 +409,25 @@ export class Reconciler {
       left.importPath.localeCompare(right.importPath),
     );
   }
+}
+
+function buildReverseAdjacency(
+  adjacency: Map<string, Set<string>>,
+): Map<string, Set<string>> {
+  const reverse = new Map<string, Set<string>>();
+
+  for (const [sourceId, targets] of adjacency) {
+    if (!reverse.has(sourceId)) {
+      reverse.set(sourceId, new Set<string>());
+    }
+    for (const targetId of targets) {
+      const parents = reverse.get(targetId) ?? new Set<string>();
+      parents.add(sourceId);
+      reverse.set(targetId, parents);
+    }
+  }
+
+  return reverse;
 }
 
 function canonicalizeCycle(cycle: string[]): string {

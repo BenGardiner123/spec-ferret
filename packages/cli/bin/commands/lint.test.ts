@@ -161,9 +161,36 @@ describe("ferret lint — S30 import integrity", () => {
       assert.match(result.stdout, /import integrity violations/);
       assert.match(result.stdout, /api.GET\/example/);
       assert.match(result.stdout, /contracts[\\/]example\.contract\.md/);
-      assert.match(result.stdout, /unresolved import api.GET\/missing/);
+      assert.match(result.stdout, /expected target api.GET\/missing/);
+      assert.match(result.stdout, /orphaned contract/);
+      assert.match(result.stdout, /remediation:/);
     },
   );
+
+  stableIt("includes transitive chain context for unresolved imports", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "root.contract.md"),
+      `---\nferret:\n  id: api.GET/root\n  type: api\n  imports:\n    - api.GET/mid\n  shape:\n    type: object\n---\n`,
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "mid.contract.md"),
+      `---\nferret:\n  id: api.GET/mid\n  type: api\n  imports:\n    - api.GET/leaf\n  shape:\n    type: object\n---\n`,
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "leaf.contract.md"),
+      `---\nferret:\n  id: api.GET/leaf\n  type: api\n  imports:\n    - api.GET/missing\n  shape:\n    type: object\n---\n`,
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["lint"]);
+    assert.equal(result.status, 2);
+    assert.match(
+      result.stdout,
+      /transitive chain: api.GET\/root -> api.GET\/mid -> api.GET\/leaf -> api.GET\/missing/,
+    );
+  });
 
   stableIt("fails on self-imports with actionable local diagnostics", () => {
     const contractPath = path.join(tmpDir, "contracts", "example.contract.md");
@@ -215,9 +242,19 @@ describe("ferret lint — S30 import integrity", () => {
 
     const json = JSON.parse(result.stdout) as {
       integrityViolations: {
-        unresolvedImports: Array<{ contractId: string; importPath: string }>;
+        unresolvedImports: Array<{
+          contractId: string;
+          importPath: string;
+          expectedTargetId: string;
+          transitiveChain?: string[];
+        }>;
         selfImports: unknown[];
         circularImports: unknown[];
+        orphanedContracts: Array<{
+          contractId: string;
+          unresolvedImports: string[];
+          remediationHint: string;
+        }>;
       };
       flagged: unknown[];
       breaking: number;
@@ -236,8 +273,17 @@ describe("ferret lint — S30 import integrity", () => {
       json.integrityViolations.unresolvedImports[0].importPath,
       "api.GET/missing",
     );
+    assert.equal(
+      json.integrityViolations.unresolvedImports[0].expectedTargetId,
+      "api.GET/missing",
+    );
     assert.equal(json.integrityViolations.selfImports.length, 0);
     assert.equal(json.integrityViolations.circularImports.length, 0);
+    assert.equal(json.integrityViolations.orphanedContracts.length, 1);
+    assert.equal(
+      json.integrityViolations.orphanedContracts[0].contractId,
+      "api.GET/example",
+    );
   });
 });
 

@@ -9,6 +9,8 @@ export type DiagnosticLocation = {
   filePath?: string;
   nodeId?: string;
   importPath?: string;
+  expectedTargetId?: string;
+  transitiveChain?: string[];
   depth?: number;
   impact?: 'direct' | 'transitive';
 };
@@ -76,14 +78,19 @@ export function buildLintDiagnostics(params: {
   }
 
   for (const violation of params.report.integrityViolations.unresolvedImports) {
+    const chainSuffix = violation.transitiveChain?.length
+      ? ` Transitive chain: ${violation.transitiveChain.join(' -> ')}.`
+      : '';
     add({
       code: 'FERRET_IMPORT_UNRESOLVED',
       severity: 'error',
-      message: `${violation.contractId} imports missing contract ${violation.importPath}.`,
+      message: `Source contract ${violation.contractId} imports missing expected target ${violation.expectedTargetId}.${chainSuffix}`,
       location: {
         contractId: violation.contractId,
         filePath: violation.filePath,
         importPath: violation.importPath,
+        expectedTargetId: violation.expectedTargetId,
+        transitiveChain: violation.transitiveChain,
       },
       remediation: 'Create the missing contract or remove the invalid import path.',
     });
@@ -114,6 +121,19 @@ export function buildLintDiagnostics(params: {
         importPath: violation.importPath,
       },
       remediation: 'Break the cycle by removing or redesigning one of the circular dependencies.',
+    });
+  }
+
+  for (const violation of params.report.integrityViolations.orphanedContracts) {
+    add({
+      code: 'FERRET_CONTRACT_ORPHANED',
+      severity: 'warning',
+      message: `${violation.contractId} is orphaned due to unresolved imports: ${violation.unresolvedImports.join(', ')}.`,
+      location: {
+        contractId: violation.contractId,
+        filePath: violation.filePath,
+      },
+      remediation: violation.remediationHint,
     });
   }
 
