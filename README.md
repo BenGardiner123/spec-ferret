@@ -346,9 +346,43 @@ Exits with code `1` when drift exists. Emits a JSON summary to stdout for downst
   "drift": true,
   "breaking": 2,
   "nonBreaking": 1,
+  "diagnosticsSchemaVersion": "1.0.0",
+  "diagnostics": [
+    {
+      "code": "FERRET_DRIFT_BREAKING",
+      "severity": "error",
+      "message": "auth.jwt impacts contracts/search/results.contract.md (direct, depth 1).",
+      "location": {
+        "contractId": "auth.jwt",
+        "filePath": "contracts/search/results.contract.md",
+        "depth": 1,
+        "impact": "direct"
+      },
+      "remediation": "Run ferret review and resolve downstream drift before merge."
+    }
+  ],
   "contracts": [...]
 }
 ```
+
+Machine-readable diagnostics contract:
+
+- `diagnosticsSchemaVersion` identifies the stable diagnostics schema version for parsers
+- `diagnostics[].code` is a stable machine key (safe for switch/case routing)
+- `diagnostics[].severity` is one of `error`, `warning`, or `info`
+- `diagnostics[].location` carries file/contract/node/import context when available
+- `diagnostics[].remediation` is human-readable guidance for safe resolution
+
+Parsing guidance:
+
+- Branch your parser by `diagnosticsSchemaVersion` first
+- Treat unknown `code` values as forward-compatible and fall back to `message`
+- Prefer `code + location` for automation and `remediation` for user-facing hints
+
+Reference sample payloads:
+
+- `docs/ci-templates/ferret-lint-ci-sample.json`
+- `docs/ci-templates/ferret-review-json-sample.json`
 
 </details>
 

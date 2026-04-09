@@ -1,0 +1,48 @@
+{
+  "version": "2.0",
+  "diagnosticsSchemaVersion": "1.0.0",
+  "diagnostics": [
+    {
+      "code": "FERRET_REVIEW_BREAKING",
+      "severity": "error",
+      "message": "auth.jwt requires review (2 impacted files).",
+      "location": {
+        "contractId": "auth.jwt",
+        "filePath": "contracts/auth/jwt.contract.md"
+      },
+      "remediation": "Run ferret review --action accept|update|reject to resolve this review item."
+    }
+  ],
+  "reviewable": [
+    {
+      "contractId": "auth.jwt",
+      "sourceNodeId": "7990f9ca-bf93-4f59-84a8-f3a4b0de5a65",
+      "sourceFile": "contracts/auth/jwt.contract.md",
+      "classification": "breaking",
+      "affectedCount": 2,
+      "impact": {
+        "direct": [
+          {
+            "nodeId": "d4e47463-1f90-4561-a01f-59d980190f76",
+            "filePath": "contracts/search/results.contract.md",
+            "impact": "direct",
+            "depth": 1
+          }
+        ],
+        "transitive": [
+          {
+            "nodeId": "2f322e73-b91e-4deb-bfe4-73c65834293d",
+            "filePath": "contracts/recommendations/items.contract.md",
+            "impact": "transitive",
+            "depth": 2
+          }
+        ]
+      },
+      "recommendedAction": "update",
+      "availableActions": ["accept", "update", "reject"]
+    }
+  ],
+  "selected": [],
+  "action": null,
+  "result": null
+}

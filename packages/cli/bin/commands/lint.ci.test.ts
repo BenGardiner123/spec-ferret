@@ -49,6 +49,8 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(result.status, 0);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(json.consistent, true);
+    assert.equal(json.diagnosticsSchemaVersion, "1.0.0");
+    assert.ok(Array.isArray(json.diagnostics));
   });
 
   it("passes with committed baseline when context.json exists", () => {
@@ -59,6 +61,8 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(result.status, 0);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(json.consistent, true);
+    assert.equal(json.diagnosticsSchemaVersion, "1.0.0");
+    assert.ok(Array.isArray(json.diagnostics));
   });
 
   it("is deterministic across repeated CI runs in the same state", () => {
@@ -75,9 +79,14 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(firstJson.consistent, secondJson.consistent);
     assert.equal(firstJson.breaking, secondJson.breaking);
     assert.equal(firstJson.nonBreaking, secondJson.nonBreaking);
+    assert.equal(firstJson.diagnosticsSchemaVersion, secondJson.diagnosticsSchemaVersion);
     assert.equal(
       JSON.stringify(firstJson.flagged),
       JSON.stringify(secondJson.flagged),
+    );
+    assert.equal(
+      JSON.stringify(firstJson.diagnostics),
+      JSON.stringify(secondJson.diagnostics),
     );
   });
 
@@ -112,6 +121,15 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(seededJson.breaking, 0);
     assert.equal(seededJson.nonBreaking, 0);
     assert.ok(Array.isArray(seededJson.flagged));
+    assert.equal(seededJson.diagnosticsSchemaVersion, "1.0.0");
+    assert.ok(Array.isArray(seededJson.diagnostics));
+    const seededDiagnostics = seededJson.diagnostics as Array<Record<string, unknown>>;
+    assert.ok(seededDiagnostics.length >= 1);
+    const firstDiagnostic = seededDiagnostics[0];
+    assert.equal(typeof firstDiagnostic.code, "string");
+    assert.equal(typeof firstDiagnostic.severity, "string");
+    assert.equal(typeof firstDiagnostic.remediation, "string");
+    assert.equal(typeof firstDiagnostic.location, "object");
 
     fs.writeFileSync(contractPath, baselineSource, "utf-8");
 
@@ -122,5 +140,7 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(resolvedJson.breaking, 0);
     assert.equal(resolvedJson.nonBreaking, 0);
     assert.deepEqual(resolvedJson.flagged, []);
+    assert.equal(resolvedJson.diagnosticsSchemaVersion, "1.0.0");
+    assert.deepEqual(resolvedJson.diagnostics, []);
   });
 });

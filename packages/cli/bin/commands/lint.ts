@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
 import { getStore, Reconciler, findProjectRoot, loadConfig, hashSchema } from '@specferret/core';
 import { parsePositiveMsBudget } from './parse-utils.js';
+import { buildLintDiagnostics, DIAGNOSTICS_SCHEMA_VERSION } from './diagnostics.js';
 
 export const lintCommand = new Command('lint')
   .description('Default daily command: check and block contract drift.')
@@ -67,6 +68,8 @@ export const lintCommand = new Command('lint')
       const report = await reconciler.reconcile();
 
       const contracts = await store.getContracts();
+      const nodes = await store.getNodes();
+      const nodeById = new Map(nodes.map((node) => [node.id, node]));
       const contractCount = contracts.length;
       const ms = Math.round(performance.now() - start);
       const perfExceeded = perfBudgetMs !== undefined && ms > perfBudgetMs;
@@ -78,19 +81,35 @@ export const lintCommand = new Command('lint')
       // Contract IDs whose schema change was classified as breaking by scan.
       // Used by both CI and human output so counts align with tree labels.
       const breakingTriggerIds = new Set(contracts.filter((c) => c.status === 'needs-review').map((c) => c.id));
+      const triggerLocations = new Map(
+        contracts
+          .filter((contract) => breakingTriggerIds.has(contract.id))
+          .map((contract) => [contract.id, { filePath: nodeById.get(contract.node_id)?.file_path, nodeId: contract.node_id }]),
+      );
 
       if (options.ci) {
         // CI mode: JSON to stdout, zero ANSI codes
         const breaking = report.flagged.filter((f) => breakingTriggerIds.has(f.triggeredByContractId)).length;
         const nonBreaking = report.flagged.filter((f) => !breakingTriggerIds.has(f.triggeredByContractId)).length;
+        const diagnostics = buildLintDiagnostics({
+          report,
+          breakingTriggerIds,
+          triggerLocations,
+          perfBudgetMs,
+          durationMs: ms,
+          perfExceeded,
+          includeSuggestions: Boolean(options.ciSuggestions && suggestionsEnabled),
+        });
         const output: Record<string, unknown> = {
           version: '2.0',
+          diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           consistent: report.consistent,
           breaking,
           nonBreaking,
           durationMs: ms,
           flagged: report.flagged,
           integrityViolations: report.integrityViolations,
+          diagnostics,
           timestamp: report.timestamp,
         };
         if (perfBudgetMs !== undefined) {

@@ -10,6 +10,12 @@ import {
   type FerretContract,
   type FerretNode,
 } from "@specferret/core";
+import {
+  buildIntegrityDiagnostics,
+  buildReviewDiagnostics,
+  DIAGNOSTICS_SCHEMA_VERSION,
+  type MachineDiagnostic,
+} from "./diagnostics.js";
 
 type ReviewAction = "accept" | "update" | "reject";
 
@@ -36,6 +42,8 @@ type ReviewItem = {
 
 type ReviewJsonOutput = {
   version: "2.0";
+  diagnosticsSchemaVersion: string;
+  diagnostics: MachineDiagnostic[];
   reviewable: ReviewItem[];
   selected: string[];
   action: ReviewAction | null;
@@ -77,6 +85,17 @@ export const reviewCommand = new Command("review")
         report.integrityViolations.circularImports.length > 0;
 
       if (hasIntegrityViolations) {
+        if (options.json) {
+          writeJson({
+            version: "2.0",
+            diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
+            diagnostics: buildIntegrityDiagnostics(report.integrityViolations),
+            reviewable: [],
+            selected: [],
+            action: null,
+            result: null,
+          });
+        }
         process.stderr.write(
           "ferret review: fix import integrity violations before reviewing drift.\n",
         );
@@ -113,6 +132,8 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
+            diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
+            diagnostics: [],
             reviewable: [],
             selected: [],
             action: null,
@@ -136,6 +157,8 @@ export const reviewCommand = new Command("review")
       if (options.json && !options.action && selectedContractIds.length === 0) {
         writeJson({
           version: "2.0",
+          diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
+          diagnostics: buildReviewDiagnostics(reviewItems),
           reviewable: reviewItems,
           selected: [],
           action: null,
@@ -205,6 +228,8 @@ export const reviewCommand = new Command("review")
       if (options.json) {
         writeJson({
           version: "2.0",
+          diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
+          diagnostics: buildReviewDiagnostics(selectedItems),
           reviewable: selectedItems,
           selected: selectedItems.map((item) => item.contractId),
           action,

@@ -1,9 +1,45 @@
-﻿{
+{
   "version": "2.0",
-  "consistent": true,
-  "breaking": 0,
+  "diagnosticsSchemaVersion": "1.0.0",
+  "consistent": false,
+  "breaking": 1,
   "nonBreaking": 0,
-  "flagged": [],
+  "durationMs": 42,
+  "flagged": [
+    {
+      "nodeId": "f6f26d95-fec2-4a88-bdb8-3dc262e7ba39",
+      "filePath": "contracts/search/results.contract.md",
+      "triggeredByContractId": "auth.jwt",
+      "impact": "direct",
+      "depth": 1
+    }
+  ],
+  "diagnostics": [
+    {
+      "code": "FERRET_DRIFT_BREAKING",
+      "severity": "error",
+      "message": "auth.jwt impacts contracts/search/results.contract.md (direct, depth 1).",
+      "location": {
+        "contractId": "auth.jwt",
+        "filePath": "contracts/search/results.contract.md",
+        "nodeId": "f6f26d95-fec2-4a88-bdb8-3dc262e7ba39",
+        "depth": 1,
+        "impact": "direct"
+      },
+      "remediation": "Run ferret review and resolve downstream drift before merge."
+    },
+    {
+      "code": "FERRET_CONTRACT_NEEDS_REVIEW",
+      "severity": "error",
+      "message": "auth.jwt is marked needs-review.",
+      "location": {
+        "contractId": "auth.jwt",
+        "filePath": "contracts/auth/jwt.contract.md",
+        "nodeId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      },
+      "remediation": "Run ferret review to accept, update downstream contracts, or reject upstream drift."
+    }
+  ],
   "integrityViolations": {
     "unresolvedImports": [],
     "selfImports": [],
@@ -11,4 +47,3 @@
   },
   "timestamp": "2026-04-03T22:50:55.064Z"
 }
-
