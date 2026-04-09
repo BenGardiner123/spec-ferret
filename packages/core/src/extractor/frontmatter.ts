@@ -2,15 +2,16 @@
 // Extractor layer — turns a spec file into an ExtractionResult using gray-matter.
 
 import matter from 'gray-matter';
-import { validateFerretSchema } from './validator.js';
+import { validateContractType, validateFerretSchema } from './validator.js';
 import { hashSchema } from './hash.js';
+import type { ContractType } from './contract-types.js';
 
 export interface ExtractionResult {
   filePath: string;
   fileType: 'spec' | 'code';
   contracts: Array<{
     id: string;
-    type: string;
+    type: ContractType;
     shape: object;
     shape_hash: string;
     imports: string[];
@@ -29,10 +30,7 @@ export interface ExtractionResult {
  *   - Unsupported schema keyword → warn via validateFerretSchema, continue
  *   - Identical files → identical shape_hash (deterministic)
  */
-export function extractFromSpecFile(
-  filePath: string,
-  fileContent: string,
-): ExtractionResult {
+export function extractFromSpecFile(filePath: string, fileContent: string): ExtractionResult {
   const { data } = matter(fileContent);
   const ferret = data?.ferret;
 
@@ -47,27 +45,32 @@ export function extractFromSpecFile(
     };
   }
 
-  const missingFields = ['id', 'type', 'shape'].filter(f => !ferret[f]);
+  const missingFields = ['id', 'type', 'shape'].filter((f) => !ferret[f]);
   if (missingFields.length > 0) {
-    throw new Error(
-      `Missing required frontmatter fields in ${filePath}: ${missingFields.join(', ')}`,
-    );
+    throw new Error(`Missing required frontmatter fields in ${filePath}: ${missingFields.join(', ')}`);
+  }
+
+  const typeValidation = validateContractType(ferret.type, filePath);
+  if (!typeValidation.valid) {
+    throw new Error(typeValidation.error);
   }
 
   // validateFerretSchema never throws — only warns on unsupported keywords
   const validation = validateFerretSchema(ferret.shape, filePath);
-  validation.warnings.forEach(w => process.stderr.write(w + '\n'));
+  validation.warnings.forEach((w) => process.stderr.write(w + '\n'));
 
   return {
     filePath,
     fileType: 'spec',
-    contracts: [{
-      id: ferret.id as string,
-      type: ferret.type as string,
-      shape: ferret.shape as object,
-      shape_hash: hashSchema(ferret.shape),
-      imports: Array.isArray(ferret.imports) ? ferret.imports as string[] : [],
-    }],
+    contracts: [
+      {
+        id: ferret.id as string,
+        type: typeValidation.value,
+        shape: ferret.shape as object,
+        shape_hash: hashSchema(ferret.shape),
+        imports: Array.isArray(ferret.imports) ? (ferret.imports as string[]) : [],
+      },
+    ],
     extractedBy: 'gray-matter',
     extractedAt: Date.now(),
   };
