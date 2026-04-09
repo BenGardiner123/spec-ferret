@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'bun:test';
 import { extractFromSpecFile } from './frontmatter.js';
+import { CONTRACT_TYPES } from './contract-types.js';
 
 const VALID_SPEC = `---
 ferret:
@@ -142,6 +143,20 @@ describe('extractFromSpecFile — Task 3', () => {
       stderrOutput.some((line) => line.includes('allOf')),
       true,
     );
+  });
+
+  it('all six allowed types are accepted without error', () => {
+    for (const contractType of CONTRACT_TYPES) {
+      const spec = `---
+ferret:
+  id: test.${contractType}
+  type: ${contractType}
+  shape:
+    type: object
+---
+`;
+      assert.doesNotThrow(() => extractFromSpecFile(`contracts/${contractType}.contract.md`, spec));
+    }
   });
 
   it('extraction is synchronous — the function itself has no async/await', () => {

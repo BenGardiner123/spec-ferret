@@ -106,7 +106,16 @@ Used for graph filtering and reporting.
 
 **Rules:**
 - Must be exactly one of the six values above
+- Runtime validation is strict — unknown values fail extraction and lint with an explicit allowed-types error
 - If your contract does not fit any of these, use the closest one and open an issue
+
+**Extension model:**
+- The six core types are a closed runtime set today
+- Expanding type categories requires a SpecFerret change, not project-local custom values
+
+**Migration note (legacy type values):**
+- Legacy values like `schema`, `service`, or `model` are not accepted
+- Migrate legacy values to the closest supported type before scanning
 
 ---
 

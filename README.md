@@ -38,6 +38,7 @@
 - [Your First Contract](#-your-first-contract)
 - [CLI Reference](#-cli-reference)
 - [Contract Types](#-contract-types)
+- [Changelog](#-changelog)
 - [How Drift Resolution Works](#-how-drift-resolution-works)
 - [CI Integration](#-ci-integration)
 - [BMAD & spec-kit Integration](#-bmad--spec-kit-integration)
@@ -364,7 +365,27 @@ Exits with code `1` when drift exists. Emits a JSON summary to stdout for downst
 | `flow`   | User flows and multi-step process contracts      |
 | `config` | Configuration shapes, environment schemas, flags |
 
-Each type uses the same frontmatter convention. The `type` field is used for grouping and reporting — it does not change validation behaviour.
+Each type uses the same frontmatter convention. The `type` field is used for grouping and reporting.
+
+Type semantics are strict at runtime:
+
+- `ferret.type` must be exactly one of: `api`, `table`, `type`, `event`, `flow`, `config`
+- Unknown values are rejected during extraction with an error that lists allowed values
+- Custom type namespaces are not currently supported as runtime extensions
+
+Extension model:
+
+- If a contract does not fit one of the six core types, use the closest core type and open an issue for model expansion
+
+Migration note for legacy repos:
+
+- Replace legacy values like `schema`, `service`, or `model` with the closest supported core type before running `ferret scan` or `ferret lint`
+
+---
+
+## 🗒 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for versioned changes and migration notes.
 
 ---
 
