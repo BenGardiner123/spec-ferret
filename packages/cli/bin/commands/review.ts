@@ -1,28 +1,16 @@
-import { Command } from "commander";
-import { randomUUID } from "node:crypto";
-import * as readline from "node:readline/promises";
-import pc from "picocolors";
-import {
-  findProjectRoot,
-  getStore,
-  Reconciler,
-  writeContext,
-  type FerretContract,
-  type FerretNode,
-} from "@specferret/core";
-import {
-  buildIntegrityDiagnostics,
-  buildReviewDiagnostics,
-  DIAGNOSTICS_SCHEMA_VERSION,
-  type MachineDiagnostic,
-} from "./diagnostics.js";
+import { Command } from 'commander';
+import { randomUUID } from 'node:crypto';
+import * as readline from 'node:readline/promises';
+import pc from 'picocolors';
+import { findProjectRoot, getStore, Reconciler, writeContext, type FerretContract, type FerretNode } from '@specferret/core';
+import { buildIntegrityDiagnostics, buildReviewDiagnostics, DIAGNOSTICS_SCHEMA_VERSION, type MachineDiagnostic } from './diagnostics.js';
 
-type ReviewAction = "accept" | "update" | "reject";
+type ReviewAction = 'accept' | 'update' | 'reject';
 
 type ReviewImpactItem = {
   nodeId: string;
   filePath: string;
-  impact: "direct" | "transitive";
+  impact: 'direct' | 'transitive';
   depth: number;
 };
 
@@ -30,7 +18,7 @@ type ReviewItem = {
   contractId: string;
   sourceNodeId: string;
   sourceFile: string;
-  classification: "breaking" | "non-breaking";
+  classification: 'breaking' | 'non-breaking';
   affectedCount: number;
   impact: {
     direct: ReviewImpactItem[];
@@ -41,7 +29,7 @@ type ReviewItem = {
 };
 
 type ReviewJsonOutput = {
-  version: "2.0";
+  version: '2.0';
   diagnosticsSchemaVersion: string;
   diagnostics: MachineDiagnostic[];
   reviewable: ReviewItem[];
@@ -56,19 +44,13 @@ type ReviewJsonOutput = {
   } | null;
 };
 
-export const reviewCommand = new Command("review")
-  .description("Guided review flow for contract drift.")
-  .option(
-    "--contract <ids>",
-    "Specific contract id or comma-separated contract ids to review",
-  )
-  .option("--all", "Select all current review items")
-  .option("--action <accept|update|reject>", "Review action to apply")
-  .option("--json", "Emit structured review output to stdout")
-  .option(
-    "--note <text>",
-    "Optional review note to persist in reconciliation log",
-  )
+export const reviewCommand = new Command('review')
+  .description('Guided review flow for contract drift.')
+  .option('--contract <ids>', 'Specific contract id or comma-separated contract ids to review')
+  .option('--all', 'Select all current review items')
+  .option('--action <accept|update|reject>', 'Review action to apply')
+  .option('--json', 'Emit structured review output to stdout')
+  .option('--note <text>', 'Optional review note to persist in reconciliation log')
   .action(async (options) => {
     const root = findProjectRoot();
     const store = await getStore();
@@ -87,7 +69,7 @@ export const reviewCommand = new Command("review")
       if (hasIntegrityViolations) {
         if (options.json) {
           writeJson({
-            version: "2.0",
+            version: '2.0',
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: buildIntegrityDiagnostics(report.integrityViolations),
             reviewable: [],
@@ -96,9 +78,7 @@ export const reviewCommand = new Command("review")
             result: null,
           });
         }
-        process.stderr.write(
-          "ferret review: fix import integrity violations before reviewing drift.\n",
-        );
+        process.stderr.write('ferret review: fix import integrity violations before reviewing drift.\n');
         process.exitCode = 2;
         return;
       }
@@ -109,29 +89,20 @@ export const reviewCommand = new Command("review")
       const affectedByContractId = new Map<string, typeof report.flagged>();
 
       for (const item of report.flagged) {
-        const affected =
-          affectedByContractId.get(item.triggeredByContractId) ?? [];
+        const affected = affectedByContractId.get(item.triggeredByContractId) ?? [];
         affected.push(item);
         affectedByContractId.set(item.triggeredByContractId, affected);
       }
 
       const reviewableContracts = contracts
-        .filter(
-          (contract) =>
-            contract.status === "needs-review" ||
-            affectedByContractId.has(contract.id),
-        )
+        .filter((contract) => contract.status === 'needs-review' || affectedByContractId.has(contract.id))
         .sort((left, right) => left.id.localeCompare(right.id));
-      const reviewItems = buildReviewItems(
-        reviewableContracts,
-        nodeById,
-        affectedByContractId,
-      );
+      const reviewItems = buildReviewItems(reviewableContracts, nodeById, affectedByContractId);
 
       if (reviewItems.length === 0) {
         if (options.json) {
           writeJson({
-            version: "2.0",
+            version: '2.0',
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: [],
             reviewable: [],
@@ -140,9 +111,7 @@ export const reviewCommand = new Command("review")
             result: null,
           });
         } else {
-          process.stdout.write(
-            `${pc.green("✓ ferret review")}  0 items need review\n`,
-          );
+          process.stdout.write(`${pc.green('✓ ferret review')}  0 items need review\n`);
         }
         process.exitCode = 0;
         return;
@@ -156,7 +125,7 @@ export const reviewCommand = new Command("review")
 
       if (options.json && !options.action && selectedContractIds.length === 0) {
         writeJson({
-          version: "2.0",
+          version: '2.0',
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(reviewItems),
           reviewable: reviewItems,
@@ -169,20 +138,14 @@ export const reviewCommand = new Command("review")
       }
 
       if (selectedContractIds.length === 0) {
-        process.stderr.write(
-          "ferret review: no valid review items selected. Use --contract, --all, or choose from the prompt.\n",
-        );
+        process.stderr.write('ferret review: no valid review items selected. Use --contract, --all, or choose from the prompt.\n');
         process.exitCode = 2;
         return;
       }
 
-      const selectedItems = reviewItems.filter((item) =>
-        selectedContractIds.includes(item.contractId),
-      );
+      const selectedItems = reviewItems.filter((item) => selectedContractIds.includes(item.contractId));
       if (selectedItems.length !== selectedContractIds.length) {
-        process.stderr.write(
-          "ferret review: one or more selected contracts are not in the current drift set.\n",
-        );
+        process.stderr.write('ferret review: one or more selected contracts are not in the current drift set.\n');
         process.exitCode = 2;
         return;
       }
@@ -190,7 +153,7 @@ export const reviewCommand = new Command("review")
       if (!options.json) {
         selectedItems.forEach((item, index) => {
           if (index > 0) {
-            process.stdout.write("\n");
+            process.stdout.write('\n');
           }
           renderReviewContext(item);
         });
@@ -198,36 +161,27 @@ export const reviewCommand = new Command("review")
 
       const action = await selectAction(options.action, Boolean(options.json));
       if (!action) {
-        process.stderr.write(
-          "ferret review: no action selected. Use --action in non-interactive mode.\n",
-        );
+        process.stderr.write('ferret review: no action selected. Use --action in non-interactive mode.\n');
         process.exitCode = 2;
         return;
       }
 
-      const note = String(options.note ?? "").trim();
+      const note = String(options.note ?? '').trim();
       for (const item of selectedItems) {
         await store.insertReconciliationLog({
           id: randomUUID(),
           node_id: item.sourceNodeId,
           triggered_by: item.contractId,
           resolved_by: action,
-          resolution_notes:
-            note || defaultResolutionNote(action, item.contractId),
+          resolution_notes: note || defaultResolutionNote(action, item.contractId),
         });
       }
 
-      const resultSummary = await applyReviewAction(
-        store,
-        root,
-        contracts,
-        selectedItems,
-        action,
-      );
+      const resultSummary = await applyReviewAction(store, root, contracts, selectedItems, action);
 
       if (options.json) {
         writeJson({
-          version: "2.0",
+          version: '2.0',
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(selectedItems),
           reviewable: selectedItems,
@@ -239,17 +193,15 @@ export const reviewCommand = new Command("review")
         return;
       }
 
-      if (action === "accept") {
-        process.stdout.write(
-          `ACCEPTED  ${selectedItems.map((item) => item.contractId).join(", ")}  review recorded, drift cleared\n`,
-        );
+      if (action === 'accept') {
+        process.stdout.write(`ACCEPTED  ${selectedItems.map((item) => item.contractId).join(', ')}  review recorded, drift cleared\n`);
         process.exitCode = 0;
         return;
       }
 
       selectedItems.forEach((item) => renderCopyPasteContext(item, action));
       process.stdout.write(
-        `${action === "update" ? "UPDATE" : "REJECT"}  ${selectedItems.map((item) => item.contractId).join(", ")}  repo remains blocked until ${action === "update" ? "dependents are updated" : "upstream is fixed"}\n`,
+        `${action === 'update' ? 'UPDATE' : 'REJECT'}  ${selectedItems.map((item) => item.contractId).join(', ')}  repo remains blocked until ${action === 'update' ? 'dependents are updated' : 'upstream is fixed'}\n`,
       );
       process.exitCode = 0;
       return;
@@ -258,18 +210,15 @@ export const reviewCommand = new Command("review")
     }
   });
 
-async function runScanQuietly(options: {
-  changed?: boolean;
-  force?: boolean;
-}): Promise<void> {
-  const { scanCommand } = await import("./scan.js");
-  const args = ["node", "scan"];
-  if (options.changed) args.push("--changed");
-  if (options.force) args.push("--force");
+async function runScanQuietly(options: { changed?: boolean; force?: boolean }): Promise<void> {
+  const { scanCommand } = await import('./scan.js');
+  const args = ['node', 'scan'];
+  if (options.changed) args.push('--changed');
+  if (options.force) args.push('--force');
   const savedWrite = process.stdout.write.bind(process.stdout);
   process.stdout.write = () => true;
   try {
-    await scanCommand.parseAsync(args, { from: "node" });
+    await scanCommand.parseAsync(args, { from: 'node' });
   } catch {
     // scan errors are surfaced later through lint/reconcile state
   } finally {
@@ -285,54 +234,48 @@ function buildReviewItems(
     Array<{
       nodeId: string;
       filePath: string;
-      impact: "direct" | "transitive";
+      impact: 'direct' | 'transitive';
       depth: number;
     }>
   >,
 ): ReviewItem[] {
   return reviewableContracts.map((contract) => {
     const sourceNode = nodeById.get(contract.node_id);
-    const affected = (affectedByContractId.get(contract.id) ?? [])
-      .slice()
-      .sort((a, b) => {
-        if (a.impact !== b.impact) {
-          return a.impact.localeCompare(b.impact);
-        }
-        if (a.depth !== b.depth) {
-          return a.depth - b.depth;
-        }
-        return a.filePath.localeCompare(b.filePath);
-      });
-    const direct = affected.filter((item) => item.impact === "direct");
-    const transitive = affected.filter((item) => item.impact === "transitive");
+    const affected = (affectedByContractId.get(contract.id) ?? []).slice().sort((a, b) => {
+      if (a.impact !== b.impact) {
+        return a.impact.localeCompare(b.impact);
+      }
+      if (a.depth !== b.depth) {
+        return a.depth - b.depth;
+      }
+      return a.filePath.localeCompare(b.filePath);
+    });
+    const direct = affected.filter((item) => item.impact === 'direct');
+    const transitive = affected.filter((item) => item.impact === 'transitive');
     return {
       contractId: contract.id,
       sourceNodeId: contract.node_id,
       sourceFile: sourceNode?.file_path ?? contract.node_id,
-      classification:
-        contract.status === "needs-review" ? "breaking" : "non-breaking",
+      classification: contract.status === 'needs-review' ? 'breaking' : 'non-breaking',
       affectedCount: affected.length,
       impact: {
         direct,
         transitive,
       },
-      recommendedAction: affected.length > 0 ? "update" : "accept",
-      availableActions: ["accept", "update", "reject"],
+      recommendedAction: affected.length > 0 ? 'update' : 'accept',
+      availableActions: ['accept', 'update', 'reject'],
     };
   });
 }
 
-async function selectContracts(
-  reviewItems: ReviewItem[],
-  options: { contract?: string; all?: boolean; json?: boolean },
-): Promise<string[]> {
+async function selectContracts(reviewItems: ReviewItem[], options: { contract?: string; all?: boolean; json?: boolean }): Promise<string[]> {
   if (options.all) {
     return reviewItems.map((item) => item.contractId);
   }
 
   if (options.contract) {
     const requested = options.contract
-      .split(",")
+      .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
     return [...new Set(requested)];
@@ -346,22 +289,20 @@ async function selectContracts(
     return [];
   }
 
-  process.stdout.write("\n  REVIEW ITEMS\n");
+  process.stdout.write('\n  REVIEW ITEMS\n');
   reviewItems.forEach((item, index) => {
     process.stdout.write(
-      `  ${index + 1}. ${item.contractId}  ${item.sourceFile}  ${item.affectedCount} impacted file${item.affectedCount === 1 ? "" : "s"}\n`,
+      `  ${index + 1}. ${item.contractId}  ${item.sourceFile}  ${item.affectedCount} impacted file${item.affectedCount === 1 ? '' : 's'}\n`,
     );
   });
-  process.stdout.write("  all. review every current drift item\n");
+  process.stdout.write('  all. review every current drift item\n');
 
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
   try {
-    const answer = (
-      await rl.question("\nSelect review item number(s) or 'all': ")
-    ).trim();
+    const answer = (await rl.question("\nSelect review item number(s) or 'all': ")).trim();
     return parseSelection(answer, reviewItems);
   } finally {
     rl.close();
@@ -373,19 +314,15 @@ function parseSelection(answer: string, reviewItems: ReviewItem[]): string[] {
   if (!normalized) {
     return [];
   }
-  if (normalized === "all") {
+  if (normalized === 'all') {
     return reviewItems.map((item) => item.contractId);
   }
 
   const seen = new Set<string>();
   const selected: string[] = [];
-  for (const token of normalized.split(",").map((item) => item.trim())) {
+  for (const token of normalized.split(',').map((item) => item.trim())) {
     const selection = Number.parseInt(token, 10);
-    if (
-      !Number.isFinite(selection) ||
-      selection < 1 ||
-      selection > reviewItems.length
-    ) {
+    if (!Number.isFinite(selection) || selection < 1 || selection > reviewItems.length) {
       return [];
     }
     const contractId = reviewItems[selection - 1].contractId;
@@ -398,10 +335,7 @@ function parseSelection(answer: string, reviewItems: ReviewItem[]): string[] {
   return selected;
 }
 
-async function selectAction(
-  requestedAction?: string,
-  suppressPromptOutput: boolean = false,
-): Promise<ReviewAction | undefined> {
+async function selectAction(requestedAction?: string, suppressPromptOutput: boolean = false): Promise<ReviewAction | undefined> {
   if (requestedAction) {
     const normalized = normalizeAction(requestedAction);
     return normalized;
@@ -412,9 +346,7 @@ async function selectAction(
     output: suppressPromptOutput ? undefined : process.stdout,
   });
   try {
-    const answer = (
-      await rl.question("\nSelect action [a]ccept, [u]pdate, [r]eject: ")
-    ).trim();
+    const answer = (await rl.question('\nSelect action [a]ccept, [u]pdate, [r]eject: ')).trim();
     return normalizeAction(answer);
   } finally {
     rl.close();
@@ -423,9 +355,9 @@ async function selectAction(
 
 function normalizeAction(value: string): ReviewAction | undefined {
   const normalized = value.trim().toLowerCase();
-  if (normalized === "a" || normalized === "accept") return "accept";
-  if (normalized === "u" || normalized === "update") return "update";
-  if (normalized === "r" || normalized === "reject") return "reject";
+  if (normalized === 'a' || normalized === 'accept') return 'accept';
+  if (normalized === 'u' || normalized === 'update') return 'update';
+  if (normalized === 'r' || normalized === 'reject') return 'reject';
   return undefined;
 }
 
@@ -435,26 +367,22 @@ async function applyReviewAction(
   contracts: FerretContract[],
   selectedItems: ReviewItem[],
   action: ReviewAction,
-): Promise<ReviewJsonOutput["result"]> {
-  if (action === "accept") {
+): Promise<ReviewJsonOutput['result']> {
+  if (action === 'accept') {
     const nodeIdsToClear = new Set<string>();
     for (const item of selectedItems) {
       nodeIdsToClear.add(item.sourceNodeId);
       item.impact.direct.forEach((impact) => nodeIdsToClear.add(impact.nodeId));
-      item.impact.transitive.forEach((impact) =>
-        nodeIdsToClear.add(impact.nodeId),
-      );
+      item.impact.transitive.forEach((impact) => nodeIdsToClear.add(impact.nodeId));
     }
 
     for (const nodeId of nodeIdsToClear) {
-      await store.updateNodeStatus(nodeId, "stable");
+      await store.updateNodeStatus(nodeId, 'stable');
     }
 
-    const clearedContracts = contracts.filter((contract) =>
-      nodeIdsToClear.has(contract.node_id),
-    );
+    const clearedContracts = contracts.filter((contract) => nodeIdsToClear.has(contract.node_id));
     for (const contract of clearedContracts) {
-      await store.upsertContract({ ...contract, status: "stable" });
+      await store.upsertContract({ ...contract, status: 'stable' });
     }
 
     await writeContext(store, root);
@@ -465,9 +393,7 @@ async function applyReviewAction(
       clearedFiles: [
         ...new Set(
           clearedContracts.map((contract) => {
-            const item = selectedItems.find(
-              (entry) => entry.sourceNodeId === contract.node_id,
-            );
+            const item = selectedItems.find((entry) => entry.sourceNodeId === contract.node_id);
             return item?.sourceFile ?? contract.node_id;
           }),
         ),
@@ -497,79 +423,62 @@ async function applyReviewAction(
 }
 
 function renderReviewContext(item: ReviewItem): void {
-  process.stdout.write("\n  ferret review\n\n");
-  process.stdout.write("  DRIFT\n");
+  process.stdout.write('\n  ferret review\n\n');
+  process.stdout.write('  DRIFT\n');
   process.stdout.write(`  contract: ${item.contractId}\n`);
   process.stdout.write(`  source: ${item.sourceFile}\n`);
   process.stdout.write(`  classification: ${item.classification}\n`);
-  process.stdout.write(
-    `  affected: ${item.affectedCount} file${item.affectedCount === 1 ? "" : "s"}\n`,
-  );
+  process.stdout.write(`  affected: ${item.affectedCount} file${item.affectedCount === 1 ? '' : 's'}\n`);
   process.stdout.write(`  recommended-action: ${item.recommendedAction}\n\n`);
 
-  process.stdout.write("  DIRECT IMPACT\n");
+  process.stdout.write('  DIRECT IMPACT\n');
   renderImpactGroup(item.impact.direct);
-  process.stdout.write("\n  TRANSITIVE IMPACT\n");
+  process.stdout.write('\n  TRANSITIVE IMPACT\n');
   renderImpactGroup(item.impact.transitive);
-  process.stdout.write("\n");
+  process.stdout.write('\n');
 
-  process.stdout.write("  RESOLUTION OPTIONS\n");
-  process.stdout.write("  [a]ccept  mark reviewed items stable and continue\n");
-  process.stdout.write(
-    "  [u]pdate  print copy-paste context for downstream updates\n",
-  );
-  process.stdout.write(
-    "  [r]eject  keep repo blocked until upstream is fixed\n",
-  );
+  process.stdout.write('  RESOLUTION OPTIONS\n');
+  process.stdout.write('  [a]ccept  mark reviewed items stable and continue\n');
+  process.stdout.write('  [u]pdate  print copy-paste context for downstream updates\n');
+  process.stdout.write('  [r]eject  keep repo blocked until upstream is fixed\n');
 }
 
 function renderImpactGroup(items: ReviewImpactItem[]): void {
   if (items.length === 0) {
-    process.stdout.write("  └── none\n");
+    process.stdout.write('  └── none\n');
     return;
   }
 
   items.forEach((item, index) => {
-    const treeChar = index === items.length - 1 ? "└──" : "├──";
-    const impact =
-      item.impact === "direct"
-        ? "imports this directly"
-        : `imports this transitively (depth ${item.depth})`;
+    const treeChar = index === items.length - 1 ? '└──' : '├──';
+    const impact = item.impact === 'direct' ? 'imports this directly' : `imports this transitively (depth ${item.depth})`;
     process.stdout.write(`  ${treeChar} ${item.filePath}  ${impact}\n`);
   });
 }
 
-function renderCopyPasteContext(
-  item: ReviewItem,
-  mode: "update" | "reject",
-): void {
-  process.stdout.write("\n  COPY-PASTE CONTEXT\n");
+function renderCopyPasteContext(item: ReviewItem, mode: 'update' | 'reject'): void {
+  process.stdout.write('\n  COPY-PASTE CONTEXT\n');
   process.stdout.write(`  contract: ${item.contractId}\n`);
   process.stdout.write(`  source: ${item.sourceFile}\n`);
   process.stdout.write(`  requested-action: ${mode}\n`);
   process.stdout.write(`  affected-files: ${item.affectedCount}\n`);
   [...item.impact.direct, ...item.impact.transitive].forEach((impact) => {
-    process.stdout.write(
-      `  - ${impact.filePath} (${impact.impact === "direct" ? "direct" : `transitive depth ${impact.depth}`})\n`,
-    );
+    process.stdout.write(`  - ${impact.filePath} (${impact.impact === 'direct' ? 'direct' : `transitive depth ${impact.depth}`})\n`);
   });
   process.stdout.write(
-    `  next-step: ${mode === "update" ? "Update downstream files and re-run ferret lint" : "Fix or revert the upstream change and re-run ferret lint"}\n\n`,
+    `  next-step: ${mode === 'update' ? 'Update downstream files and re-run ferret lint' : 'Fix or revert the upstream change and re-run ferret lint'}\n\n`,
   );
 }
 
 function writeJson(payload: ReviewJsonOutput): void {
-  process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
+  process.stdout.write(JSON.stringify(payload, null, 2) + '\n');
 }
 
-function defaultResolutionNote(
-  action: ReviewAction,
-  contractId: string,
-): string {
-  if (action === "accept") {
+function defaultResolutionNote(action: ReviewAction, contractId: string): string {
+  if (action === 'accept') {
     return `Accepted review for ${contractId}.`;
   }
-  if (action === "update") {
+  if (action === 'update') {
     return `Update requested for downstream dependents of ${contractId}.`;
   }
   return `Rejected upstream drift for ${contractId}.`;
