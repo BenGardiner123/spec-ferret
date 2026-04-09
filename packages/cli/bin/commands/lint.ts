@@ -320,6 +320,8 @@ function renderIntegrityViolations(
       contractId: string;
       filePath: string;
       importPath: string;
+      expectedTargetId: string;
+      transitiveChain?: string[];
     }>;
     selfImports: Array<{
       contractId: string;
@@ -331,14 +333,29 @@ function renderIntegrityViolations(
       filePath: string;
       importPath: string;
     }>;
+    orphanedContracts: Array<{
+      contractId: string;
+      filePath: string;
+      unresolvedImports: string[];
+      remediationHint: string;
+    }>;
   },
   useColor: boolean,
 ): void {
   const criticalLabel = useColor ? pc.red('CRITICAL') : 'CRITICAL';
+  const warningLabel = useColor ? pc.yellow('WARNING') : 'WARNING';
 
   for (const violation of integrityViolations.unresolvedImports) {
     process.stdout.write(`  ${criticalLabel}  ${violation.contractId}\n`);
-    process.stdout.write(`  └── ${violation.filePath}  unresolved import ${violation.importPath}\n\n`);
+    process.stdout.write(
+      `  └── ${violation.filePath}  unresolved import (source ${violation.contractId}, expected target ${violation.expectedTargetId})\n`,
+    );
+    if (violation.transitiveChain && violation.transitiveChain.length > 0) {
+      process.stdout.write(
+        `      transitive chain: ${violation.transitiveChain.join(' -> ')}\n`,
+      );
+    }
+    process.stdout.write('\n');
   }
 
   for (const violation of integrityViolations.selfImports) {
@@ -349,5 +366,13 @@ function renderIntegrityViolations(
   for (const violation of integrityViolations.circularImports) {
     process.stdout.write(`  ${criticalLabel}  ${violation.contractId}\n`);
     process.stdout.write(`  └── ${violation.filePath}  circular import ${violation.importPath}\n\n`);
+  }
+
+  for (const violation of integrityViolations.orphanedContracts) {
+    process.stdout.write(`  ${warningLabel}  ${violation.contractId}\n`);
+    process.stdout.write(
+      `  └── ${violation.filePath}  orphaned contract (${violation.unresolvedImports.join(', ')})\n`,
+    );
+    process.stdout.write(`      remediation: ${violation.remediationHint}\n\n`);
   }
 }

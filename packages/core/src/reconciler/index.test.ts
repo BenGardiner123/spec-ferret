@@ -50,10 +50,16 @@ describe("Reconciler — S30 import integrity", () => {
         contractId: "api.GET/a",
         filePath: "contracts/a.contract.md",
         importPath: "api.GET/missing",
+        expectedTargetId: "api.GET/missing",
       },
     ]);
     assert.equal(report.integrityViolations.selfImports.length, 0);
     assert.equal(report.integrityViolations.circularImports.length, 0);
+    assert.equal(report.integrityViolations.orphanedContracts.length, 1);
+    assert.equal(
+      report.integrityViolations.orphanedContracts[0].contractId,
+      "api.GET/a",
+    );
 
     await store.close();
   });
@@ -149,6 +155,56 @@ describe("Reconciler — S30 import integrity", () => {
     assert.equal(
       report.integrityViolations.circularImports[0].importPath,
       "api.GET/a -> api.GET/b -> api.GET/c -> api.GET/a",
+    );
+
+    await store.close();
+  });
+
+  it("adds transitive chain context to unresolved import violations", async () => {
+    const store = makeStore();
+    await store.init();
+
+    const nodeRoot = makeNode({
+      id: "node-root",
+      file_path: "contracts/root.contract.md",
+    });
+    const nodeMid = makeNode({
+      id: "node-mid",
+      file_path: "contracts/mid.contract.md",
+    });
+    const nodeLeaf = makeNode({
+      id: "node-leaf",
+      file_path: "contracts/leaf.contract.md",
+    });
+
+    await store.upsertNode(nodeRoot);
+    await store.upsertNode(nodeMid);
+    await store.upsertNode(nodeLeaf);
+    await store.upsertContract(makeContract(nodeRoot.id, "api.GET/root"));
+    await store.upsertContract(makeContract(nodeMid.id, "api.GET/mid"));
+    await store.upsertContract(makeContract(nodeLeaf.id, "api.GET/leaf"));
+
+    await store.replaceDependenciesForSourceNode(nodeRoot.id, ["api.GET/mid"]);
+    await store.replaceDependenciesForSourceNode(nodeMid.id, ["api.GET/leaf"]);
+    await store.replaceDependenciesForSourceNode(nodeLeaf.id, [
+      "api.GET/missing",
+    ]);
+
+    const report = await new Reconciler(store).reconcile();
+    assert.equal(report.integrityViolations.unresolvedImports.length, 1);
+    assert.deepEqual(
+      report.integrityViolations.unresolvedImports[0].transitiveChain,
+      [
+        "api.GET/root",
+        "api.GET/mid",
+        "api.GET/leaf",
+        "api.GET/missing",
+      ],
+    );
+    assert.equal(report.integrityViolations.orphanedContracts.length, 1);
+    assert.equal(
+      report.integrityViolations.orphanedContracts[0].contractId,
+      "api.GET/leaf",
     );
 
     await store.close();
