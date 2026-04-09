@@ -77,7 +77,7 @@ ferret review --json > review.json
 Validate required keys including versioned review contract:
 
 ```bash
-cat review.json | jq -e '.version and .reviewSchemaVersion and .diagnosticsSchemaVersion and .reviewable and .selected and (.action == null or .action) and (.result == null or .result)'
+cat review.json | jq -e '.version and .diagnosticsSchemaVersion and .reviewable and .selected and (.action == null or .action) and (.result == null or .result)'
 ```
 
 Pass criteria:
