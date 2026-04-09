@@ -15,9 +15,7 @@ export interface SchemaComparisonResult {
   reason: string;
 }
 
-export type ContractTypeValidationResult =
-  | { valid: true; value: ContractType }
-  | { valid: false; error: string };
+export type ContractTypeValidationResult = { valid: true; value: ContractType } | { valid: false; error: string };
 
 export function validateContractType(contractType: unknown, filePath: string): ContractTypeValidationResult {
   if (isContractType(contractType)) {
