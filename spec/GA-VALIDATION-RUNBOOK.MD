@@ -14,6 +14,10 @@ This runbook verifies SpecFerret behavior in two real external workflows:
 
 Both must complete mandatory branch-matrix validation before GA approval.
 
+Release enforcement and agent-UX gates are defined in:
+
+- `spec/RELEASE-GATE-CHECKLIST.MD`
+
 ---
 
 ## Prerequisites
@@ -267,6 +271,7 @@ Fix:
 
 ## GA Sign-off Procedure
 
+0. Complete every required item in `spec/RELEASE-GATE-CHECKLIST.MD`.
 1. Run both validation repositories against the final GA candidate tag.
 2. Verify all mandatory scenario branches are green in both repositories.
 3. Verify evidence checklist complete for both.
