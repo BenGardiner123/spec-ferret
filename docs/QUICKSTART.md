@@ -134,7 +134,31 @@ Expected result after resolution:
 
 ---
 
-## 5. Daily Workflow
+## 5. Agent Mode (Optional)
+
+If you use Claude, GitHub Copilot, or Gemini in your repo, scaffold the canonical agent rules:
+
+```bash
+ferret init --agent-targets claude,copilot,gemini
+```
+
+This writes:
+
+- `.github/specferret/canonical-agent-rules.md` — the authoritative contract lifecycle rules for agents
+- `.github/instructions/specferret-agent.instructions.md` — VS Code Copilot instruction pack
+- `.github/specferret/adapters/claude.adapter.md`
+- `.github/specferret/adapters/copilot.adapter.md`
+- `.github/specferret/adapters/gemini.adapter.md`
+
+Skip agent rules entirely with `--no-agent-rules`. Run specific targets only with:
+
+```bash
+ferret init --agent-targets claude
+```
+
+---
+
+## 6. Daily Workflow
 
 Normal workflow:
 
@@ -156,7 +180,7 @@ Migration note for annotation-first repositories:
 
 ---
 
-## 6. CI Workflow
+## 7. CI Workflow
 
 Recommended when `.ferret/context.json` is committed:
 

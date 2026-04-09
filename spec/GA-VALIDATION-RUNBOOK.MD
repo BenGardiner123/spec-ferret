@@ -193,6 +193,30 @@ Notes:
 
 ---
 
+### Recorded Execution Evidence (pending — 0.1.4 npm install)
+
+Candidate under test:
+
+- `@specferret/cli@0.1.4` installed from npm (live package, not vendor bundle)
+
+To complete this entry: trigger both validation workflows via Actions → "Run workflow" → version `0.1.4`, then fill in below.
+
+spec-kit validation repo:
+
+- Workflow run: _pending_
+- Head SHA: `eeb8e4e53f012079043c0a61a26a69248effa3f8`
+- Result: _pending_
+- Matrix jobs: _pending_
+
+BMAD validation repo:
+
+- Workflow run: _pending_
+- Head SHA: `65f0ce934788d8a6a46f6e3861d25f88f2daf07d`
+- Result: _pending_
+- Matrix jobs: _pending_
+
+---
+
 ## Pass/Fail Decision Table
 
 | Check               | Expected                                 | Fail Condition              |

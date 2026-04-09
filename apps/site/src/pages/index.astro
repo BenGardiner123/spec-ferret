@@ -15,7 +15,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     </header>
 
     <section class="hero">
-      <p class="pill mono">Open source CLI • npm: @specferret/cli</p>
+      <p class="pill mono">Open source CLI • @specferret/cli@0.1.4</p>
       <h1>Catch spec drift before it breaks production.</h1>
       <p class="subhead">
         SpecFerret is a CLI that detects when API specs, contracts, and shipped
@@ -27,6 +27,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           class="cta primary"
           href="https://www.npmjs.com/package/@specferret/cli">Install CLI</a
         >
+        <a class="cta" href="https://github.com/BenGardiner123/spec-ferret/blob/main/docs/QUICKSTART.md"
+          >Quickstart</a
+        >
         <a class="cta" href="https://github.com/BenGardiner123/spec-ferret"
           >Read the code</a
         >
@@ -34,7 +37,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       <pre
         class="quick mono"><code>bun install -g @specferret/cli
 ferret init
-ferret lint</code></pre>
+ferret lint
+
+# Optional: scaffold agent rules for Claude / Copilot / Gemini
+ferret init --agent-targets claude,copilot,gemini</code></pre>
     </section>
 
     <section class="section why">

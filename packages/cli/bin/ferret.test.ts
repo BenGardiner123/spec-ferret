@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'bun:test';
+import pkg from '../package.json';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, './ferret.ts');
@@ -15,7 +16,7 @@ describe('ferret version', () => {
     });
 
     assert.equal(result.status, 0);
-    assert.equal(result.stdout.trim(), '0.1.4');
+    assert.equal(result.stdout.trim(), pkg.version);
     assert.equal(result.stderr, '');
   });
 });
