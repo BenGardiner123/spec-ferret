@@ -1,6 +1,7 @@
-import assert from "node:assert/strict";
-import { describe, it } from "bun:test";
-import { extractFromSpecFile, ALLOWED_TYPES } from "./frontmatter.js";
+import assert from 'node:assert/strict';
+import { describe, it } from 'bun:test';
+import { extractFromSpecFile } from './frontmatter.js';
+import { CONTRACT_TYPES } from './contract-types.js';
 
 const VALID_SPEC = `---
 ferret:
@@ -66,88 +67,60 @@ ferret:
 ---
 `;
 
-describe("extractFromSpecFile — Task 3", () => {
-  it("extracts valid frontmatter correctly", () => {
-    const result = extractFromSpecFile("contracts/users.contract.md", VALID_SPEC);
-    assert.equal(result.filePath, "contracts/users.contract.md");
-    assert.equal(result.fileType, "spec");
-    assert.equal(result.extractedBy, "gray-matter");
+const SPEC_INVALID_TYPE = `---
+ferret:
+  id: api.GET/broken
+  type: service
+  shape:
+    type: object
+---
+`;
+
+describe('extractFromSpecFile — Task 3', () => {
+  it('extracts valid frontmatter correctly', () => {
+    const result = extractFromSpecFile('contracts/users.contract.md', VALID_SPEC);
+    assert.equal(result.filePath, 'contracts/users.contract.md');
+    assert.equal(result.fileType, 'spec');
+    assert.equal(result.extractedBy, 'gray-matter');
     assert.equal(result.warning, undefined);
     assert.equal(result.contracts.length, 1);
-    assert.equal(result.contracts[0].id, "api.GET/users");
-    assert.equal(result.contracts[0].type, "api");
+    assert.equal(result.contracts[0].id, 'api.GET/users');
+    assert.equal(result.contracts[0].type, 'api');
     assert.notEqual(result.contracts[0].shape_hash, undefined);
     assert.equal(result.contracts[0].shape_hash.length, 64);
     assert.deepEqual(result.contracts[0].imports, []);
   });
 
-  it("extracts imports correctly", () => {
-    const result = extractFromSpecFile("contracts/search.contract.md", SPEC_WITH_IMPORTS);
-    assert.deepEqual(result.contracts[0].imports, [
-      "auth.jwt",
-      "tables.document",
-    ]);
+  it('extracts imports correctly', () => {
+    const result = extractFromSpecFile('contracts/search.contract.md', SPEC_WITH_IMPORTS);
+    assert.deepEqual(result.contracts[0].imports, ['auth.jwt', 'tables.document']);
   });
 
-  it("missing frontmatter returns warning, empty contracts, does not throw", () => {
-    const result = extractFromSpecFile("contracts/plain.contract.md", SPEC_NO_FRONTMATTER);
-    assert.equal(result.warning, "no-frontmatter");
+  it('missing frontmatter returns warning, empty contracts, does not throw', () => {
+    const result = extractFromSpecFile('contracts/plain.contract.md', SPEC_NO_FRONTMATTER);
+    assert.equal(result.warning, 'no-frontmatter');
     assert.equal(result.contracts.length, 0);
-    assert.equal(result.filePath, "contracts/plain.contract.md");
-    assert.equal(result.fileType, "spec");
+    assert.equal(result.filePath, 'contracts/plain.contract.md');
+    assert.equal(result.fileType, 'spec');
   });
 
   it('missing required field "shape" throws with field name in message', () => {
-    assert.throws(
-      () => extractFromSpecFile("contracts/broken.contract.md", SPEC_MISSING_FIELDS),
-      /shape/,
-    );
+    assert.throws(() => extractFromSpecFile('contracts/broken.contract.md', SPEC_MISSING_FIELDS), /shape/);
   });
 
-  it("missing multiple required fields throws with all field names in message", () => {
+  it('missing multiple required fields throws with all field names in message', () => {
     const specMissingAll = `---\nferret:\n  someField: value\n---\n`;
+    assert.throws(() => extractFromSpecFile('contracts/broken.contract.md', specMissingAll), /id.*type.*shape|Missing required/);
+  });
+
+  it('invalid top-level contract type throws and lists allowed values', () => {
     assert.throws(
-      () => extractFromSpecFile("contracts/broken.contract.md", specMissingAll),
-      /id.*type.*shape|Missing required/,
+      () => extractFromSpecFile('contracts/broken.contract.md', SPEC_INVALID_TYPE),
+      /Invalid contract type 'service'.*Allowed types: api, table, type, event, flow, config/,
     );
   });
 
-  it("invalid ferret.type throws with allowed values listed", () => {
-    const specInvalidType = `---
-ferret:
-  id: tables.user
-  type: schema
-  shape:
-    type: object
-    properties:
-      id:
-        type: string
----
-`;
-    assert.throws(
-      () => extractFromSpecFile("contracts/invalid-type.contract.md", specInvalidType),
-      /Invalid ferret\.type "schema".*api, table, type, event, flow, config/,
-    );
-  });
-
-  it("all six allowed types are accepted without error", () => {
-    for (const t of ALLOWED_TYPES) {
-      const spec = `---
-ferret:
-  id: test.${t}
-  type: ${t}
-  shape:
-    type: object
----
-`;
-      assert.doesNotThrow(
-        () => extractFromSpecFile(`contracts/${t}.contract.md`, spec),
-        `Expected type "${t}" to be accepted`,
-      );
-    }
-  });
-
-  it("unsupported schema keyword produces warning, does not fail", () => {
+  it('unsupported schema keyword produces warning, does not fail', () => {
     const stderrOutput: string[] = [];
     const originalWrite = process.stderr.write.bind(process.stderr);
     // Capture stderr writes
@@ -158,10 +131,7 @@ ferret:
 
     let result: ReturnType<typeof extractFromSpecFile> | undefined;
     try {
-      result = extractFromSpecFile(
-        "contracts/complex.contract.md",
-        SPEC_WITH_UNSUPPORTED_KEYWORD,
-      );
+      result = extractFromSpecFile('contracts/complex.contract.md', SPEC_WITH_UNSUPPORTED_KEYWORD);
     } finally {
       process.stderr.write = originalWrite;
     }
@@ -170,33 +140,47 @@ ferret:
     assert.equal(result!.contracts.length, 1);
     assert.equal(result!.warning, undefined);
     assert.equal(
-      stderrOutput.some((line) => line.includes("allOf")),
+      stderrOutput.some((line) => line.includes('allOf')),
       true,
     );
   });
 
-  it("extraction is synchronous — the function itself has no async/await", () => {
-    // If extractFromSpecFile returns a Promise, this would be a thenable object
-    const result = extractFromSpecFile("contracts/users.contract.md", VALID_SPEC);
-    assert.equal(result instanceof Promise, false);
-    assert.notEqual(typeof (result as any).then, "function");
+  it('all six allowed types are accepted without error', () => {
+    for (const contractType of CONTRACT_TYPES) {
+      const spec = `---
+ferret:
+  id: test.${contractType}
+  type: ${contractType}
+  shape:
+    type: object
+---
+`;
+      assert.doesNotThrow(() => extractFromSpecFile(`contracts/${contractType}.contract.md`, spec));
+    }
   });
 
-  it("identical files produce identical shape_hash", () => {
-    const r1 = extractFromSpecFile("contracts/a.contract.md", VALID_SPEC);
-    const r2 = extractFromSpecFile("contracts/b.contract.md", VALID_SPEC);
+  it('extraction is synchronous — the function itself has no async/await', () => {
+    // If extractFromSpecFile returns a Promise, this would be a thenable object
+    const result = extractFromSpecFile('contracts/users.contract.md', VALID_SPEC);
+    assert.equal(result instanceof Promise, false);
+    assert.notEqual(typeof (result as any).then, 'function');
+  });
+
+  it('identical files produce identical shape_hash', () => {
+    const r1 = extractFromSpecFile('contracts/a.contract.md', VALID_SPEC);
+    const r2 = extractFromSpecFile('contracts/b.contract.md', VALID_SPEC);
     assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 
-  it("different shapes produce different shape_hash", () => {
+  it('different shapes produce different shape_hash', () => {
     const specA = VALID_SPEC;
-    const specB = specA.replace("format: uuid", "format: email");
-    const r1 = extractFromSpecFile("contracts/a.contract.md", specA);
-    const r2 = extractFromSpecFile("contracts/b.contract.md", specB);
+    const specB = specA.replace('format: uuid', 'format: email');
+    const r1 = extractFromSpecFile('contracts/a.contract.md', specA);
+    const r2 = extractFromSpecFile('contracts/b.contract.md', specB);
     assert.notEqual(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 
-  it("property order change in shape does NOT change shape_hash", () => {
+  it('property order change in shape does NOT change shape_hash', () => {
     const specA = `---
 ferret:
   id: api.GET/test
@@ -225,8 +209,8 @@ ferret:
     required: [id, name]
 ---
 `;
-    const r1 = extractFromSpecFile("contracts/a.contract.md", specA);
-    const r2 = extractFromSpecFile("contracts/b.contract.md", specB);
+    const r1 = extractFromSpecFile('contracts/a.contract.md', specA);
+    const r2 = extractFromSpecFile('contracts/b.contract.md', specB);
     // Keys are sorted before hashing — order change is a no-change
     assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, it } from 'bun:test';
+import { CONTRACT_TYPES } from './contract-types.js';
 import { extractContractsFromTypeScript } from './typescript.js';
 
 describe('extractContractsFromTypeScript — S28 acceptance criteria', () => {
@@ -84,6 +85,21 @@ export interface ProfileResponse {
     assert.equal(result.contracts.length, 1);
     assert.equal(result.contracts[0].id, 'api.GET/profile');
     assert.equal(result.contracts[0].type, 'api');
+  });
+
+  it('accepts all supported annotation contract types', () => {
+    for (const contractType of CONTRACT_TYPES) {
+      const src = `
+// @ferret-contract: ${contractType}.GET/profile ${contractType}
+export interface ProfileResponse {
+  email: string;
+}
+`;
+      const result = extractContractsFromTypeScript('src/annotated.ts', src);
+      assert.equal(result.errors.length, 0);
+      assert.equal(result.contracts.length, 1);
+      assert.equal(result.contracts[0].type, contractType);
+    }
   });
 
   it('reports unmatched annotations', () => {
