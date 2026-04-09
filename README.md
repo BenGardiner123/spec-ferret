@@ -22,6 +22,7 @@
 
 ## 📢 News
 
+- **2026-04-09** 🎉 Released **v0.1.4** — agent mode scaffolding (`--agent-targets`), default tree-sitter TypeScript extraction (no annotations required), context schema versioning, diagnostics command, and perf budget hardening. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.4).
 - **2026-04-04** 🎉 Released **v0.1.3** — publish-safe Bun exports, smoke-fixture hardening, and npm packages refreshed. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.3).
 - **2026-04-03** 🎉 Released **v0.1.1** — package READMEs, trusted publishing via OIDC, and specferret.dev launched. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.1).
 - **2026-03-15** 🚀 Released **v0.1.0** — initial public release. `ferret init`, `ferret scan`, `ferret lint`, `ferret review`. Full BMAD and spec-kit validation runs passing.
