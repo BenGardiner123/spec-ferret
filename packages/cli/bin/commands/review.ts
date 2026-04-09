@@ -320,27 +320,31 @@ function buildReviewItems(
       });
     const direct = affected.filter((item) => item.impact === "direct");
     const transitive = affected.filter((item) => item.impact === "transitive");
+    const classification: "breaking" | "non-breaking" =
+      contract.status === "needs-review" ? "breaking" : "non-breaking";
     return {
       contractId: contract.id,
       sourceNodeId: contract.node_id,
       sourceFile: sourceNode?.file_path ?? contract.node_id,
-      classification:
-        contract.status === "needs-review" ? "breaking" : "non-breaking",
+      classification,
       affectedCount: affected.length,
       impact: {
         direct,
         transitive,
       },
-      recommendedAction: affected.length > 0 ? "update" : "accept",
+      recommendedAction:
+        classification === "breaking" || affected.length > 0
+          ? "update"
+          : "accept",
       availableActions: ["accept", "update", "reject"],
-      suggestedActions: buildSuggestedActions(
-        contract.status === "needs-review" ? "breaking" : "non-breaking",
-        affected.length,
-      ),
+      suggestedActions: buildSuggestedActions(classification, affected.length),
       dependencyContext: {
         directDependents: direct.length,
         transitiveDependents: transitive.length,
-        maxDepth: affected.length > 0 ? Math.max(...affected.map((item) => item.depth)) : 0,
+        maxDepth:
+          affected.length > 0
+            ? Math.max(...affected.map((item) => item.depth))
+            : 0,
       },
     };
   });
