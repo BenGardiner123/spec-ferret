@@ -17,6 +17,8 @@ import {
   type MachineDiagnostic,
 } from "./diagnostics.js";
 
+const REVIEW_SCHEMA_VERSION = "1.1.0" as const;
+
 type ReviewAction = "accept" | "update" | "reject";
 
 type ReviewImpactItem = {
@@ -38,10 +40,28 @@ type ReviewItem = {
   };
   recommendedAction: ReviewAction;
   availableActions: ReviewAction[];
+  suggestedActions: Array<{
+    action: ReviewAction;
+    confidence: "high" | "medium" | "low";
+    reason: string;
+  }>;
+  dependencyContext: {
+    directDependents: Array<{
+      nodeId: string;
+      filePath: string;
+      depth: number;
+    }>;
+    transitiveDependents: Array<{
+      nodeId: string;
+      filePath: string;
+      depth: number;
+    }>;
+  };
 };
 
 type ReviewJsonOutput = {
   version: "2.0";
+  reviewSchemaVersion: typeof REVIEW_SCHEMA_VERSION;
   diagnosticsSchemaVersion: string;
   diagnostics: MachineDiagnostic[];
   reviewable: ReviewItem[];
@@ -88,6 +108,7 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: buildIntegrityDiagnostics(report.integrityViolations),
             reviewable: [],
@@ -132,6 +153,7 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: [],
             reviewable: [],
@@ -157,6 +179,7 @@ export const reviewCommand = new Command("review")
       if (options.json && !options.action && selectedContractIds.length === 0) {
         writeJson({
           version: "2.0",
+          reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(reviewItems),
           reviewable: reviewItems,
@@ -228,6 +251,7 @@ export const reviewCommand = new Command("review")
       if (options.json) {
         writeJson({
           version: "2.0",
+          reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(selectedItems),
           reviewable: selectedItems,
@@ -318,8 +342,77 @@ function buildReviewItems(
       },
       recommendedAction: affected.length > 0 ? "update" : "accept",
       availableActions: ["accept", "update", "reject"],
+      suggestedActions: buildSuggestedActions(
+        contract.status === "needs-review" ? "breaking" : "non-breaking",
+        affected.length,
+      ),
+      dependencyContext: {
+        directDependents: direct.map((item) => ({
+          nodeId: item.nodeId,
+          filePath: item.filePath,
+          depth: item.depth,
+        })),
+        transitiveDependents: transitive.map((item) => ({
+          nodeId: item.nodeId,
+          filePath: item.filePath,
+          depth: item.depth,
+        })),
+      },
     };
   });
+}
+
+function buildSuggestedActions(
+  classification: "breaking" | "non-breaking",
+  affectedCount: number,
+): Array<{ action: ReviewAction; confidence: "high" | "medium" | "low"; reason: string }> {
+  if (classification === "breaking") {
+    if (affectedCount > 0) {
+      return [
+        {
+          action: "update",
+          confidence: "high",
+          reason: "Breaking drift has downstream dependents that need updates.",
+        },
+        {
+          action: "reject",
+          confidence: "medium",
+          reason: "Reject when upstream change should not propagate.",
+        },
+        {
+          action: "accept",
+          confidence: "low",
+          reason: "Accept only when downstream risk is intentionally tolerated.",
+        },
+      ];
+    }
+
+    return [
+      {
+        action: "accept",
+        confidence: "medium",
+        reason: "No downstream dependents detected for this breaking change.",
+      },
+      {
+        action: "reject",
+        confidence: "medium",
+        reason: "Reject if the breaking change should not ship.",
+      },
+    ];
+  }
+
+  return [
+    {
+      action: "accept",
+      confidence: "high",
+      reason: "Non-breaking drift can usually be accepted safely.",
+    },
+    {
+      action: "update",
+      confidence: affectedCount > 0 ? "medium" : "low",
+      reason: "Update dependents if you want immediate downstream alignment.",
+    },
+  ];
 }
 
 async function selectContracts(
