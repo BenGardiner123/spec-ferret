@@ -1,96 +1,88 @@
-import assert from "node:assert/strict";
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-import { describe, it, beforeEach, afterEach } from "bun:test";
+import assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { describe, it, beforeEach, afterEach } from 'bun:test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ferretBin = path.resolve(__dirname, "../ferret.ts");
+const ferretBin = path.resolve(__dirname, '../ferret.ts');
 
 function runFerret(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
   return spawnSync(process.execPath, [ferretBin, ...args], {
     cwd,
-    encoding: "utf-8",
+    encoding: 'utf-8',
     timeout: 10_000,
   });
 }
 
-describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () => {
+describe('ferret lint --ci baseline strategy — S27 acceptance criteria', () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-lint-ci-test-"));
-    runFerret(tmpDir, ["init", "--no-hook"]);
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-ci-test-'));
+    runFerret(tmpDir, ['init', '--no-hook']);
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("fails with clear diagnostic when committed baseline is missing", () => {
-    const result = runFerret(tmpDir, ["lint", "--ci"]);
+  it('fails with clear diagnostic when committed baseline is missing', () => {
+    const result = runFerret(tmpDir, ['lint', '--ci']);
 
     assert.equal(result.status, 2);
-    assert.equal(result.stdout, "");
+    assert.equal(result.stdout, '');
     assert.match(result.stderr, /CI baseline missing/);
     assert.match(result.stderr, /--ci-baseline rebuild/);
   });
 
-  it("passes with --ci-baseline rebuild on a clean project", () => {
-    const result = runFerret(tmpDir, [
-      "lint",
-      "--ci",
-      "--ci-baseline",
-      "rebuild",
-    ]);
+  it('passes with --ci-baseline rebuild on a clean project', () => {
+    const result = runFerret(tmpDir, ['lint', '--ci', '--ci-baseline', 'rebuild']);
 
     assert.equal(result.status, 0);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(json.consistent, true);
-    assert.equal(json.diagnosticsSchemaVersion, "1.0.0");
+    assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.ok(Array.isArray(json.diagnostics));
   });
 
-  it("passes with committed baseline when context.json exists", () => {
-    runFerret(tmpDir, ["scan"]);
+  it('passes with committed baseline when context.json exists', () => {
+    runFerret(tmpDir, ['scan']);
 
-    const result = runFerret(tmpDir, ["lint", "--ci"]);
+    const result = runFerret(tmpDir, ['lint', '--ci']);
 
     assert.equal(result.status, 0);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(json.consistent, true);
-    assert.equal(json.diagnosticsSchemaVersion, "1.0.0");
+    assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.ok(Array.isArray(json.diagnostics));
   });
 
-  it("migrates known legacy committed context without schemaVersion", () => {
-    runFerret(tmpDir, ["scan"]);
-    const contextPath = path.join(tmpDir, ".ferret", "context.json");
-    const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as Record<
-      string,
-      unknown
-    >;
+  it('migrates known legacy committed context without schemaVersion', () => {
+    runFerret(tmpDir, ['scan']);
+    const contextPath = path.join(tmpDir, '.ferret', 'context.json');
+    const context = JSON.parse(fs.readFileSync(contextPath, 'utf-8')) as Record<string, unknown>;
     delete context.schemaVersion;
-    fs.writeFileSync(contextPath, JSON.stringify(context, null, 2), "utf-8");
+    fs.writeFileSync(contextPath, JSON.stringify(context, null, 2), 'utf-8');
 
-    const result = runFerret(tmpDir, ["lint", "--ci"]);
+    const result = runFerret(tmpDir, ['lint', '--ci']);
     assert.equal(result.status, 0);
     const json = JSON.parse(result.stdout) as Record<string, unknown>;
     assert.equal(json.consistent, true);
   });
 
-  it("fails with explicit upgrade guidance for unknown committed context version", () => {
-    const ferretDir = path.join(tmpDir, ".ferret");
+  it('fails with explicit upgrade guidance for unknown committed context version', () => {
+    const ferretDir = path.join(tmpDir, '.ferret');
     fs.mkdirSync(ferretDir, { recursive: true });
-    const contextPath = path.join(ferretDir, "context.json");
+    const contextPath = path.join(ferretDir, 'context.json');
     fs.writeFileSync(
       contextPath,
       JSON.stringify(
         {
-          version: "9.9",
-          schemaVersion: "1.0.0",
+          version: '9.9',
+          schemaVersion: '1.0.0',
           generated: new Date().toISOString(),
           contracts: [],
           edges: [],
@@ -99,20 +91,20 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
         null,
         2,
       ),
-      "utf-8",
+      'utf-8',
     );
 
-    const result = runFerret(tmpDir, ["lint", "--ci"]);
+    const result = runFerret(tmpDir, ['lint', '--ci']);
     assert.equal(result.status, 2);
     assert.match(result.stderr, /unsupported context\.json version/);
     assert.match(result.stderr, /Run 'ferret scan'/);
   });
 
-  it("is deterministic across repeated CI runs in the same state", () => {
-    runFerret(tmpDir, ["scan"]);
+  it('is deterministic across repeated CI runs in the same state', () => {
+    runFerret(tmpDir, ['scan']);
 
-    const first = runFerret(tmpDir, ["lint", "--ci"]);
-    const second = runFerret(tmpDir, ["lint", "--ci"]);
+    const first = runFerret(tmpDir, ['lint', '--ci']);
+    const second = runFerret(tmpDir, ['lint', '--ci']);
 
     assert.equal(first.status, second.status);
 
@@ -123,67 +115,53 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.equal(firstJson.breaking, secondJson.breaking);
     assert.equal(firstJson.nonBreaking, secondJson.nonBreaking);
     assert.equal(firstJson.diagnosticsSchemaVersion, secondJson.diagnosticsSchemaVersion);
-    assert.equal(
-      JSON.stringify(firstJson.flagged),
-      JSON.stringify(secondJson.flagged),
-    );
-    assert.equal(
-      JSON.stringify(firstJson.diagnostics),
-      JSON.stringify(secondJson.diagnostics),
-    );
+    assert.equal(JSON.stringify(firstJson.flagged), JSON.stringify(secondJson.flagged));
+    assert.equal(JSON.stringify(firstJson.diagnostics), JSON.stringify(secondJson.diagnostics));
   });
 
-  it("fails fast on invalid --ci-baseline value", () => {
-    const result = runFerret(tmpDir, [
-      "lint",
-      "--ci",
-      "--ci-baseline",
-      "unsupported",
-    ]);
+  it('fails fast on invalid --ci-baseline value', () => {
+    const result = runFerret(tmpDir, ['lint', '--ci', '--ci-baseline', 'unsupported']);
 
     assert.equal(result.status, 2);
-    assert.equal(result.stdout, "");
+    assert.equal(result.stdout, '');
     assert.match(result.stderr, /invalid --ci-baseline/);
   });
 
-  it("uses committed context baseline for fail then resolve CI flow", () => {
-    runFerret(tmpDir, ["scan"]);
+  it('uses committed context baseline for fail then resolve CI flow', () => {
+    runFerret(tmpDir, ['scan']);
 
-    const contractPath = path.join(tmpDir, "contracts", "example.contract.md");
-    const baselineSource = fs.readFileSync(contractPath, "utf-8");
-    const brokenSource = baselineSource.replace(
-      "required: [id, name]",
-      "required: [id]",
-    );
-    fs.writeFileSync(contractPath, brokenSource, "utf-8");
+    const contractPath = path.join(tmpDir, 'contracts', 'example.contract.md');
+    const baselineSource = fs.readFileSync(contractPath, 'utf-8');
+    const brokenSource = baselineSource.replace('required: [id, name]', 'required: [id]');
+    fs.writeFileSync(contractPath, brokenSource, 'utf-8');
 
-    const seeded = runFerret(tmpDir, ["lint", "--ci"]);
+    const seeded = runFerret(tmpDir, ['lint', '--ci']);
     assert.equal(seeded.status, 1);
     const seededJson = JSON.parse(seeded.stdout) as Record<string, unknown>;
     assert.equal(seededJson.consistent, false);
     assert.equal(seededJson.breaking, 0);
     assert.equal(seededJson.nonBreaking, 0);
     assert.ok(Array.isArray(seededJson.flagged));
-    assert.equal(seededJson.diagnosticsSchemaVersion, "1.0.0");
+    assert.equal(seededJson.diagnosticsSchemaVersion, '1.0.0');
     assert.ok(Array.isArray(seededJson.diagnostics));
     const seededDiagnostics = seededJson.diagnostics as Array<Record<string, unknown>>;
     assert.ok(seededDiagnostics.length >= 1);
     const firstDiagnostic = seededDiagnostics[0];
-    assert.equal(typeof firstDiagnostic.code, "string");
-    assert.equal(typeof firstDiagnostic.severity, "string");
-    assert.equal(typeof firstDiagnostic.remediation, "string");
-    assert.equal(typeof firstDiagnostic.location, "object");
+    assert.equal(typeof firstDiagnostic.code, 'string');
+    assert.equal(typeof firstDiagnostic.severity, 'string');
+    assert.equal(typeof firstDiagnostic.remediation, 'string');
+    assert.equal(typeof firstDiagnostic.location, 'object');
 
-    fs.writeFileSync(contractPath, baselineSource, "utf-8");
+    fs.writeFileSync(contractPath, baselineSource, 'utf-8');
 
-    const resolved = runFerret(tmpDir, ["lint", "--ci"]);
+    const resolved = runFerret(tmpDir, ['lint', '--ci']);
     assert.equal(resolved.status, 0);
     const resolvedJson = JSON.parse(resolved.stdout) as Record<string, unknown>;
     assert.equal(resolvedJson.consistent, true);
     assert.equal(resolvedJson.breaking, 0);
     assert.equal(resolvedJson.nonBreaking, 0);
     assert.deepEqual(resolvedJson.flagged, []);
-    assert.equal(resolvedJson.diagnosticsSchemaVersion, "1.0.0");
+    assert.equal(resolvedJson.diagnosticsSchemaVersion, '1.0.0');
     assert.deepEqual(resolvedJson.diagnostics, []);
   });
 });

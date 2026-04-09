@@ -353,9 +353,7 @@ function renderIntegrityViolations(
       `  └── ${violation.filePath}  unresolved import (source ${violation.contractId}, expected target ${violation.expectedTargetId})\n`,
     );
     if (violation.transitiveChain && violation.transitiveChain.length > 0) {
-      process.stdout.write(
-        `      transitive chain: ${violation.transitiveChain.join(' -> ')}\n`,
-      );
+      process.stdout.write(`      transitive chain: ${violation.transitiveChain.join(' -> ')}\n`);
     }
     process.stdout.write('\n');
   }
@@ -372,9 +370,7 @@ function renderIntegrityViolations(
 
   for (const violation of integrityViolations.orphanedContracts) {
     process.stdout.write(`  ${warningLabel}  ${violation.contractId}\n`);
-    process.stdout.write(
-      `  └── ${violation.filePath}  orphaned contract (${violation.unresolvedImports.join(', ')})\n`,
-    );
+    process.stdout.write(`  └── ${violation.filePath}  orphaned contract (${violation.unresolvedImports.join(', ')})\n`);
     process.stdout.write(`      remediation: ${violation.remediationHint}\n\n`);
   }
 }

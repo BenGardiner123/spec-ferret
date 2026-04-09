@@ -1,16 +1,11 @@
-import assert from "node:assert/strict";
-import { afterEach, describe, it } from "bun:test";
-import {
-  CONTEXT_SCHEMA_VERSION,
-  readContextFile,
-  writeContext,
-  type FerretContext,
-} from "./index.js";
-import { SqliteStore } from "../store/sqlite.js";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
-import { randomUUID } from "node:crypto";
+import assert from 'node:assert/strict';
+import { afterEach, describe, it } from 'bun:test';
+import { CONTEXT_SCHEMA_VERSION, readContextFile, writeContext, type FerretContext } from './index.js';
+import { SqliteStore } from '../store/sqlite.js';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import { randomUUID } from 'node:crypto';
 
 function makeTmpDir(): string {
   const tmp = path.join(os.tmpdir(), `ferret-ctx-test-${randomUUID()}`);
@@ -20,48 +15,48 @@ function makeTmpDir(): string {
 
 async function makeStoreWithData(tmpDir: string) {
   // Use in-memory store but fake the projectRoot for file writing
-  const store = new SqliteStore(":memory:");
+  const store = new SqliteStore(':memory:');
   await store.init();
 
   const nodeId = randomUUID();
   await store.upsertNode({
     id: nodeId,
-    file_path: "contracts/auth.contract.md",
-    hash: "abc",
-    status: "stable",
+    file_path: 'contracts/auth.contract.md',
+    hash: 'abc',
+    status: 'stable',
   });
 
-  const contractId = "auth.jwt";
+  const contractId = 'auth.jwt';
   await store.upsertContract({
     id: contractId,
     node_id: nodeId,
-    shape_hash: "sha256hash",
+    shape_hash: 'sha256hash',
     shape_schema: JSON.stringify({
-      type: "object",
-      properties: { token: { type: "string" } },
-      required: ["token"],
+      type: 'object',
+      properties: { token: { type: 'string' } },
+      required: ['token'],
     }),
-    type: "api",
-    status: "stable",
+    type: 'api',
+    status: 'stable',
   });
 
   // Second node that imports auth.jwt
   const nodeId2 = randomUUID();
   await store.upsertNode({
     id: nodeId2,
-    file_path: "contracts/search.contract.md",
-    hash: "def",
-    status: "needs-review",
+    file_path: 'contracts/search.contract.md',
+    hash: 'def',
+    status: 'needs-review',
   });
 
-  const contractId2 = "api.GET/search";
+  const contractId2 = 'api.GET/search';
   await store.upsertContract({
     id: contractId2,
     node_id: nodeId2,
-    shape_hash: "sha256hash2",
-    shape_schema: JSON.stringify({ type: "array" }),
-    type: "api",
-    status: "stable",
+    shape_hash: 'sha256hash2',
+    shape_schema: JSON.stringify({ type: 'array' }),
+    type: 'api',
+    status: 'stable',
   });
 
   await store.upsertDependency({
@@ -73,7 +68,7 @@ async function makeStoreWithData(tmpDir: string) {
   return { store, contractId, contractId2 };
 }
 
-describe("writeContext — Task 5", () => {
+describe('writeContext — Task 5', () => {
   const tmps: string[] = [];
 
   afterEach(() => {
@@ -86,28 +81,28 @@ describe("writeContext — Task 5", () => {
     tmps.length = 0;
   });
 
-  it("creates context.json at the correct path", async () => {
+  it('creates context.json at the correct path', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store } = await makeStoreWithData(tmpDir);
 
     await writeContext(store, tmpDir);
 
-    const contextPath = path.join(tmpDir, ".ferret", "context.json");
+    const contextPath = path.join(tmpDir, '.ferret', 'context.json');
     assert.equal(fs.existsSync(contextPath), true);
 
     await store.close();
   });
 
-  it("produces valid JSON", async () => {
+  it('produces valid JSON', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store } = await makeStoreWithData(tmpDir);
 
     await writeContext(store, tmpDir);
 
-    const contextPath = path.join(tmpDir, ".ferret", "context.json");
-    const raw = fs.readFileSync(contextPath, "utf-8");
+    const contextPath = path.join(tmpDir, '.ferret', 'context.json');
+    const raw = fs.readFileSync(contextPath, 'utf-8');
     assert.doesNotThrow(() => JSON.parse(raw));
 
     await store.close();
@@ -120,41 +115,37 @@ describe("writeContext — Task 5", () => {
 
     await writeContext(store, tmpDir);
 
-    const ctx = JSON.parse(
-      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
-    ) as FerretContext;
-    assert.equal(ctx.version, "2.0");
+    const ctx = JSON.parse(fs.readFileSync(path.join(tmpDir, '.ferret', 'context.json'), 'utf-8')) as FerretContext;
+    assert.equal(ctx.version, '2.0');
 
     await store.close();
   });
 
-  it("contains context schemaVersion", async () => {
+  it('contains context schemaVersion', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store } = await makeStoreWithData(tmpDir);
 
     await writeContext(store, tmpDir);
 
-    const ctx = JSON.parse(
-      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
-    ) as FerretContext;
+    const ctx = JSON.parse(fs.readFileSync(path.join(tmpDir, '.ferret', 'context.json'), 'utf-8')) as FerretContext;
     assert.equal(ctx.schemaVersion, CONTEXT_SCHEMA_VERSION);
 
     await store.close();
   });
 
-  it("readContextFile migrates known legacy V2 payload without schemaVersion", () => {
+  it('readContextFile migrates known legacy V2 payload without schemaVersion', () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
-    const ferretDir = path.join(tmpDir, ".ferret");
+    const ferretDir = path.join(tmpDir, '.ferret');
     fs.mkdirSync(ferretDir, { recursive: true });
-    const contextPath = path.join(ferretDir, "context.json");
+    const contextPath = path.join(ferretDir, 'context.json');
     fs.writeFileSync(
       contextPath,
       JSON.stringify(
         {
-          version: "2.0",
-          generated: "2026-01-01T00:00:00.000Z",
+          version: '2.0',
+          generated: '2026-01-01T00:00:00.000Z',
           contracts: [],
           edges: [],
           needsReview: [],
@@ -162,112 +153,100 @@ describe("writeContext — Task 5", () => {
         null,
         2,
       ),
-      "utf-8",
+      'utf-8',
     );
 
     const context = readContextFile(contextPath);
-    assert.equal(context.version, "2.0");
+    assert.equal(context.version, '2.0');
     assert.equal(context.schemaVersion, CONTEXT_SCHEMA_VERSION);
     assert.deepEqual(context.contracts, []);
     assert.deepEqual(context.edges, []);
     assert.deepEqual(context.needsReview, []);
   });
 
-  it("readContextFile fails with upgrade guidance on unknown context version", () => {
+  it('readContextFile fails with upgrade guidance on unknown context version', () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
-    const ferretDir = path.join(tmpDir, ".ferret");
+    const ferretDir = path.join(tmpDir, '.ferret');
     fs.mkdirSync(ferretDir, { recursive: true });
-    const contextPath = path.join(ferretDir, "context.json");
+    const contextPath = path.join(ferretDir, 'context.json');
     fs.writeFileSync(
       contextPath,
       JSON.stringify({
-        version: "9.9",
+        version: '9.9',
         schemaVersion: CONTEXT_SCHEMA_VERSION,
         generated: new Date().toISOString(),
         contracts: [],
         edges: [],
         needsReview: [],
       }),
-      "utf-8",
+      'utf-8',
     );
 
-    assert.throws(
-      () => readContextFile(contextPath),
-      /unsupported context\.json version|Run 'ferret scan'/,
-    );
+    assert.throws(() => readContextFile(contextPath), /unsupported context\.json version|Run 'ferret scan'/);
   });
 
-  it("readContextFile fails with upgrade guidance on unknown schemaVersion", () => {
+  it('readContextFile fails with upgrade guidance on unknown schemaVersion', () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
-    const ferretDir = path.join(tmpDir, ".ferret");
+    const ferretDir = path.join(tmpDir, '.ferret');
     fs.mkdirSync(ferretDir, { recursive: true });
-    const contextPath = path.join(ferretDir, "context.json");
+    const contextPath = path.join(ferretDir, 'context.json');
     fs.writeFileSync(
       contextPath,
       JSON.stringify({
-        version: "2.0",
-        schemaVersion: "9.0.0",
+        version: '2.0',
+        schemaVersion: '9.0.0',
         generated: new Date().toISOString(),
         contracts: [],
         edges: [],
         needsReview: [],
       }),
-      "utf-8",
+      'utf-8',
     );
 
-    assert.throws(
-      () => readContextFile(contextPath),
-      /unsupported context schemaVersion|Run 'ferret scan'/,
-    );
+    assert.throws(() => readContextFile(contextPath), /unsupported context schemaVersion|Run 'ferret scan'/);
   });
 
-  it("stable contracts appear in contracts array", async () => {
+  it('stable contracts appear in contracts array', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store, contractId } = await makeStoreWithData(tmpDir);
 
     await writeContext(store, tmpDir);
 
-    const ctx = JSON.parse(
-      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
-    ) as FerretContext;
+    const ctx = JSON.parse(fs.readFileSync(path.join(tmpDir, '.ferret', 'context.json'), 'utf-8')) as FerretContext;
     const ids = ctx.contracts.map((c) => c.id);
     assert.ok(ids.includes(contractId));
 
     await store.close();
   });
 
-  it("needs-review contracts appear in needsReview array", async () => {
+  it('needs-review contracts appear in needsReview array', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store, contractId2 } = await makeStoreWithData(tmpDir);
 
     await writeContext(store, tmpDir);
 
-    const ctx = JSON.parse(
-      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
-    ) as FerretContext;
+    const ctx = JSON.parse(fs.readFileSync(path.join(tmpDir, '.ferret', 'context.json'), 'utf-8')) as FerretContext;
     // contractId2 belongs to the needs-review node
     assert.ok(ctx.needsReview.includes(contractId2));
 
     await store.close();
   });
 
-  it("edges correctly represent dependency relationships", async () => {
+  it('edges correctly represent dependency relationships', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store, contractId } = await makeStoreWithData(tmpDir);
 
     await writeContext(store, tmpDir);
 
-    const ctx = JSON.parse(
-      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
-    ) as FerretContext;
+    const ctx = JSON.parse(fs.readFileSync(path.join(tmpDir, '.ferret', 'context.json'), 'utf-8')) as FerretContext;
     const edge = ctx.edges.find((e) => e.to === contractId);
     assert.notEqual(edge, undefined);
-    assert.equal(edge!.from, "contracts/search.contract.md");
+    assert.equal(edge!.from, 'contracts/search.contract.md');
 
     await store.close();
   });
