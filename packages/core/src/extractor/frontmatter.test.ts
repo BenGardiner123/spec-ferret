@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "bun:test";
-import { extractFromSpecFile } from "./frontmatter.js";
+import { extractFromSpecFile, ALLOWED_TYPES } from "./frontmatter.js";
 
 const VALID_SPEC = `---
 ferret:
@@ -131,8 +131,7 @@ ferret:
   });
 
   it("all six allowed types are accepted without error", () => {
-    const allowedTypes = ['api', 'table', 'type', 'event', 'flow', 'config'] as const;
-    for (const t of allowedTypes) {
+    for (const t of ALLOWED_TYPES) {
       const spec = `---
 ferret:
   id: test.${t}

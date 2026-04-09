@@ -5,7 +5,7 @@ import matter from 'gray-matter';
 import { validateFerretSchema } from './validator.js';
 import { hashSchema } from './hash.js';
 
-const ALLOWED_TYPES = ['api', 'table', 'type', 'event', 'flow', 'config'] as const;
+export const ALLOWED_TYPES = ['api', 'table', 'type', 'event', 'flow', 'config'] as const;
 export type ContractType = typeof ALLOWED_TYPES[number];
 
 export interface ExtractionResult {
@@ -57,7 +57,7 @@ export function extractFromSpecFile(
     );
   }
 
-  if (!ALLOWED_TYPES.includes(ferret.type as ContractType)) {
+  if (!ALLOWED_TYPES.includes(ferret.type)) {
     throw new Error(
       `Invalid ferret.type "${ferret.type}" in ${filePath}. ` +
       `Allowed values: ${ALLOWED_TYPES.join(', ')}`,
