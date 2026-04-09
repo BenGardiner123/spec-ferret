@@ -71,6 +71,9 @@ describe('ferret init — S01 acceptance criteria', () => {
     runInit(tmpDir);
     assert.ok(fs.existsSync(path.join(tmpDir, '.github', 'specferret', 'canonical-agent-rules.md')), 'missing canonical agent rules source');
     assert.ok(fs.existsSync(path.join(tmpDir, '.github', 'instructions', 'specferret-agent.instructions.md')), 'missing generated instruction pack');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.github', 'specferret', 'adapters', 'claude.adapter.md')), 'missing Claude adapter artifact');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.github', 'specferret', 'adapters', 'copilot.adapter.md')), 'missing Copilot adapter artifact');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.github', 'specferret', 'adapters', 'gemini.adapter.md')), 'missing Gemini adapter artifact');
   });
 
   it('generated agent content includes lifecycle and lint/review gate expectations', () => {
@@ -110,7 +113,7 @@ describe('ferret init — S01 acceptance criteria', () => {
     assert.equal(content, sentinel);
   });
 
-  it('second run prints \'Already initialised.\' and exits 0', () => {
+  it("second run prints 'Already initialised.' and exits 0", () => {
     runInit(tmpDir);
     const second = runInit(tmpDir);
     assert.equal(second.status, 0);
@@ -144,5 +147,71 @@ describe('ferret init — S01 acceptance criteria', () => {
 
     assert.equal(fs.readFileSync(canonicalPath, 'utf-8'), sentinelCanonical);
     assert.equal(fs.readFileSync(packPath, 'utf-8'), sentinelPack);
+  });
+
+  it('adapter generation is deterministic across reruns', () => {
+    runInit(tmpDir);
+
+    const claudePath = path.join(tmpDir, '.github', 'specferret', 'adapters', 'claude.adapter.md');
+    const copilotPath = path.join(tmpDir, '.github', 'specferret', 'adapters', 'copilot.adapter.md');
+    const geminiPath = path.join(tmpDir, '.github', 'specferret', 'adapters', 'gemini.adapter.md');
+
+    const first = {
+      claude: fs.readFileSync(claudePath, 'utf-8'),
+      copilot: fs.readFileSync(copilotPath, 'utf-8'),
+      gemini: fs.readFileSync(geminiPath, 'utf-8'),
+    };
+
+    runInit(tmpDir);
+
+    const second = {
+      claude: fs.readFileSync(claudePath, 'utf-8'),
+      copilot: fs.readFileSync(copilotPath, 'utf-8'),
+      gemini: fs.readFileSync(geminiPath, 'utf-8'),
+    };
+
+    assert.equal(first.claude, second.claude);
+    assert.equal(first.copilot, second.copilot);
+    assert.equal(first.gemini, second.gemini);
+  });
+
+  it('regeneration updates existing managed adapter files safely', () => {
+    runInit(tmpDir);
+
+    const canonicalPath = path.join(tmpDir, '.github', 'specferret', 'canonical-agent-rules.md');
+    const canonicalBefore = fs.readFileSync(canonicalPath, 'utf-8');
+    const canonicalAfter = `${canonicalBefore}\n- Adapter regeneration marker for tests.`;
+    fs.writeFileSync(canonicalPath, canonicalAfter, 'utf-8');
+
+    const claudePath = path.join(tmpDir, '.github', 'specferret', 'adapters', 'claude.adapter.md');
+    const before = fs.readFileSync(claudePath, 'utf-8');
+
+    runInit(tmpDir);
+
+    const after = fs.readFileSync(claudePath, 'utf-8');
+    assert.notEqual(before, after);
+    assert.ok(after.includes('Adapter regeneration marker for tests.'));
+  });
+
+  it('does not overwrite unmanaged adapter files during regeneration', () => {
+    runInit(tmpDir);
+
+    const claudePath = path.join(tmpDir, '.github', 'specferret', 'adapters', 'claude.adapter.md');
+    const sentinel = '# unmanaged adapter content';
+    fs.writeFileSync(claudePath, sentinel, 'utf-8');
+
+    const result = runInit(tmpDir);
+
+    assert.equal(result.status, 0);
+    assert.equal(fs.readFileSync(claudePath, 'utf-8'), sentinel);
+    assert.ok(result.stdout.includes('claude.adapter.md  skipped-unmanaged'));
+  });
+
+  it('unsupported agent targets fail with clear message', () => {
+    const result = runInit(tmpDir, ['--no-hook', '--agent-targets', 'claude,unknown']);
+
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /unsupported agent targets/);
+    assert.match(result.stderr, /Supported targets: claude, copilot, gemini/);
   });
 });
