@@ -153,6 +153,13 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
 
     const json = JSON.parse(result.stdout) as {
       version: string;
+      diagnosticsSchemaVersion: string;
+      diagnostics: Array<{
+        code: string;
+        severity: string;
+        location: Record<string, unknown>;
+        remediation: string;
+      }>;
       reviewable: Array<{
         contractId: string;
         sourceFile: string;
@@ -169,6 +176,11 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     };
 
     assert.equal(json.version, '2.0');
+    assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
+    assert.equal(json.diagnostics.length >= 1, true);
+    assert.equal(typeof json.diagnostics[0].code, 'string');
+    assert.equal(typeof json.diagnostics[0].severity, 'string');
+    assert.equal(typeof json.diagnostics[0].remediation, 'string');
     assert.equal(json.reviewable.length, 3);
     assert.equal(json.selected.length, 0);
     assert.equal(json.action, null);
@@ -188,6 +200,13 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     assert.equal(result.stderr, '');
 
     const json = JSON.parse(result.stdout) as {
+      diagnosticsSchemaVersion: string;
+      diagnostics: Array<{
+        code: string;
+        severity: string;
+        location: Record<string, unknown>;
+        remediation: string;
+      }>;
       selected: string[];
       action: string;
       result: {
@@ -197,6 +216,8 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
       };
     };
 
+    assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
+    assert.equal(json.diagnostics.length >= 1, true);
     assert.deepEqual(json.selected, ['auth.jwt']);
     assert.equal(json.action, 'accept');
     assert.equal(json.result.repoBlocked, false);

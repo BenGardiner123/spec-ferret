@@ -1,9 +1,25 @@
 ﻿{
   "version": "2.0",
+  "diagnosticsSchemaVersion": "1.0.0",
   "consistent": true,
   "breaking": 0,
   "nonBreaking": 0,
   "flagged": [],
+  "diagnostics": [
+    {
+      "code": "FERRET_DRIFT_BREAKING",
+      "severity": "error",
+      "message": "auth.jwt impacts contracts/search/results.contract.md (direct, depth 1).",
+      "location": {
+        "contractId": "auth.jwt",
+        "filePath": "contracts/search/results.contract.md",
+        "nodeId": "f6f26d95-fec2-4a88-bdb8-3dc262e7ba39",
+        "depth": 1,
+        "impact": "direct"
+      },
+      "remediation": "Run ferret review and resolve downstream drift before merge."
+    }
+  ],
   "integrityViolations": {
     "unresolvedImports": [],
     "selfImports": [],
