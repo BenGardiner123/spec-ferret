@@ -2,6 +2,17 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { DBStore } from "../store/types.js";
 
+export const CONTEXT_VERSION = "2.0" as const;
+export const CONTEXT_SCHEMA_VERSION = "1.0.0" as const;
+
+type LegacyFerretContextV2 = {
+  version: "2.0";
+  generated: string;
+  contracts: ContextContract[];
+  edges: ContextEdge[];
+  needsReview: string[];
+};
+
 export interface ContextContract {
   id: string;
   type: string;
@@ -17,11 +28,66 @@ export interface ContextEdge {
 }
 
 export interface FerretContext {
-  version: "2.0";
+  version: typeof CONTEXT_VERSION;
+  schemaVersion: typeof CONTEXT_SCHEMA_VERSION;
   generated: string; // ISO timestamp
   contracts: ContextContract[];
   edges: ContextEdge[];
   needsReview: string[]; // contract IDs currently flagged
+}
+
+function normalizeContext(raw: unknown): FerretContext {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("ferret: invalid context.json format. Run 'ferret scan' to regenerate .ferret/context.json.");
+  }
+
+  const candidate = raw as Record<string, unknown>;
+  const contextVersion = candidate.version;
+  if (contextVersion !== CONTEXT_VERSION) {
+    throw new Error(
+      `ferret: unsupported context.json version '${String(contextVersion)}'. Run 'ferret scan' with the current CLI to regenerate .ferret/context.json.`,
+    );
+  }
+
+  const schemaVersion = candidate.schemaVersion;
+  if (schemaVersion !== undefined && schemaVersion !== CONTEXT_SCHEMA_VERSION) {
+    throw new Error(
+      `ferret: unsupported context schemaVersion '${String(schemaVersion)}'. Run 'ferret scan' with the current CLI to migrate .ferret/context.json.`,
+    );
+  }
+
+  // Known migration path: V2 payloads created before schemaVersion was introduced.
+  const legacy = candidate as Partial<LegacyFerretContextV2>;
+  return {
+    version: CONTEXT_VERSION,
+    schemaVersion: CONTEXT_SCHEMA_VERSION,
+    generated:
+      typeof legacy.generated === "string"
+        ? legacy.generated
+        : new Date(0).toISOString(),
+    contracts: Array.isArray(legacy.contracts)
+      ? legacy.contracts
+      : [],
+    edges: Array.isArray(legacy.edges) ? legacy.edges : [],
+    needsReview: Array.isArray(legacy.needsReview)
+      ? legacy.needsReview
+      : [],
+  };
+}
+
+export function readContextFile(contextPath: string): FerretContext {
+  try {
+    const raw = fs.readFileSync(contextPath, "utf-8");
+    return normalizeContext(JSON.parse(raw));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.startsWith("ferret:")) {
+      throw error;
+    }
+    throw new Error(
+      `ferret: unable to read .ferret/context.json (${message}). Run 'ferret scan' to regenerate it.`,
+    );
+  }
 }
 
 /**
@@ -90,7 +156,8 @@ export async function writeContext(
     .map((c) => c.id);
 
   const context: FerretContext = {
-    version: "2.0",
+    version: CONTEXT_VERSION,
+    schemaVersion: CONTEXT_SCHEMA_VERSION,
     generated: new Date().toISOString(),
     contracts: contextContracts,
     edges,

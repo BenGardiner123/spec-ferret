@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "bun:test";
-import { writeContext, type FerretContext } from "./index.js";
+import {
+  CONTEXT_SCHEMA_VERSION,
+  readContextFile,
+  writeContext,
+  type FerretContext,
+} from "./index.js";
 import { SqliteStore } from "../store/sqlite.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -121,6 +126,101 @@ describe("writeContext — Task 5", () => {
     assert.equal(ctx.version, "2.0");
 
     await store.close();
+  });
+
+  it("contains context schemaVersion", async () => {
+    const tmpDir = makeTmpDir();
+    tmps.push(tmpDir);
+    const { store } = await makeStoreWithData(tmpDir);
+
+    await writeContext(store, tmpDir);
+
+    const ctx = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
+    ) as FerretContext;
+    assert.equal(ctx.schemaVersion, CONTEXT_SCHEMA_VERSION);
+
+    await store.close();
+  });
+
+  it("readContextFile migrates known legacy V2 payload without schemaVersion", () => {
+    const tmpDir = makeTmpDir();
+    tmps.push(tmpDir);
+    const ferretDir = path.join(tmpDir, ".ferret");
+    fs.mkdirSync(ferretDir, { recursive: true });
+    const contextPath = path.join(ferretDir, "context.json");
+    fs.writeFileSync(
+      contextPath,
+      JSON.stringify(
+        {
+          version: "2.0",
+          generated: "2026-01-01T00:00:00.000Z",
+          contracts: [],
+          edges: [],
+          needsReview: [],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const context = readContextFile(contextPath);
+    assert.equal(context.version, "2.0");
+    assert.equal(context.schemaVersion, CONTEXT_SCHEMA_VERSION);
+    assert.deepEqual(context.contracts, []);
+    assert.deepEqual(context.edges, []);
+    assert.deepEqual(context.needsReview, []);
+  });
+
+  it("readContextFile fails with upgrade guidance on unknown context version", () => {
+    const tmpDir = makeTmpDir();
+    tmps.push(tmpDir);
+    const ferretDir = path.join(tmpDir, ".ferret");
+    fs.mkdirSync(ferretDir, { recursive: true });
+    const contextPath = path.join(ferretDir, "context.json");
+    fs.writeFileSync(
+      contextPath,
+      JSON.stringify({
+        version: "9.9",
+        schemaVersion: CONTEXT_SCHEMA_VERSION,
+        generated: new Date().toISOString(),
+        contracts: [],
+        edges: [],
+        needsReview: [],
+      }),
+      "utf-8",
+    );
+
+    assert.throws(
+      () => readContextFile(contextPath),
+      /unsupported context\.json version|Run 'ferret scan'/,
+    );
+  });
+
+  it("readContextFile fails with upgrade guidance on unknown schemaVersion", () => {
+    const tmpDir = makeTmpDir();
+    tmps.push(tmpDir);
+    const ferretDir = path.join(tmpDir, ".ferret");
+    fs.mkdirSync(ferretDir, { recursive: true });
+    const contextPath = path.join(ferretDir, "context.json");
+    fs.writeFileSync(
+      contextPath,
+      JSON.stringify({
+        version: "2.0",
+        schemaVersion: "9.0.0",
+        generated: new Date().toISOString(),
+        contracts: [],
+        edges: [],
+        needsReview: [],
+      }),
+      "utf-8",
+    );
+
+    assert.throws(
+      () => readContextFile(contextPath),
+      /unsupported context schemaVersion|Run 'ferret scan'/,
+    );
   });
 
   it("stable contracts appear in contracts array", async () => {

@@ -65,6 +65,49 @@ describe("ferret lint --ci baseline strategy — S27 acceptance criteria", () =>
     assert.ok(Array.isArray(json.diagnostics));
   });
 
+  it("migrates known legacy committed context without schemaVersion", () => {
+    runFerret(tmpDir, ["scan"]);
+    const contextPath = path.join(tmpDir, ".ferret", "context.json");
+    const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
+    delete context.schemaVersion;
+    fs.writeFileSync(contextPath, JSON.stringify(context, null, 2), "utf-8");
+
+    const result = runFerret(tmpDir, ["lint", "--ci"]);
+    assert.equal(result.status, 0);
+    const json = JSON.parse(result.stdout) as Record<string, unknown>;
+    assert.equal(json.consistent, true);
+  });
+
+  it("fails with explicit upgrade guidance for unknown committed context version", () => {
+    const ferretDir = path.join(tmpDir, ".ferret");
+    fs.mkdirSync(ferretDir, { recursive: true });
+    const contextPath = path.join(ferretDir, "context.json");
+    fs.writeFileSync(
+      contextPath,
+      JSON.stringify(
+        {
+          version: "9.9",
+          schemaVersion: "1.0.0",
+          generated: new Date().toISOString(),
+          contracts: [],
+          edges: [],
+          needsReview: [],
+        },
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["lint", "--ci"]);
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /unsupported context\.json version/);
+    assert.match(result.stderr, /Run 'ferret scan'/);
+  });
+
   it("is deterministic across repeated CI runs in the same state", () => {
     runFerret(tmpDir, ["scan"]);
 
