@@ -1,7 +1,8 @@
 import Parser from 'tree-sitter';
 import tsLanguage from 'tree-sitter-typescript';
+import { CONTRACT_TYPES, type ContractType } from './contract-types.js';
 
-export type ContractType = 'api' | 'table' | 'type' | 'event' | 'flow' | 'config';
+export type { ContractType } from './contract-types.js';
 
 export interface ExtractedCodeContract {
   id: string;
@@ -494,7 +495,8 @@ function parseDeclarationShape(filePath: string, declaration: ExportedDeclaratio
 }
 
 function parseAnnotations(content: string): Annotation[] {
-  const pattern = /^\s*\/\/\s*@ferret-contract:\s*([^\s]+)\s+(api|table|type|event|flow|config)\s*$/gm;
+  const contractTypePattern = CONTRACT_TYPES.join('|');
+  const pattern = new RegExp(`^\\s*//\\s*@ferret-contract:\\s*([^\\s]+)\\s+(${contractTypePattern})\\s*$`, 'gm');
   const out: Annotation[] = [];
   let match: RegExpExecArray | null;
 

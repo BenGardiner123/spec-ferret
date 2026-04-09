@@ -1,6 +1,8 @@
 // Pure function. No I/O. No side effects. Ever.
 // Validator layer — validates JSON Schema subset, classifies breaking/non-breaking/no-change.
 
+import { CONTRACT_TYPES, formatAllowedContractTypes, isContractType, type ContractType } from './contract-types.js';
+
 export type ChangeClassification = 'breaking' | 'non-breaking' | 'no-change';
 
 export interface SchemaValidationResult {
@@ -13,25 +15,52 @@ export interface SchemaComparisonResult {
   reason: string;
 }
 
+export interface ContractTypeValidationResult {
+  valid: boolean;
+  value?: ContractType;
+  error?: string;
+}
+
+export function validateContractType(contractType: unknown, filePath: string): ContractTypeValidationResult {
+  if (isContractType(contractType)) {
+    return { valid: true, value: contractType };
+  }
+
+  return {
+    valid: false,
+    error: `Invalid contract type '${String(contractType)}' in ${filePath}. ` + `Allowed types: ${formatAllowedContractTypes()}.`,
+  };
+}
+
+export function getAllowedContractTypes(): readonly ContractType[] {
+  return CONTRACT_TYPES;
+}
+
 /**
  * JSON Schema keywords that are explicitly NOT supported by Ferret.
  * If any appear in a schema, a warning is emitted but the schema is still accepted.
  * See: spec/CONTRACT-SCHEMA.md — Part 3
  */
 const UNSUPPORTED_KEYWORDS = [
-  '$ref', 'allOf', 'anyOf', 'oneOf', 'not',
-  'if', 'then', 'else', '$defs', 'definitions',
-  'patternProperties', 'dependencies',
+  '$ref',
+  'allOf',
+  'anyOf',
+  'oneOf',
+  'not',
+  'if',
+  'then',
+  'else',
+  '$defs',
+  'definitions',
+  'patternProperties',
+  'dependencies',
 ];
 
 /**
  * Validates a schema object against the Ferret JSON Schema subset.
  * Always returns valid: true — unsupported keywords produce warnings, not errors.
  */
-export function validateFerretSchema(
-  shape: unknown,
-  filePath: string,
-): SchemaValidationResult {
+export function validateFerretSchema(shape: unknown, filePath: string): SchemaValidationResult {
   const warnings: string[] = [];
 
   if (shape === null || typeof shape !== 'object') {
@@ -45,8 +74,8 @@ export function validateFerretSchema(
     if (serialised.includes(`"${keyword}"`)) {
       warnings.push(
         `⚠ Unsupported JSON Schema keyword: ${keyword} in ${filePath}\n` +
-        `  Ferret supports a subset of JSON Schema.\n` +
-        `  See: spec/CONTRACT-SCHEMA.md — Part 3`,
+          `  Ferret supports a subset of JSON Schema.\n` +
+          `  See: spec/CONTRACT-SCHEMA.md — Part 3`,
       );
     }
   }
@@ -62,10 +91,7 @@ export function validateFerretSchema(
  * Non-breaking: optional field added, enum value added
  * No-change:    property order changed, whitespace, required array reordered
  */
-export function compareSchemas(
-  previous: unknown,
-  current: unknown,
-): SchemaComparisonResult {
+export function compareSchemas(previous: unknown, current: unknown): SchemaComparisonResult {
   // Normalise: work with plain objects only
   const prev = (typeof previous === 'object' && previous !== null ? previous : {}) as Record<string, unknown>;
   const curr = (typeof current === 'object' && current !== null ? current : {}) as Record<string, unknown>;
@@ -79,12 +105,12 @@ export function compareSchemas(
   const prevRequired = normaliseRequired(prev.required);
   const currRequired = normaliseRequired(curr.required);
 
-  const removedRequired = prevRequired.filter(f => !currRequired.includes(f));
+  const removedRequired = prevRequired.filter((f) => !currRequired.includes(f));
   if (removedRequired.length > 0) {
     return { classification: 'breaking', reason: `required field(s) removed: ${removedRequired.join(', ')}` };
   }
 
-  const addedRequired = currRequired.filter(f => !prevRequired.includes(f));
+  const addedRequired = currRequired.filter((f) => !prevRequired.includes(f));
   if (addedRequired.length > 0) {
     return { classification: 'breaking', reason: `required field(s) added: ${addedRequired.join(', ')}` };
   }
@@ -94,11 +120,11 @@ export function compareSchemas(
   const currEnum = normaliseEnum(curr.enum);
 
   if (prevEnum !== null && currEnum !== null) {
-    const removedEnum = prevEnum.filter(v => !currEnum.includes(v));
+    const removedEnum = prevEnum.filter((v) => !currEnum.includes(v));
     if (removedEnum.length > 0) {
       return { classification: 'breaking', reason: `enum value(s) removed: ${removedEnum.join(', ')}` };
     }
-    const addedEnum = currEnum.filter(v => !prevEnum.includes(v));
+    const addedEnum = currEnum.filter((v) => !prevEnum.includes(v));
     if (addedEnum.length > 0) {
       return { classification: 'non-breaking', reason: `enum value(s) added: ${addedEnum.join(', ')}` };
     }
@@ -160,7 +186,7 @@ export function compareSchemas(
   }
 
   // 8. Check if a new optional property was added (non-breaking)
-  const newOptionalKeys = Object.keys(currProps).filter(k => !(k in prevProps) && !currRequired.includes(k));
+  const newOptionalKeys = Object.keys(currProps).filter((k) => !(k in prevProps) && !currRequired.includes(k));
   if (newOptionalKeys.length > 0) {
     return { classification: 'non-breaking', reason: `optional field(s) added: ${newOptionalKeys.join(', ')}` };
   }
@@ -177,5 +203,5 @@ function normaliseRequired(required: unknown): string[] {
 
 function normaliseEnum(enumVal: unknown): string[] | null {
   if (!Array.isArray(enumVal)) return null;
-  return enumVal.map(v => String(v));
+  return enumVal.map((v) => String(v));
 }
