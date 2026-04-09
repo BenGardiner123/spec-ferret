@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { glob } from 'glob';
 import { extractContractsFromTypeScript, findProjectRoot, loadConfig } from '@specferret/core';
+import { parsePositiveMsBudget } from './parse-utils.js';
 
 const CONTRACT_ID_PATTERN = /^[A-Za-z0-9_.\/-]+$/;
 
@@ -224,15 +225,3 @@ export const extractCommand = new Command('extract')
     process.exit(0);
   });
 
-function parsePositiveMsBudget(raw: unknown): number | undefined | null {
-  if (raw === undefined || raw === null || raw === '') {
-    return undefined;
-  }
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return Math.round(parsed);
-}

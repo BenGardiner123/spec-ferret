@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
 import { getStore, Reconciler, findProjectRoot, loadConfig, hashSchema } from '@specferret/core';
+import { parsePositiveMsBudget } from './parse-utils.js';
 
 export const lintCommand = new Command('lint')
   .description('Default daily command: check and block contract drift.')
@@ -162,6 +163,10 @@ export const lintCommand = new Command('lint')
         renderImportSuggestions(report.importSuggestions, true);
       }
 
+      if (perfExceeded) {
+        process.stderr.write(`ferret: performance budget exceeded for lint (${ms}ms > ${perfBudgetMs}ms).\n`);
+      }
+
       process.exit(1);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -176,19 +181,6 @@ export const lintCommand = new Command('lint')
       await store.close();
     }
   });
-
-function parsePositiveMsBudget(raw: unknown): number | undefined | null {
-  if (raw === undefined || raw === null || raw === '') {
-    return undefined;
-  }
-
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return Math.round(parsed);
-}
 
 type CommittedContext = {
   contracts: Array<{
