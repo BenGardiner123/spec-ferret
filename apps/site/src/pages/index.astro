@@ -1,5 +1,5 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
@@ -9,30 +9,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   <main>
     <header class="topbar">
       <div class="brand mono">specferret.dev</div>
-      <a class="repo" href="https://github.com/BenGardiner123/spec-ferret"
-        >GitHub</a
-      >
+      <a class="repo" href="https://github.com/BenGardiner123/spec-ferret">GitHub</a>
     </header>
 
     <section class="hero">
       <p class="pill mono">Open source CLI • @specferret/cli@0.1.4</p>
       <h1>Catch spec drift before it breaks production.</h1>
       <p class="subhead">
-        SpecFerret is a CLI that detects when API specs, contracts, and shipped
-        behavior drift apart. Block risky commits with pre-commit checks and
+        SpecFerret is a CLI that detects when API specs, contracts, and shipped behavior drift apart. Block risky commits with pre-commit checks and
         clear impact reports.
       </p>
       <div class="cta-row">
-        <a
-          class="cta primary"
-          href="https://www.npmjs.com/package/@specferret/cli">Install CLI</a
-        >
-        <a class="cta" href="https://github.com/BenGardiner123/spec-ferret/blob/main/docs/QUICKSTART.md"
-          >Quickstart</a
-        >
-        <a class="cta" href="https://github.com/BenGardiner123/spec-ferret"
-          >Read the code</a
-        >
+        <a class="cta primary" href="https://www.npmjs.com/package/@specferret/cli">Install CLI</a>
+        <a class="cta" href="https://github.com/BenGardiner123/spec-ferret/blob/main/docs/QUICKSTART.md">Quickstart</a>
+        <a class="cta" href="https://github.com/BenGardiner123/spec-ferret">Read the code</a>
       </div>
       <pre
         class="quick mono"><code>bun install -g @specferret/cli
@@ -48,24 +38,15 @@ ferret init --agent-targets claude,copilot,gemini</code></pre>
       <div class="proof-grid">
         <article>
           <h3>AI ships code quickly</h3>
-          <p>
-            LLM-assisted development accelerates changes, but specs are often
-            left behind. SpecFerret catches that mismatch before deploy.
-          </p>
+          <p>LLM-assisted development accelerates changes, but specs are often left behind. SpecFerret catches that mismatch before deploy.</p>
         </article>
         <article>
           <h3>Breaking vs non-breaking</h3>
-          <p>
-            It classifies drift so teams do not panic over harmless optional
-            additions but do block true consumer-breaking changes.
-          </p>
+          <p>It classifies drift so teams do not panic over harmless optional additions but do block true consumer-breaking changes.</p>
         </article>
         <article>
           <h3>Commit-time enforcement</h3>
-          <p>
-            Pre-commit hooks fail fast and keep bad contract changes out of main
-            branch and out of production.
-          </p>
+          <p>Pre-commit hooks fail fast and keep bad contract changes out of main branch and out of production.</p>
         </article>
       </div>
     </section>
@@ -75,31 +56,19 @@ ferret init --agent-targets claude,copilot,gemini</code></pre>
       <div class="proof-grid">
         <article>
           <h3>API teams</h3>
-          <p>
-            Detect shape changes in request and response contracts before
-            clients break in staging or prod.
-          </p>
+          <p>Detect shape changes in request and response contracts before clients break in staging or prod.</p>
         </article>
         <article>
           <h3>Multi-team repos</h3>
-          <p>
-            Backend changes can impact many consumers. SpecFerret shows direct
-            and transitive impact in one report.
-          </p>
+          <p>Backend changes can impact many consumers. SpecFerret shows direct and transitive impact in one report.</p>
         </article>
         <article>
           <h3>AI-assisted workflows</h3>
-          <p>
-            Keep generated code and contract docs in sync when rapid edits land
-            through agents or pair-programming loops.
-          </p>
+          <p>Keep generated code and contract docs in sync when rapid edits land through agents or pair-programming loops.</p>
         </article>
         <article>
           <h3>TypeScript shape checks</h3>
-          <p>
-            Validate declared types against contract expectations to reduce
-            drift between docs and runtime reality.
-          </p>
+          <p>Validate declared types against contract expectations to reduce drift between docs and runtime reality.</p>
         </article>
       </div>
     </section>
@@ -117,8 +86,7 @@ ferret init --agent-targets claude,copilot,gemini</code></pre>
         </li>
         <li>
           <span class="mono">3.</span>
-          Use <span class="mono">ferret review</span> to inspect downstream impact
-          and resolve safely.
+          Use <span class="mono">ferret review</span> to inspect downstream impact and resolve safely.
         </li>
       </ol>
     </section>
@@ -127,23 +95,16 @@ ferret init --agent-targets claude,copilot,gemini</code></pre>
       <article>
         <h2>Deterministic checks</h2>
         <p>
-          Run <span class="mono">ferret lint</span> locally and in CI with reproducible
-          drift detection and clear failure output.
+          Run <span class="mono">ferret lint</span> locally and in CI with reproducible drift detection and clear failure output.
         </p>
       </article>
       <article>
         <h2>Contract-aware impact</h2>
-        <p>
-          Review mode reports direct and transitive affected contracts so teams
-          know exactly what to update.
-        </p>
+        <p>Review mode reports direct and transitive affected contracts so teams know exactly what to update.</p>
       </article>
       <article>
         <h2>Production-ready publishing</h2>
-        <p>
-          Trusted publishing with OIDC from GitHub Actions, versioned releases
-          on npm, and evidence-backed validation runs.
-        </p>
+        <p>Trusted publishing with OIDC from GitHub Actions, versioned releases on npm, and evidence-backed validation runs.</p>
       </article>
     </section>
   </main>
