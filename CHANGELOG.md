@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ## [0.1.4] - 2026-04-09
 
 ### Added
+
 - `ferret init` now scaffolds canonical agent rules for Claude, Copilot, and Gemini via `--agent-targets`.
   - Writes `.github/specferret/canonical-agent-rules.md` and `.github/instructions/specferret-agent.instructions.md`.
   - Use `--no-agent-rules` to skip.
@@ -21,6 +22,7 @@ All notable changes to this project are documented in this file.
 - `ferret review --json` now emits `diagnosticsSchemaVersion` in the machine JSON payload.
 
 ### Changed
+
 - Align contract type semantics across runtime and docs: `ferret.type` now uses a strict six-type model (`api`, `table`, `type`, `event`, `flow`, `config`) in both extractor behavior and documentation.
 - Document migration guidance for legacy frontmatter type values such as `schema`, `service`, and `model`.
 - Breaking/non-breaking classification is now based on trigger severity rather than graph depth.
@@ -31,5 +33,6 @@ All notable changes to this project are documented in this file.
 - `init` output ordering stabilized.
 
 ### Notes
+
 - If a contract does not fit a core type, select the closest core type and open an issue to propose expansion of the core type set.
 - Mixed annotation and inferred extraction is fully supported; remove `@ferret-contract` annotations incrementally once inferred ids/types are confirmed stable.
