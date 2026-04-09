@@ -186,7 +186,7 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     };
 
     assert.equal(json.version, '2.0');
-  assert.equal(json.reviewSchemaVersion, '1.1.0');
+    assert.equal(json.reviewSchemaVersion, '1.1.0');
     assert.equal(json.diagnosticsSchemaVersion, '1.0.0');
     assert.equal(json.diagnostics.length >= 1, true);
     assert.equal(typeof json.diagnostics[0].code, 'string');

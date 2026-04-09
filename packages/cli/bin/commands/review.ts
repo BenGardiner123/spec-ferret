@@ -17,6 +17,8 @@ import {
   type MachineDiagnostic,
 } from "./diagnostics.js";
 
+const REVIEW_SCHEMA_VERSION = "1.1.0" as const;
+
 type ReviewAction = "accept" | "update" | "reject";
 
 type ReviewImpactItem = {
@@ -59,7 +61,7 @@ type ReviewItem = {
 
 type ReviewJsonOutput = {
   version: "2.0";
-  reviewSchemaVersion: "1.1.0";
+  reviewSchemaVersion: typeof REVIEW_SCHEMA_VERSION;
   diagnosticsSchemaVersion: string;
   diagnostics: MachineDiagnostic[];
   reviewable: ReviewItem[];
@@ -106,7 +108,7 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
-            reviewSchemaVersion: "1.1.0",
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: buildIntegrityDiagnostics(report.integrityViolations),
             reviewable: [],
@@ -151,7 +153,7 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
-            reviewSchemaVersion: "1.1.0",
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: [],
             reviewable: [],
@@ -177,7 +179,7 @@ export const reviewCommand = new Command("review")
       if (options.json && !options.action && selectedContractIds.length === 0) {
         writeJson({
           version: "2.0",
-          reviewSchemaVersion: "1.1.0",
+          reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(reviewItems),
           reviewable: reviewItems,
@@ -249,7 +251,7 @@ export const reviewCommand = new Command("review")
       if (options.json) {
         writeJson({
           version: "2.0",
-          reviewSchemaVersion: "1.1.0",
+          reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(selectedItems),
           reviewable: selectedItems,
