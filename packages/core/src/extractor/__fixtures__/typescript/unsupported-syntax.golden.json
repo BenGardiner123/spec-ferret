@@ -1,0 +1,20 @@
+{
+  "contracts": [
+    {
+      "id": "type.src/fixtures/unsupported-syntax/routemap",
+      "type": "type",
+      "shape": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      },
+      "sourceSymbol": "RouteMap",
+      "filePath": "src/fixtures/unsupported-syntax.ts",
+      "idSource": "inferred"
+    }
+  ],
+  "errors": [],
+  "diagnostics": [
+    "src/fixtures/unsupported-syntax.ts (RouteMap): Unsupported object member type 'index_signature'. Falling back by skipping this member."
+  ]
+}

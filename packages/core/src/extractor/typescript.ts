@@ -358,11 +358,16 @@ function parseObjectShape(
   const properties: Record<string, unknown> = {};
   const required: string[] = [];
 
-  const members = node.namedChildren.filter((child) =>
-    ["property_signature", "method_signature"].includes(child.type),
-  );
+  const members = node.namedChildren;
 
   for (const member of members) {
+    if (!["property_signature", "method_signature"].includes(member.type)) {
+      diagnostics.push(
+        `${filePath} (${symbol}): Unsupported object member type '${member.type}'. Falling back by skipping this member.`,
+      );
+      continue;
+    }
+
     const nameNode =
       member.childForFieldName("name") ??
       findChildByType(member, ["property_identifier", "identifier", "string"]);
