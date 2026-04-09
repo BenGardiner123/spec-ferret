@@ -112,6 +112,42 @@ describe("extractFromSpecFile — Task 3", () => {
     );
   });
 
+  it("invalid ferret.type throws with allowed values listed", () => {
+    const specInvalidType = `---
+ferret:
+  id: tables.user
+  type: schema
+  shape:
+    type: object
+    properties:
+      id:
+        type: string
+---
+`;
+    assert.throws(
+      () => extractFromSpecFile("contracts/invalid-type.contract.md", specInvalidType),
+      /Invalid ferret\.type "schema".*api, table, type, event, flow, config/,
+    );
+  });
+
+  it("all six allowed types are accepted without error", () => {
+    const allowedTypes = ['api', 'table', 'type', 'event', 'flow', 'config'] as const;
+    for (const t of allowedTypes) {
+      const spec = `---
+ferret:
+  id: test.${t}
+  type: ${t}
+  shape:
+    type: object
+---
+`;
+      assert.doesNotThrow(
+        () => extractFromSpecFile(`contracts/${t}.contract.md`, spec),
+        `Expected type "${t}" to be accepted`,
+      );
+    }
+  });
+
   it("unsupported schema keyword produces warning, does not fail", () => {
     const stderrOutput: string[] = [];
     const originalWrite = process.stderr.write.bind(process.stderr);
