@@ -193,27 +193,32 @@ Notes:
 
 ---
 
-### Recorded Execution Evidence (pending — 0.1.4 npm install)
+### Recorded Execution Evidence (2026-04-09 — 0.1.4 npm install, 9-scenario matrix)
 
 Candidate under test:
 
-- `@specferret/cli@0.1.4` installed from npm (live package, not vendor bundle)
-
-To complete this entry: trigger both validation workflows via Actions → "Run workflow" → version `0.1.4`, then fill in below.
+- `@specferret/cli@0.1.4` installed from npm (`bun add --global @specferret/cli@0.1.4`)
+- Includes: `agent-mode-init` scenario (9th scenario), updated `code-first-extract` using `@ferret-contract` source annotation
 
 spec-kit validation repo:
 
-- Workflow run: _pending_
-- Head SHA: `eeb8e4e53f012079043c0a61a26a69248effa3f8`
-- Result: _pending_
-- Matrix jobs: _pending_
+- Workflow run: https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/24217228972
+- Head SHA: `9dfdee94132590bdbf0fc3b2ce3ca9cdebb3b164`
+- Result: `success`
+- Matrix jobs: 9/9 successful
 
 BMAD validation repo:
 
-- Workflow run: _pending_
-- Head SHA: `65f0ce934788d8a6a46f6e3861d25f88f2daf07d`
-- Result: _pending_
-- Matrix jobs: _pending_
+- Workflow run: https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/24217230401
+- Head SHA: `b87a5dc1edb1ed6b68f2d7c327416b182b89705b`
+- Result: `success`
+- Matrix jobs: 9/9 successful
+
+Notes:
+
+- This is the definitive GA evidence for `@specferret/cli@0.1.4`.
+- All scenarios validated against the live npm package, not a vendor bundle.
+- `agent-mode-init` confirms `ferret init --agent-targets` scaffolding works end-to-end in CI.
 
 ---
 
