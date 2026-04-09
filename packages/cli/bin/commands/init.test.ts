@@ -110,7 +110,7 @@ describe('ferret init — S01 acceptance criteria', () => {
     assert.equal(content, sentinel);
   });
 
-  it("second run prints 'Already initialised.' and exits 0", () => {
+  it('second run prints \'Already initialised.\' and exits 0', () => {
     runInit(tmpDir);
     const second = runInit(tmpDir);
     assert.equal(second.status, 0);
@@ -133,12 +133,16 @@ describe('ferret init — S01 acceptance criteria', () => {
     runInit(tmpDir);
 
     const canonicalPath = path.join(tmpDir, '.github', 'specferret', 'canonical-agent-rules.md');
-    const sentinel = '# sentinel canonical rules';
-    fs.writeFileSync(canonicalPath, sentinel, 'utf-8');
+    const sentinelCanonical = '# sentinel canonical rules';
+    fs.writeFileSync(canonicalPath, sentinelCanonical, 'utf-8');
+
+    const packPath = path.join(tmpDir, '.github', 'instructions', 'specferret-agent.instructions.md');
+    const sentinelPack = '# sentinel instruction pack';
+    fs.writeFileSync(packPath, sentinelPack, 'utf-8');
 
     runInit(tmpDir);
 
-    const content = fs.readFileSync(canonicalPath, 'utf-8');
-    assert.equal(content, sentinel);
+    assert.equal(fs.readFileSync(canonicalPath, 'utf-8'), sentinelCanonical);
+    assert.equal(fs.readFileSync(packPath, 'utf-8'), sentinelPack);
   });
 });
