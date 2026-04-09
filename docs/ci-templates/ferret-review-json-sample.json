@@ -39,6 +39,39 @@
           }
         ]
       },
+      "suggestedActions": [
+        {
+          "action": "update",
+          "confidence": "high",
+          "reason": "Breaking drift has downstream dependents that need updates."
+        },
+        {
+          "action": "reject",
+          "confidence": "medium",
+          "reason": "Reject when upstream change should not propagate."
+        },
+        {
+          "action": "accept",
+          "confidence": "low",
+          "reason": "Accept only when downstream risk is intentionally tolerated."
+        }
+      ],
+      "dependencyContext": {
+        "directDependents": [
+          {
+            "nodeId": "d4e47463-1f90-4561-a01f-59d980190f76",
+            "filePath": "contracts/search/results.contract.md",
+            "depth": 1
+          }
+        ],
+        "transitiveDependents": [
+          {
+            "nodeId": "2f322e73-b91e-4deb-bfe4-73c65834293d",
+            "filePath": "contracts/recommendations/items.contract.md",
+            "depth": 2
+          }
+        ]
+      },
       "recommendedAction": "update",
       "availableActions": ["accept", "update", "reject"],
       "suggestedActions": [

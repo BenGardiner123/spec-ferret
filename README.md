@@ -384,6 +384,16 @@ Reference sample payloads:
 - `docs/ci-templates/ferret-lint-ci-sample.json`
 - `docs/ci-templates/ferret-review-json-sample.json`
 
+End-to-end agent example (`ferret review --json`):
+
+1. Run `ferret lint --ci` and collect diagnostics.
+2. If drift is detected, run `ferret review --json`.
+3. For each `reviewable[]` item:
+  - Use `suggestedActions[]` ordered by `confidence` to pick a default action.
+  - Use `dependencyContext.directDependents` and `dependencyContext.transitiveDependents` to scope impacted files.
+4. Apply the selected action with `ferret review --contract <id> --action <accept|update|reject> --json`.
+5. Re-run `ferret lint --ci` and confirm `consistent: true` before merge.
+
 </details>
 
 ---

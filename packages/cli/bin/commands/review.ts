@@ -17,6 +17,8 @@ import {
   type MachineDiagnostic,
 } from "./diagnostics.js";
 
+const REVIEW_SCHEMA_VERSION = "1.1.0" as const;
+
 type ReviewAction = "accept" | "update" | "reject";
 
 type ReviewImpactItem = {
@@ -40,19 +42,26 @@ type ReviewItem = {
   availableActions: ReviewAction[];
   suggestedActions: Array<{
     action: ReviewAction;
-    confidence: number;
+    confidence: "high" | "medium" | "low";
     reason: string;
   }>;
   dependencyContext: {
-    directDependents: number;
-    transitiveDependents: number;
-    maxDepth: number;
+    directDependents: Array<{
+      nodeId: string;
+      filePath: string;
+      depth: number;
+    }>;
+    transitiveDependents: Array<{
+      nodeId: string;
+      filePath: string;
+      depth: number;
+    }>;
   };
 };
 
 type ReviewJsonOutput = {
   version: "2.0";
-  reviewSchemaVersion: "1.1.0";
+  reviewSchemaVersion: typeof REVIEW_SCHEMA_VERSION;
   diagnosticsSchemaVersion: string;
   diagnostics: MachineDiagnostic[];
   reviewable: ReviewItem[];
@@ -99,7 +108,7 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
-            reviewSchemaVersion: "1.1.0",
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: buildIntegrityDiagnostics(report.integrityViolations),
             reviewable: [],
@@ -144,7 +153,7 @@ export const reviewCommand = new Command("review")
         if (options.json) {
           writeJson({
             version: "2.0",
-            reviewSchemaVersion: "1.1.0",
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: [],
             reviewable: [],
@@ -170,7 +179,7 @@ export const reviewCommand = new Command("review")
       if (options.json && !options.action && selectedContractIds.length === 0) {
         writeJson({
           version: "2.0",
-          reviewSchemaVersion: "1.1.0",
+          reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(reviewItems),
           reviewable: reviewItems,
@@ -242,7 +251,7 @@ export const reviewCommand = new Command("review")
       if (options.json) {
         writeJson({
           version: "2.0",
-          reviewSchemaVersion: "1.1.0",
+          reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(selectedItems),
           reviewable: selectedItems,
@@ -337,17 +346,77 @@ function buildReviewItems(
           ? "update"
           : "accept",
       availableActions: ["accept", "update", "reject"],
-      suggestedActions: buildSuggestedActions(classification, affected.length),
+      suggestedActions: buildSuggestedActions(
+        contract.status === "needs-review" ? "breaking" : "non-breaking",
+        affected.length,
+      ),
       dependencyContext: {
-        directDependents: direct.length,
-        transitiveDependents: transitive.length,
-        maxDepth:
-          affected.length > 0
-            ? Math.max(...affected.map((item) => item.depth))
-            : 0,
+        directDependents: direct.map((item) => ({
+          nodeId: item.nodeId,
+          filePath: item.filePath,
+          depth: item.depth,
+        })),
+        transitiveDependents: transitive.map((item) => ({
+          nodeId: item.nodeId,
+          filePath: item.filePath,
+          depth: item.depth,
+        })),
       },
     };
   });
+}
+
+function buildSuggestedActions(
+  classification: "breaking" | "non-breaking",
+  affectedCount: number,
+): Array<{ action: ReviewAction; confidence: "high" | "medium" | "low"; reason: string }> {
+  if (classification === "breaking") {
+    if (affectedCount > 0) {
+      return [
+        {
+          action: "update",
+          confidence: "high",
+          reason: "Breaking drift has downstream dependents that need updates.",
+        },
+        {
+          action: "reject",
+          confidence: "medium",
+          reason: "Reject when upstream change should not propagate.",
+        },
+        {
+          action: "accept",
+          confidence: "low",
+          reason: "Accept only when downstream risk is intentionally tolerated.",
+        },
+      ];
+    }
+
+    return [
+      {
+        action: "accept",
+        confidence: "medium",
+        reason: "No downstream dependents detected for this breaking change.",
+      },
+      {
+        action: "reject",
+        confidence: "medium",
+        reason: "Reject if the breaking change should not ship.",
+      },
+    ];
+  }
+
+  return [
+    {
+      action: "accept",
+      confidence: "high",
+      reason: "Non-breaking drift can usually be accepted safely.",
+    },
+    {
+      action: "update",
+      confidence: affectedCount > 0 ? "medium" : "low",
+      reason: "Update dependents if you want immediate downstream alignment.",
+    },
+  ];
 }
 
 async function selectContracts(
@@ -601,50 +670,4 @@ function defaultResolutionNote(
     return `Update requested for downstream dependents of ${contractId}.`;
   }
   return `Rejected upstream drift for ${contractId}.`;
-}
-
-function buildSuggestedActions(
-  classification: "breaking" | "non-breaking",
-  affectedCount: number,
-): ReviewItem["suggestedActions"] {
-  if (classification === "breaking") {
-    return [
-      {
-        action: "update",
-        confidence: affectedCount > 0 ? 0.95 : 0.7,
-        reason:
-          affectedCount > 0
-            ? "Breaking drift has downstream dependents that need updates."
-            : "Breaking drift detected and should be reconciled before merge.",
-      },
-      {
-        action: "reject",
-        confidence: 0.5,
-        reason: "Use reject when the upstream contract change was accidental.",
-      },
-      {
-        action: "accept",
-        confidence: 0.15,
-        reason: "Accept only when downstream impact is intentionally waived.",
-      },
-    ];
-  }
-
-  return [
-    {
-      action: "accept",
-      confidence: 0.9,
-      reason: "Non-breaking drift is usually safe to accept.",
-    },
-    {
-      action: "update",
-      confidence: 0.45,
-      reason: "Update if downstream contracts should reflect the new optional fields.",
-    },
-    {
-      action: "reject",
-      confidence: 0.2,
-      reason: "Reject only when the non-breaking change should be reverted.",
-    },
-  ];
 }
