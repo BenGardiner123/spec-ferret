@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
-import { getStore, Reconciler, findProjectRoot, loadConfig, hashSchema } from '@specferret/core';
+import { getStore, Reconciler, findProjectRoot, loadConfig, hashSchema, readContextFile } from '@specferret/core';
 import { parsePositiveMsBudget } from './parse-utils.js';
 import { buildLintDiagnostics, DIAGNOSTICS_SCHEMA_VERSION } from './diagnostics.js';
 
@@ -202,6 +202,8 @@ export const lintCommand = new Command('lint')
   });
 
 type CommittedContext = {
+  version: string;
+  schemaVersion: string;
   contracts: Array<{
     id: string;
     type: string;
@@ -217,7 +219,7 @@ type CommittedContext = {
 };
 
 async function restoreCommittedBaseline(store: Awaited<ReturnType<typeof getStore>>, contextPath: string): Promise<void> {
-  const context = JSON.parse(fs.readFileSync(contextPath, 'utf-8')) as CommittedContext;
+  const context = readContextFile(contextPath) as CommittedContext;
   const existingNodes = await store.getNodes();
   const nodeIdByFilePath = new Map(existingNodes.map((node) => [node.file_path, node.id]));
   const contractsByFilePath = new Map<string, CommittedContext['contracts']>();
