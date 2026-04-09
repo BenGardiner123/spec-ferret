@@ -193,30 +193,42 @@ Notes:
 
 ---
 
-### Recorded Execution Evidence (2026-04-09 — 0.1.4 npm install, 9-scenario matrix)
+### Recorded Execution Evidence (2026-04-09 — 0.1.4 npm install, 12-scenario matrix)
 
 Candidate under test:
 
 - `@specferret/cli@0.1.4` installed from npm (`bun add --global @specferret/cli@0.1.4`)
-- Includes: `agent-mode-init` scenario (9th scenario), updated `code-first-extract` using `@ferret-contract` source annotation
+- Matrix expanded from 9 → 12 scenarios (added: `breaking-required-field-added`, `noop-no-drift`, `depth-3-chain`)
+- New `assert-scenario.sh` supports `expectedTriggerContracts` — verifies WHICH contract triggered drift, not just counts
+- `depth-3-chain` proves BFS traversal reaches at least depth 3 (`maxDepthAtLeast: 3`)
+- `noop-no-drift` proves S03 hash stability (property reorder = no drift)
+- `breaking-required-field-added` covers S04 breaking class: required field added
 
 spec-kit validation repo:
 
-- Workflow run: https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/24217228972
-- Head SHA: `9dfdee94132590bdbf0fc3b2ce3ca9cdebb3b164`
+- Workflow run (12-scenario): https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/24218377049
 - Result: `success`
-- Matrix jobs: 9/9 successful
+- Matrix jobs: 12/12 successful
 
 BMAD validation repo:
 
-- Workflow run: https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/24217230401
-- Head SHA: `b87a5dc1edb1ed6b68f2d7c327416b182b89705b`
+- Workflow run (12-scenario): https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/24218378124
 - Result: `success`
-- Matrix jobs: 9/9 successful
+- Matrix jobs: 12/12 successful
+
+### Previous Evidence (2026-04-09 — 0.1.4 npm install, 9-scenario matrix)
+
+spec-kit:
+- Workflow run: https://github.com/BenGardiner123/spec-ferret-validation-spec-kit/actions/runs/24217228972
+- Head SHA: `9dfdee94132590bdbf0fc3b2ce3ca9cdebb3b164` · 9/9 successful
+
+BMAD:
+- Workflow run: https://github.com/BenGardiner123/specferret-validation-bmad/actions/runs/24217230401
+- Head SHA: `b87a5dc1edb1ed6b68f2d7c327416b182b89705b` · 9/9 successful
 
 Notes:
 
-- This is the definitive GA evidence for `@specferret/cli@0.1.4`.
+- The 12-scenario run is the authoritative GA evidence for `@specferret/cli@0.1.4`.
 - All scenarios validated against the live npm package, not a vendor bundle.
 - `agent-mode-init` confirms `ferret init --agent-targets` scaffolding works end-to-end in CI.
 
