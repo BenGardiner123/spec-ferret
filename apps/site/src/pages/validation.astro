@@ -30,6 +30,9 @@ const BRANCHES = [
   'scenario/code-first-extract',
   'scenario/specferret-opinionated-layout',
   'scenario/agent-mode-init',
+  'scenario/breaking-required-field-added',
+  'scenario/noop-no-drift',
+  'scenario/depth-3-chain',
 ];
 
 async function fetchManifest(branch: string): Promise<ScenarioManifest | null> {
@@ -61,7 +64,7 @@ const scenarios = manifests.filter((m): m is ScenarioManifest => m !== null);
 
 const LABELS: Record<string, string> = {
   'main-baseline': 'Main Baseline',
-  'breaking-required-field': 'Breaking: Required Field',
+  'breaking-required-field': 'Breaking: Required Field Removed',
   'breaking-type-change': 'Breaking: Type Change',
   'nonbreaking-optional-add': 'Non-breaking: Optional Field',
   'transitive-impact-depth': 'Transitive Impact Depth',
@@ -69,6 +72,9 @@ const LABELS: Record<string, string> = {
   'code-first-extract': 'Code-First Extraction',
   'specferret-opinionated-layout': 'Opinionated Layout',
   'agent-mode-init': 'Agent Mode Init',
+  'breaking-required-field-added': 'Breaking: Required Field Added',
+  'noop-no-drift': 'No-Op: Property Reorder (No Drift)',
+  'depth-3-chain': 'Depth-3 Transitive Chain',
 };
 
 function formatDate(iso: string) {
@@ -91,10 +97,10 @@ function formatDate(iso: string) {
     </header>
 
     <section class="hero">
-      <p class="pill mono">@specferret/cli@0.1.4 · 9 scenarios · 2 repos</p>
+      <p class="pill mono">@specferret/cli@0.1.4 · 12 scenarios · 2 repos</p>
       <h1>Validation Matrix</h1>
       <p class="subhead">
-        Every release must pass all 9 scenarios against the live npm package in two external validation repositories before publish. Manifests are
+        Every release must pass all 12 scenarios against the live npm package in two external validation repositories before publish. Manifests are
         fetched live from GitHub at build time.
       </p>
       <div class="run-row">
