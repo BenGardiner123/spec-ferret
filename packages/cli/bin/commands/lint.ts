@@ -3,7 +3,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
-import { getStore, Reconciler, findProjectRoot, loadConfig, hashSchema, readContextFile } from '@specferret/core';
+import {
+  getStore,
+  Reconciler,
+  findProjectRoot,
+  loadConfig,
+  hashSchema,
+  readContextFile,
+  classifyUpwardDrift,
+  extractContractsFromTypeScript,
+} from '@specferret/core';
+import type { UpwardDriftResult } from '@specferret/core';
 import { parsePositiveMsBudget } from './parse-utils.js';
 import { buildLintDiagnostics, DIAGNOSTICS_SCHEMA_VERSION } from './diagnostics.js';
 
@@ -78,6 +88,34 @@ export const lintCommand = new Command('lint')
         report.integrityViolations.selfImports.length > 0 ||
         report.integrityViolations.circularImports.length > 0;
 
+      // ── Upward drift detection (S52) ─────────────────────────────────────────
+      // For each contract that has code source metadata, re-extract the live TypeScript
+      // symbol and compare against the declared contract schema.
+      const upwardDrift: UpwardDriftResult[] = [];
+      for (const contract of contracts) {
+        if (!contract.code_source_file || !contract.code_source_symbol) continue;
+        const sourceAbsPath = path.resolve(root, contract.code_source_file);
+        if (!fs.existsSync(sourceAbsPath)) continue;
+        let fileContent: string;
+        try {
+          fileContent = fs.readFileSync(sourceAbsPath, 'utf-8');
+        } catch {
+          continue;
+        }
+        const extraction = extractContractsFromTypeScript(sourceAbsPath, fileContent);
+        const codeContract = extraction.contracts.find((c) => c.sourceSymbol === contract.code_source_symbol);
+        if (!codeContract) continue;
+        let declaredSchema: unknown = {};
+        try {
+          declaredSchema = JSON.parse(contract.shape_schema);
+        } catch {}
+        const result = classifyUpwardDrift(contract.id, declaredSchema, codeContract.shape, contract.code_source_file, contract.code_source_symbol);
+        if (result.driftClass !== 'NOOP') {
+          upwardDrift.push(result);
+        }
+      }
+      const hasUpwardDrift = upwardDrift.length > 0;
+
       // Contract IDs whose schema change was classified as breaking by scan.
       // Used by both CI and human output so counts align with tree labels.
       const breakingTriggerIds = new Set(contracts.filter((c) => c.status === 'needs-review').map((c) => c.id));
@@ -103,11 +141,12 @@ export const lintCommand = new Command('lint')
         const output: Record<string, unknown> = {
           version: '2.0',
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
-          consistent: report.consistent,
+          consistent: report.consistent && !hasUpwardDrift,
           breaking,
           nonBreaking,
           durationMs: ms,
           flagged: report.flagged,
+          upwardDrift,
           integrityViolations: report.integrityViolations,
           diagnostics,
           timestamp: report.timestamp,
@@ -120,7 +159,7 @@ export const lintCommand = new Command('lint')
           output.importSuggestions = report.importSuggestions;
         }
         process.stdout.write(JSON.stringify(output, null, 2) + '\n');
-        process.exit(hasIntegrityViolations ? 2 : perfExceeded ? 1 : report.consistent ? 0 : 1);
+        process.exit(hasIntegrityViolations ? 2 : perfExceeded ? 1 : report.consistent && !hasUpwardDrift ? 0 : 1);
         return;
       }
 
@@ -132,7 +171,7 @@ export const lintCommand = new Command('lint')
         return;
       }
 
-      if (report.consistent) {
+      if (report.consistent && !hasUpwardDrift) {
         // Boris clean state — exactly one line
         process.stdout.write(pc.green('✓ ferret') + `  ${contractCount} contracts  0 drift  ${ms}ms\n`);
         if (suggestionsEnabled) {
@@ -173,9 +212,24 @@ export const lintCommand = new Command('lint')
         process.stdout.write('\n');
       }
 
+      // Upward drift (code → spec direction)
+      for (const drift of upwardDrift) {
+        const driftLabel =
+          drift.driftClass === 'BREAKING'
+            ? pc.red('BREAKING (code)') + `  ${drift.contractId}`
+            : pc.yellow('NON-BREAKING (code)') + `  ${drift.contractId}`;
+        process.stdout.write(`  ${driftLabel}\n`);
+        process.stdout.write(`  └── ${drift.sourceFile}  ${drift.sourceSymbol} — ${drift.reason}\n`);
+        process.stdout.write('\n');
+      }
+
       const breakingCount = report.flagged.filter((f) => breakingTriggerIds.has(f.triggeredByContractId)).length;
       const nonBreakingCount = report.flagged.filter((f) => !breakingTriggerIds.has(f.triggeredByContractId)).length;
-      process.stdout.write(`  ${breakingCount} breaking  ${nonBreakingCount} non-breaking\n`);
+      const upwardBreakingCount = upwardDrift.filter((d) => d.driftClass === 'BREAKING').length;
+      const upwardNonBreakingCount = upwardDrift.filter((d) => d.driftClass === 'NON_BREAKING').length;
+      const totalBreaking = breakingCount + upwardBreakingCount;
+      const totalNonBreaking = nonBreakingCount + upwardNonBreakingCount;
+      process.stdout.write(`  ${totalBreaking} breaking  ${totalNonBreaking} non-breaking\n`);
       process.stdout.write(`\n  ${pc.cyan('→')} Run ferret review to resolve\n\n`);
 
       if (suggestionsEnabled) {

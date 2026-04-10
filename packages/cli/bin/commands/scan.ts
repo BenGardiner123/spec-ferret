@@ -1,32 +1,19 @@
-import { Command } from "commander";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { execSync } from "node:child_process";
-import { glob } from "glob";
-import {
-  extractFromSpecFile,
-  compareSchemas,
-  writeContext,
-  getStore,
-  loadConfig,
-  findProjectRoot,
-  hashSchema,
-} from "@specferret/core";
-import { randomUUID } from "node:crypto";
-import pc from "picocolors";
+import { Command } from 'commander';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { execSync } from 'node:child_process';
+import { glob } from 'glob';
+import { extractFromSpecFile, compareSchemas, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
+import { randomUUID } from 'node:crypto';
+import pc from 'picocolors';
 
-export const scanCommand = new Command("scan")
-  .description(
-    "Advanced/manual: scan contract files and update the graph state.",
-  )
-  .argument("[files...]", "Specific files to scan (optional)")
-  .option("--changed", "Scan only git-staged files")
-  .option("--force", "Re-extract all files regardless of hash")
-  .option(
-    "--allow-partial-success",
-    "Continue scanning after extraction failures (explicit opt-in)",
-  )
-  .option("--ci", "Machine-readable output, no colours")
+export const scanCommand = new Command('scan')
+  .description('Advanced/manual: scan contract files and update the graph state.')
+  .argument('[files...]', 'Specific files to scan (optional)')
+  .option('--changed', 'Scan only git-staged files')
+  .option('--force', 'Re-extract all files regardless of hash')
+  .option('--allow-partial-success', 'Continue scanning after extraction failures (explicit opt-in)')
+  .option('--ci', 'Machine-readable output, no colours')
   .action(async (files: string[], options) => {
     const root = findProjectRoot();
     const config = loadConfig();
@@ -40,7 +27,7 @@ export const scanCommand = new Command("scan")
       if (filesToScan.length === 0) {
         // Glob spec files from specDir
         const specDir = path.resolve(root, config.specDir);
-        const pattern = config.filePattern ?? "**/*.contract.md";
+        const pattern = config.filePattern ?? '**/*.contract.md';
         filesToScan = await glob(pattern, { cwd: specDir, absolute: false });
         filesToScan = filesToScan.map((f) => path.join(config.specDir, f));
       }
@@ -50,7 +37,7 @@ export const scanCommand = new Command("scan")
         const staged = getStagedFiles(root);
         filesToScan = filesToScan.filter((f) => {
           const abs = path.resolve(root, f);
-          const rel = path.relative(root, abs).replace(/\\/g, "/");
+          const rel = path.relative(root, abs).replace(/\\/g, '/');
           return staged.has(rel) || staged.has(f);
         });
       }
@@ -68,7 +55,7 @@ export const scanCommand = new Command("scan")
           continue;
         }
 
-        const content = fs.readFileSync(absFile, "utf-8");
+        const content = fs.readFileSync(absFile, 'utf-8');
 
         let result: ReturnType<typeof extractFromSpecFile>;
         try {
@@ -85,11 +72,11 @@ export const scanCommand = new Command("scan")
           }
 
           // Partial-success: log the failure and continue to next file.
-          process.stderr.write(diagnostic + "\n");
+          process.stderr.write(diagnostic + '\n');
           continue;
         }
 
-        if (result.warning === "no-frontmatter") {
+        if (result.warning === 'no-frontmatter') {
           const msg = `⚠ ${relFile} has no ferret frontmatter — skipped\n`;
           process.stderr.write(msg);
           skipped++;
@@ -104,8 +91,7 @@ export const scanCommand = new Command("scan")
 
         // --force: always process regardless of file hash
         // no --force: skip if file content hash unchanged (no edit detected)
-        const fileChanged =
-          options.force || !existingNode || existingNode.hash !== fileHash;
+        const fileChanged = options.force || !existingNode || existingNode.hash !== fileHash;
 
         if (!fileChanged) {
           continue;
@@ -118,7 +104,7 @@ export const scanCommand = new Command("scan")
           const prevContract = await store.getContract(contract.id);
 
           // Determine status from schema comparison
-          let nodeStatus: "stable" | "needs-review" = "stable";
+          let nodeStatus: 'stable' | 'needs-review' = 'stable';
 
           if (prevContract && prevContract.shape_schema) {
             let prevShape: unknown = {};
@@ -127,19 +113,13 @@ export const scanCommand = new Command("scan")
             } catch {}
 
             const comparison = compareSchemas(prevShape, contract.shape);
-            if (comparison.classification === "breaking") {
-              nodeStatus = "needs-review";
-              const label = options.ci ? "BREAKING" : pc.red("BREAKING");
-              process.stdout.write(
-                `  ${label}  ${contract.id} — ${comparison.reason}\n`,
-              );
-            } else if (comparison.classification === "non-breaking") {
-              const label = options.ci
-                ? "NON-BREAKING"
-                : pc.yellow("NON-BREAKING");
-              process.stdout.write(
-                `  ${label}  ${contract.id} — ${comparison.reason}\n`,
-              );
+            if (comparison.classification === 'breaking') {
+              nodeStatus = 'needs-review';
+              const label = options.ci ? 'BREAKING' : pc.red('BREAKING');
+              process.stdout.write(`  ${label}  ${contract.id} — ${comparison.reason}\n`);
+            } else if (comparison.classification === 'non-breaking') {
+              const label = options.ci ? 'NON-BREAKING' : pc.yellow('NON-BREAKING');
+              process.stdout.write(`  ${label}  ${contract.id} — ${comparison.reason}\n`);
             }
           }
 
@@ -157,6 +137,8 @@ export const scanCommand = new Command("scan")
             shape_schema: JSON.stringify(contract.shape),
             type: contract.type,
             status: nodeStatus,
+            ...(contract.sourceFile !== undefined && { code_source_file: contract.sourceFile }),
+            ...(contract.sourceSymbol !== undefined && { code_source_symbol: contract.sourceSymbol }),
           });
 
           contract.imports.forEach((importId) => importIds.add(importId));
@@ -170,13 +152,11 @@ export const scanCommand = new Command("scan")
       // Always write context.json after scan
       await writeContext(store, root);
 
-      const summary = `${scanned} file${scanned !== 1 ? "s" : ""} scanned. ${changed} changed. ${changed} contract${changed !== 1 ? "s" : ""} updated. ${failed} failed.`;
-      process.stdout.write(summary + "\n");
+      const summary = `${scanned} file${scanned !== 1 ? 's' : ''} scanned. ${changed} changed. ${changed} contract${changed !== 1 ? 's' : ''} updated. ${failed} failed.`;
+      process.stdout.write(summary + '\n');
 
       if (failed > 0 && options.allowPartialSuccess) {
-        process.stderr.write(
-          `ferret: scan completed with ${failed} extraction error(s) under --allow-partial-success\n`,
-        );
+        process.stderr.write(`ferret: scan completed with ${failed} extraction error(s) under --allow-partial-success\n`);
       }
     } finally {
       await store.close();
@@ -185,11 +165,11 @@ export const scanCommand = new Command("scan")
 
 function getStagedFiles(root: string): Set<string> {
   try {
-    const output = execSync("git diff --cached --name-only", {
-      encoding: "utf8",
+    const output = execSync('git diff --cached --name-only', {
+      encoding: 'utf8',
       cwd: root,
     }) as string;
-    return new Set(output.split("\n").filter(Boolean));
+    return new Set(output.split('\n').filter(Boolean));
   } catch {
     return new Set();
   }

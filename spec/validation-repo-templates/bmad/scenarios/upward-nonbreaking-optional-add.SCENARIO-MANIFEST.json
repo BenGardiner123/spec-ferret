@@ -1,0 +1,17 @@
+{
+  "scenario": {
+    "name": "upward-nonbreaking-optional-add",
+    "branch": "scenario/upward-nonbreaking-optional-add",
+    "description": "Non-breaking upward drift: optional 'refreshToken' field added to JwtPayload implementation"
+  },
+  "expected": {
+    "exitCode": 1,
+    "driftClass": "upward-non-breaking",
+    "reviewRequired": false,
+    "upwardDrift": {
+      "hasDrift": true,
+      "breaking": 0,
+      "nonBreaking": 1
+    }
+  }
+}

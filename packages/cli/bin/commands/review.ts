@@ -1,8 +1,19 @@
 import { Command } from 'commander';
 import { randomUUID } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as readline from 'node:readline/promises';
 import pc from 'picocolors';
-import { findProjectRoot, getStore, Reconciler, writeContext, type FerretContract, type FerretNode } from '@specferret/core';
+import {
+  findProjectRoot,
+  getStore,
+  Reconciler,
+  writeContext,
+  classifyUpwardDrift,
+  extractContractsFromTypeScript,
+  type FerretContract,
+  type FerretNode,
+} from '@specferret/core';
 import { buildIntegrityDiagnostics, buildReviewDiagnostics, DIAGNOSTICS_SCHEMA_VERSION, type MachineDiagnostic } from './diagnostics.js';
 
 const REVIEW_SCHEMA_VERSION = '1.1.0' as const;
@@ -47,12 +58,26 @@ type ReviewItem = {
   };
 };
 
+type UpwardDriftReviewItem = {
+  contractId: string;
+  sourceFile: string;
+  sourceSymbol: string;
+  driftClass: 'BREAKING' | 'NON_BREAKING';
+  reason: string;
+  resolutionOptions: Array<{
+    intent: 'spec-update' | 'code-rollback';
+    description: string;
+    confidence: 'high' | 'medium' | 'low';
+  }>;
+};
+
 type ReviewJsonOutput = {
   version: '2.0';
   reviewSchemaVersion: typeof REVIEW_SCHEMA_VERSION;
   diagnosticsSchemaVersion: string;
   diagnostics: MachineDiagnostic[];
   reviewable: ReviewItem[];
+  upwardDrift: UpwardDriftReviewItem[];
   selected: string[];
   action: ReviewAction | null;
   result: {
@@ -94,6 +119,7 @@ export const reviewCommand = new Command('review')
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: buildIntegrityDiagnostics(report.integrityViolations),
             reviewable: [],
+            upwardDrift: [],
             selected: [],
             action: null,
             result: null,
@@ -120,7 +146,38 @@ export const reviewCommand = new Command('review')
         .sort((left, right) => left.id.localeCompare(right.id));
       const reviewItems = buildReviewItems(reviewableContracts, nodeById, affectedByContractId);
 
-      if (reviewItems.length === 0) {
+      // ── Upward drift detection (S53) ─────────────────────────────────────────
+      const upwardDriftItems: UpwardDriftReviewItem[] = [];
+      for (const contract of contracts) {
+        if (!contract.code_source_file || !contract.code_source_symbol) continue;
+        const sourceAbsPath = path.resolve(root, contract.code_source_file);
+        if (!fs.existsSync(sourceAbsPath)) continue;
+        let fileContent: string;
+        try {
+          fileContent = fs.readFileSync(sourceAbsPath, 'utf-8');
+        } catch {
+          continue;
+        }
+        const extraction = extractContractsFromTypeScript(sourceAbsPath, fileContent);
+        const codeContract = extraction.contracts.find((c) => c.sourceSymbol === contract.code_source_symbol);
+        if (!codeContract) continue;
+        let declaredSchema: unknown = {};
+        try {
+          declaredSchema = JSON.parse(contract.shape_schema);
+        } catch {}
+        const result = classifyUpwardDrift(contract.id, declaredSchema, codeContract.shape, contract.code_source_file, contract.code_source_symbol);
+        if (result.driftClass === 'NOOP') continue;
+        upwardDriftItems.push({
+          contractId: contract.id,
+          sourceFile: contract.code_source_file,
+          sourceSymbol: contract.code_source_symbol,
+          driftClass: result.driftClass,
+          reason: result.reason,
+          resolutionOptions: buildUpwardResolutionOptions(result.driftClass),
+        });
+      }
+
+      if (reviewItems.length === 0 && upwardDriftItems.length === 0) {
         if (options.json) {
           writeJson({
             version: '2.0',
@@ -128,6 +185,7 @@ export const reviewCommand = new Command('review')
             diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
             diagnostics: [],
             reviewable: [],
+            upwardDrift: [],
             selected: [],
             action: null,
             result: null,
@@ -136,6 +194,27 @@ export const reviewCommand = new Command('review')
           process.stdout.write(`${pc.green('✓ ferret review')}  0 items need review\n`);
         }
         process.exitCode = 0;
+        return;
+      }
+
+      // If only upward drift exists (no spec-direction items), short-circuit
+      if (reviewItems.length === 0 && upwardDriftItems.length > 0) {
+        if (options.json) {
+          writeJson({
+            version: '2.0',
+            reviewSchemaVersion: REVIEW_SCHEMA_VERSION,
+            diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
+            diagnostics: [],
+            reviewable: [],
+            upwardDrift: upwardDriftItems,
+            selected: [],
+            action: null,
+            result: null,
+          });
+        } else {
+          renderUpwardDriftContext(upwardDriftItems);
+        }
+        process.exitCode = 1;
         return;
       }
 
@@ -152,6 +231,7 @@ export const reviewCommand = new Command('review')
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(reviewItems),
           reviewable: reviewItems,
+          upwardDrift: upwardDriftItems,
           selected: [],
           action: null,
           result: null,
@@ -180,6 +260,9 @@ export const reviewCommand = new Command('review')
           }
           renderReviewContext(item);
         });
+        if (upwardDriftItems.length > 0) {
+          renderUpwardDriftContext(upwardDriftItems);
+        }
       }
 
       const action = await selectAction(options.action, Boolean(options.json));
@@ -209,6 +292,7 @@ export const reviewCommand = new Command('review')
           diagnosticsSchemaVersion: DIAGNOSTICS_SCHEMA_VERSION,
           diagnostics: buildReviewDiagnostics(selectedItems),
           reviewable: selectedItems,
+          upwardDrift: upwardDriftItems,
           selected: selectedItems.map((item) => item.contractId),
           action,
           result: resultSummary,
@@ -559,6 +643,51 @@ function renderCopyPasteContext(item: ReviewItem, mode: 'update' | 'reject'): vo
   process.stdout.write(
     `  next-step: ${mode === 'update' ? 'Update downstream files and re-run ferret lint' : 'Fix or revert the upstream change and re-run ferret lint'}\n\n`,
   );
+}
+
+function buildUpwardResolutionOptions(driftClass: 'BREAKING' | 'NON_BREAKING'): UpwardDriftReviewItem['resolutionOptions'] {
+  if (driftClass === 'BREAKING') {
+    return [
+      {
+        intent: 'code-rollback',
+        description: 'Revert the implementation to match the declared contract.',
+        confidence: 'high',
+      },
+      {
+        intent: 'spec-update',
+        description: 'Update the contract spec to reflect the new implementation, then re-run ferret scan.',
+        confidence: 'medium',
+      },
+    ];
+  }
+  return [
+    {
+      intent: 'spec-update',
+      description: 'Update the contract spec to include the new optional addition, then re-run ferret scan.',
+      confidence: 'high',
+    },
+    {
+      intent: 'code-rollback',
+      description: 'Remove the undeclared addition from the implementation.',
+      confidence: 'low',
+    },
+  ];
+}
+
+function renderUpwardDriftContext(items: UpwardDriftReviewItem[]): void {
+  process.stdout.write('\n  UPWARD DRIFT (code → spec)\n\n');
+  for (const item of items) {
+    const label =
+      item.driftClass === 'BREAKING' ? pc.red('BREAKING (code)') + `  ${item.contractId}` : pc.yellow('NON-BREAKING (code)') + `  ${item.contractId}`;
+    process.stdout.write(`  ${label}\n`);
+    process.stdout.write(`  source: ${item.sourceFile}  ${item.sourceSymbol}\n`);
+    process.stdout.write(`  reason: ${item.reason}\n\n`);
+    process.stdout.write('  RESOLUTION OPTIONS\n');
+    for (const opt of item.resolutionOptions) {
+      process.stdout.write(`  [${opt.intent}]  ${opt.description}\n`);
+    }
+    process.stdout.write('\n');
+  }
 }
 
 function writeJson(payload: ReviewJsonOutput): void {

@@ -1,5 +1,5 @@
-export type NodeStatus = "stable" | "needs-review" | "roadmap" | "blocked";
-export type ContractStatus = "stable" | "roadmap" | "needs-review";
+export type NodeStatus = 'stable' | 'needs-review' | 'roadmap' | 'blocked';
+export type ContractStatus = 'stable' | 'roadmap' | 'needs-review';
 
 export interface FerretNode {
   id: string;
@@ -16,6 +16,10 @@ export interface FerretContract {
   shape_schema: string;
   type: string;
   status: ContractStatus;
+  /** Path to the TypeScript file this contract was generated from (code-first contracts only). */
+  code_source_file?: string;
+  /** TypeScript symbol name this contract was generated from (code-first contracts only). */
+  code_source_symbol?: string;
 }
 
 export interface FerretDependency {
@@ -73,10 +77,7 @@ export interface DBStore {
   upsertDependency(dependency: FerretDependency): Promise<void>;
 
   /** Replaces all dependency edges for a source node with the provided targets */
-  replaceDependenciesForSourceNode(
-    sourceNodeId: string,
-    targetContractIds: string[],
-  ): Promise<void>;
+  replaceDependenciesForSourceNode(sourceNodeId: string, targetContractIds: string[]): Promise<void>;
 
   /** Full graph retrieval methods for the Reconciler engine */
   getNodes(): Promise<FerretNode[]>;

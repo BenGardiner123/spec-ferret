@@ -1,0 +1,21 @@
+{
+  "scenario": {
+    "name": "upward-review-resolution-flow",
+    "branch": "scenario/upward-review-resolution-flow",
+    "description": "Review flow for upward breaking drift: ferret review --json presents resolution options"
+  },
+  "expected": {
+    "exitCode": 1,
+    "driftClass": "upward-breaking",
+    "reviewRequired": true,
+    "upwardDrift": {
+      "hasDrift": true,
+      "breaking": 1,
+      "nonBreaking": 0
+    },
+    "review": {
+      "upwardDriftItems": 1,
+      "resolutionOptions": ["spec-update", "code-rollback"]
+    }
+  }
+}
