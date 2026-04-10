@@ -6,7 +6,7 @@ This sprint targets G9 from ROADMAP.MD.
 
 ---
 
-## Status: Planned
+## Status: Complete — v0.2.0
 
 Goal: enforce bidirectional drift detection by catching implementation-code changes that invalidate declared contracts.
 Gate target: G9.
@@ -26,7 +26,7 @@ Gate target: G9.
 - Canonical ordering rules documented and tested
 - Unsupported symbols fail with actionable diagnostics
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -43,7 +43,7 @@ Gate target: G9.
 - Classifier reports contract ID, source symbol/file, and mismatch reason
 - Known no-op formatting changes do not produce false positives
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -60,7 +60,7 @@ Gate target: G9.
 - Exit behavior remains deterministic and documented
 - CI output includes impacted contracts and source locations
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -77,7 +77,7 @@ Gate target: G9.
 - Resolution options distinguish spec update vs code rollback intent
 - Reconciliation log captures code-origin drift decision metadata
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 
@@ -94,7 +94,7 @@ Gate target: G9.
 - Candidate release checklist requires green upward drift scenarios
 - Evidence links are recorded in roadmap/runbook docs
 
-**Status:** Planned
+**Status:** Complete
 
 ---
 

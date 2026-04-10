@@ -50,6 +50,9 @@ Execute these branches in both repositories:
 - `scenario/review-resolution-flow`
 - `scenario/code-first-extract`
 - `scenario/specferret-opinionated-layout`
+- `scenario/upward-breaking-signature-change`
+- `scenario/upward-nonbreaking-optional-add`
+- `scenario/upward-review-resolution-flow`
 
 Each branch must have expected outcomes declared in a scenario manifest.
 

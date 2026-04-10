@@ -155,7 +155,7 @@ export interface FerretConfig {
   specDir: string;
   filePattern: string;
   includes?: string[];
-  store: "sqlite" | "postgres";
+  store: 'sqlite' | 'postgres';
   codeContracts?: {
     include: string[];
     watchNodes?: string[];
@@ -163,10 +163,10 @@ export interface FerretConfig {
 }
 
 export const DEFAULT_CONFIG: FerretConfig = {
-  specDir: "contracts/",
-  filePattern: "**/*.contract.md",
-  includes: ["**/*.contract.md"],
-  store: "sqlite",
+  specDir: 'contracts/',
+  filePattern: '**/*.contract.md',
+  includes: ['**/*.contract.md'],
+  store: 'sqlite',
 };
 ```
 
@@ -181,7 +181,7 @@ No separate command. Silent. If write fails, logs to stderr and continues.
 
 ```typescript
 export interface FerretContext {
-  version: "2.0";
+  version: '2.0';
   generated: string; // ISO timestamp
   contracts: ContextContract[];
   edges: ContextEdge[];
@@ -251,16 +251,16 @@ Tests: `packages/core/src/context/index.test.ts`
 `packages/core/src/index.ts`
 
 ```typescript
-export * from "./extractor/frontmatter.js";
-export * from "./extractor/validator.js";
-export * from "./extractor/hash.js";
-export * from "./context/index.js";
-export * from "./store/types.js";
-export * from "./store/sqlite.js";
-export * from "./store/factory.js";
-export * from "./reconciler/index.js";
-export * from "./config.js";
-export * from "./utils/paths.js";
+export * from './extractor/frontmatter.js';
+export * from './extractor/validator.js';
+export * from './extractor/hash.js';
+export * from './context/index.js';
+export * from './store/types.js';
+export * from './store/sqlite.js';
+export * from './store/factory.js';
+export * from './reconciler/index.js';
+export * from './config.js';
+export * from './utils/paths.js';
 ```
 
 ---
@@ -480,7 +480,7 @@ Sprint 6 status: Complete.
 | S48   | G8   | Publish starter workflow templates for monorepo and single-package layouts | Copy-paste workflow snippets + docs                 | New maintainer can enable CI drift checks in under 10 minutes                                    |
 | S49   | G8   | Define Action release/versioning policy and support window                 | Versioning policy doc + release checklist           | `v1` consumers get non-breaking updates; breaking changes require explicit major tag rollout     |
 
-### Sprint 7 — Upward Code-to-Spec Drift (Post-GA)
+### Sprint 7 — Upward Code-to-Spec Drift (v0.2.0)
 
 Goal: detect and explain mismatches when implementation code changes but contract files are not updated.
 
