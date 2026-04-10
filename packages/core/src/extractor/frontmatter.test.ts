@@ -215,3 +215,77 @@ ferret:
     assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 });
+
+describe('extractFromSpecFile — S50 source block', () => {
+  const SPEC_WITH_SOURCE = `---
+ferret:
+  id: auth.jwt
+  type: type
+  source:
+    file: src/auth/jwt.ts
+    symbol: JwtPayload
+  shape:
+    type: object
+    properties:
+      sub:
+        type: string
+    required: [sub]
+---
+`;
+
+  const SPEC_WITHOUT_SOURCE = `---
+ferret:
+  id: auth.jwt
+  type: type
+  shape:
+    type: object
+    properties:
+      sub:
+        type: string
+    required: [sub]
+---
+`;
+
+  it('parses source.file and source.symbol when present', () => {
+    const result = extractFromSpecFile('contracts/auth/jwt.contract.md', SPEC_WITH_SOURCE);
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].sourceFile, 'src/auth/jwt.ts');
+    assert.equal(result.contracts[0].sourceSymbol, 'JwtPayload');
+  });
+
+  it('has undefined sourceFile and sourceSymbol when source block absent', () => {
+    const result = extractFromSpecFile('contracts/auth/jwt.contract.md', SPEC_WITHOUT_SOURCE);
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].sourceFile, undefined);
+    assert.equal(result.contracts[0].sourceSymbol, undefined);
+  });
+
+  it('ignores source block with non-string fields gracefully', () => {
+    const specBadSource = `---
+ferret:
+  id: auth.jwt
+  type: type
+  source:
+    file: 42
+    symbol: [not, a, string]
+  shape:
+    type: object
+---
+`;
+    const result = extractFromSpecFile('contracts/auth/jwt.contract.md', specBadSource);
+    assert.equal(result.contracts[0].sourceFile, undefined);
+    assert.equal(result.contracts[0].sourceSymbol, undefined);
+  });
+
+  it('source block does not affect shape_hash', () => {
+    const r1 = extractFromSpecFile('contracts/a.contract.md', SPEC_WITH_SOURCE);
+    const r2 = extractFromSpecFile('contracts/b.contract.md', SPEC_WITHOUT_SOURCE);
+    assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
+  });
+
+  it('identical source blocks produce identical shape_hash (deterministic snapshot)', () => {
+    const r1 = extractFromSpecFile('contracts/a.contract.md', SPEC_WITH_SOURCE);
+    const r2 = extractFromSpecFile('contracts/b.contract.md', SPEC_WITH_SOURCE);
+    assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
+  });
+});

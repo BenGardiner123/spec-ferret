@@ -1,45 +1,42 @@
-import assert from "node:assert/strict";
-import { describe, it } from "bun:test";
-import { SqliteStore } from "./sqlite.js";
-import type { FerretNode, FerretContract } from "./types.js";
-import { randomUUID } from "node:crypto";
+import assert from 'node:assert/strict';
+import { describe, it } from 'bun:test';
+import { SqliteStore } from './sqlite.js';
+import type { FerretNode, FerretContract } from './types.js';
+import { randomUUID } from 'node:crypto';
 
 // Use in-memory SQLite for all tests — fast, isolated, no disk cleanup needed
 function makeStore() {
-  return new SqliteStore(":memory:");
+  return new SqliteStore(':memory:');
 }
 
 function makeNode(overrides: Partial<FerretNode> = {}): FerretNode {
   return {
     id: randomUUID(),
-    file_path: "contracts/test.contract.md",
-    hash: "abc123",
-    status: "stable",
+    file_path: 'contracts/test.contract.md',
+    hash: 'abc123',
+    status: 'stable',
     ...overrides,
   };
 }
 
-function makeContract(
-  nodeId: string,
-  overrides: Partial<FerretContract> = {},
-): FerretContract {
+function makeContract(nodeId: string, overrides: Partial<FerretContract> = {}): FerretContract {
   return {
     id: `api.GET/test-${randomUUID()}`,
     node_id: nodeId,
-    shape_hash: "sha256hashvalue",
+    shape_hash: 'sha256hashvalue',
     shape_schema: JSON.stringify({
-      type: "object",
-      properties: { id: { type: "string" } },
-      required: ["id"],
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
     }),
-    type: "api",
-    status: "stable",
+    type: 'api',
+    status: 'stable',
     ...overrides,
   };
 }
 
-describe("SqliteStore — Task 1: shape_schema field", () => {
-  it("upserts a contract with shape_schema field", async () => {
+describe('SqliteStore — Task 1: shape_schema field', () => {
+  it('upserts a contract with shape_schema field', async () => {
     const store = makeStore();
     await store.init();
 
@@ -48,9 +45,9 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
 
     const contract = makeContract(node.id, {
       shape_schema: JSON.stringify({
-        type: "object",
-        properties: { name: { type: "string" } },
-        required: ["name"],
+        type: 'object',
+        properties: { name: { type: 'string' } },
+        required: ['name'],
       }),
     });
     await store.upsertContract(contract);
@@ -62,7 +59,7 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.close();
   });
 
-  it("retrieves a contract with shape_schema field intact", async () => {
+  it('retrieves a contract with shape_schema field intact', async () => {
     const store = makeStore();
     await store.init();
 
@@ -70,9 +67,9 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.upsertNode(node);
 
     const schema = {
-      type: "object",
-      properties: { email: { type: "string", format: "email" } },
-      required: ["email"],
+      type: 'object',
+      properties: { email: { type: 'string', format: 'email' } },
+      required: ['email'],
     };
     const contract = makeContract(node.id, {
       shape_schema: JSON.stringify(schema),
@@ -87,7 +84,7 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.close();
   });
 
-  it("upserts (updates) a contract — shape_schema is overwritten correctly", async () => {
+  it('upserts (updates) a contract — shape_schema is overwritten correctly', async () => {
     const store = makeStore();
     await store.init();
 
@@ -95,13 +92,13 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.upsertNode(node);
 
     const contract = makeContract(node.id, {
-      shape_schema: JSON.stringify({ type: "string" }),
+      shape_schema: JSON.stringify({ type: 'string' }),
     });
     await store.upsertContract(contract);
 
     const updatedSchema = JSON.stringify({
-      type: "object",
-      properties: { id: { type: "string" } },
+      type: 'object',
+      properties: { id: { type: 'string' } },
     });
     await store.upsertContract({ ...contract, shape_schema: updatedSchema });
 
@@ -111,7 +108,7 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.close();
   });
 
-  it("migration: ALTER TABLE runs cleanly on an existing database that lacks shape_schema", async () => {
+  it('migration: ALTER TABLE runs cleanly on an existing database that lacks shape_schema', async () => {
     // Simulate a pre-migration DB by manually creating the table without shape_schema
     // then calling init() which should run the migration without throwing
     const store = makeStore();
@@ -121,7 +118,7 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.close();
   });
 
-  it("shape_schema defaults to empty JSON object string when not set explicitly", async () => {
+  it('shape_schema defaults to empty JSON object string when not set explicitly', async () => {
     const store = makeStore();
     await store.init();
 
@@ -129,27 +126,25 @@ describe("SqliteStore — Task 1: shape_schema field", () => {
     await store.upsertNode(node);
 
     // shape_schema has DEFAULT '{}' in the schema; pass it explicitly to match interface
-    const contract = makeContract(node.id, { shape_schema: "{}" });
+    const contract = makeContract(node.id, { shape_schema: '{}' });
     await store.upsertContract(contract);
 
     const retrieved = await store.getContract(contract.id);
-    assert.equal(retrieved!.shape_schema, "{}");
+    assert.equal(retrieved!.shape_schema, '{}');
 
     await store.close();
   });
 });
 
-describe("SqliteStore — existing store functionality still passes", () => {
-  it("upserts and retrieves a node by file path", async () => {
+describe('SqliteStore — existing store functionality still passes', () => {
+  it('upserts and retrieves a node by file path', async () => {
     const store = makeStore();
     await store.init();
 
-    const node = makeNode({ file_path: "contracts/auth.contract.md" });
+    const node = makeNode({ file_path: 'contracts/auth.contract.md' });
     await store.upsertNode(node);
 
-    const retrieved = await store.getNodeByFilePath(
-      "contracts/auth.contract.md",
-    );
+    const retrieved = await store.getNodeByFilePath('contracts/auth.contract.md');
     assert.notEqual(retrieved, null);
     assert.equal(retrieved!.id, node.id);
     assert.equal(retrieved!.hash, node.hash);
@@ -157,43 +152,41 @@ describe("SqliteStore — existing store functionality still passes", () => {
     await store.close();
   });
 
-  it("returns null for unknown file path", async () => {
+  it('returns null for unknown file path', async () => {
     const store = makeStore();
     await store.init();
-    const result = await store.getNodeByFilePath(
-      "contracts/nonexistent.contract.md",
-    );
+    const result = await store.getNodeByFilePath('contracts/nonexistent.contract.md');
     assert.equal(result, null);
     await store.close();
   });
 
-  it("getAllContractIds returns all contract IDs", async () => {
+  it('getAllContractIds returns all contract IDs', async () => {
     const store = makeStore();
     await store.init();
 
     const node = makeNode();
     await store.upsertNode(node);
-    const c1 = makeContract(node.id, { id: "api.GET/one" });
-    const c2 = makeContract(node.id, { id: "api.GET/two" });
+    const c1 = makeContract(node.id, { id: 'api.GET/one' });
+    const c2 = makeContract(node.id, { id: 'api.GET/two' });
     await store.upsertContract(c1);
     await store.upsertContract(c2);
 
     const ids = await store.getAllContractIds();
-    assert.ok(ids.includes("api.GET/one"));
-    assert.ok(ids.includes("api.GET/two"));
+    assert.ok(ids.includes('api.GET/one'));
+    assert.ok(ids.includes('api.GET/two'));
 
     await store.close();
   });
 
-  it("updateNodeStatus changes node status", async () => {
+  it('updateNodeStatus changes node status', async () => {
     const store = makeStore();
     await store.init();
 
-    const node = makeNode({ status: "stable" });
+    const node = makeNode({ status: 'stable' });
     await store.upsertNode(node);
-    await store.updateNodeStatus(node.id, "needs-review");
+    await store.updateNodeStatus(node.id, 'needs-review');
 
-    const nodes = await store.getNodesByStatus("needs-review");
+    const nodes = await store.getNodesByStatus('needs-review');
     assert.equal(
       nodes.some((n) => n.id === node.id),
       true,
@@ -202,22 +195,22 @@ describe("SqliteStore — existing store functionality still passes", () => {
     await store.close();
   });
 
-  it("upsertDependency and getDependencies work correctly", async () => {
+  it('upsertDependency and getDependencies work correctly', async () => {
     const store = makeStore();
     await store.init();
 
     const nodeA = makeNode({
-      id: "node-a",
-      file_path: "contracts/a.contract.md",
+      id: 'node-a',
+      file_path: 'contracts/a.contract.md',
     });
     const nodeB = makeNode({
-      id: "node-b",
-      file_path: "contracts/b.contract.md",
+      id: 'node-b',
+      file_path: 'contracts/b.contract.md',
     });
     await store.upsertNode(nodeA);
     await store.upsertNode(nodeB);
 
-    const contract = makeContract(nodeA.id, { id: "api.GET/shared" });
+    const contract = makeContract(nodeA.id, { id: 'api.GET/shared' });
     await store.upsertContract(contract);
 
     await store.upsertDependency({
@@ -228,45 +221,108 @@ describe("SqliteStore — existing store functionality still passes", () => {
 
     const deps = await store.getDependencies();
     assert.equal(
-      deps.some(
-        (d) =>
-          d.source_node_id === nodeB.id && d.target_contract_id === contract.id,
-      ),
+      deps.some((d) => d.source_node_id === nodeB.id && d.target_contract_id === contract.id),
       true,
     );
 
     await store.close();
   });
 
-  it("replaceDependenciesForSourceNode replaces stale edges and deduplicates targets", async () => {
+  it('replaceDependenciesForSourceNode replaces stale edges and deduplicates targets', async () => {
     const store = makeStore();
     await store.init();
 
     const nodeA = makeNode({
-      id: "node-a",
-      file_path: "contracts/a.contract.md",
+      id: 'node-a',
+      file_path: 'contracts/a.contract.md',
     });
     await store.upsertNode(nodeA);
 
-    await store.replaceDependenciesForSourceNode(nodeA.id, [
-      "api.GET/one",
-      "api.GET/one",
-      "api.GET/two",
-    ]);
+    await store.replaceDependenciesForSourceNode(nodeA.id, ['api.GET/one', 'api.GET/one', 'api.GET/two']);
 
     let deps = await store.getDependencies();
     assert.equal(deps.length, 2);
-    assert.deepEqual(
-      deps.map((dependency) => dependency.target_contract_id).sort(),
-      ["api.GET/one", "api.GET/two"],
-    );
+    assert.deepEqual(deps.map((dependency) => dependency.target_contract_id).sort(), ['api.GET/one', 'api.GET/two']);
 
-    await store.replaceDependenciesForSourceNode(nodeA.id, ["api.GET/two"]);
+    await store.replaceDependenciesForSourceNode(nodeA.id, ['api.GET/two']);
 
     deps = await store.getDependencies();
     assert.equal(deps.length, 1);
-    assert.equal(deps[0].target_contract_id, "api.GET/two");
+    assert.equal(deps[0].target_contract_id, 'api.GET/two');
 
+    await store.close();
+  });
+});
+
+describe('SqliteStore — S50: code_source_file and code_source_symbol', () => {
+  it('persists code_source_file and code_source_symbol when provided', async () => {
+    const store = makeStore();
+    await store.init();
+
+    const node = makeNode();
+    await store.upsertNode(node);
+
+    const contract = makeContract(node.id, {
+      code_source_file: 'src/auth/jwt.ts',
+      code_source_symbol: 'JwtPayload',
+    });
+    await store.upsertContract(contract);
+
+    const retrieved = await store.getContract(contract.id);
+    assert.equal(retrieved!.code_source_file, 'src/auth/jwt.ts');
+    assert.equal(retrieved!.code_source_symbol, 'JwtPayload');
+
+    await store.close();
+  });
+
+  it('stores null when code_source_file and code_source_symbol are absent', async () => {
+    const store = makeStore();
+    await store.init();
+
+    const node = makeNode();
+    await store.upsertNode(node);
+
+    const contract = makeContract(node.id);
+    await store.upsertContract(contract);
+
+    const retrieved = await store.getContract(contract.id);
+    // SQLite returns null for missing TEXT columns
+    assert.ok(retrieved!.code_source_file == null);
+    assert.ok(retrieved!.code_source_symbol == null);
+
+    await store.close();
+  });
+
+  it('overwrites code_source_file on upsert', async () => {
+    const store = makeStore();
+    await store.init();
+
+    const node = makeNode();
+    await store.upsertNode(node);
+
+    const contract = makeContract(node.id, {
+      code_source_file: 'src/old.ts',
+      code_source_symbol: 'OldSymbol',
+    });
+    await store.upsertContract(contract);
+
+    await store.upsertContract({
+      ...contract,
+      code_source_file: 'src/new.ts',
+      code_source_symbol: 'NewSymbol',
+    });
+
+    const retrieved = await store.getContract(contract.id);
+    assert.equal(retrieved!.code_source_file, 'src/new.ts');
+    assert.equal(retrieved!.code_source_symbol, 'NewSymbol');
+
+    await store.close();
+  });
+
+  it('migration for code_source columns is idempotent (double init does not throw)', async () => {
+    const store = makeStore();
+    await store.init();
+    await store.init();
     await store.close();
   });
 });

@@ -15,6 +15,10 @@ export interface ExtractionResult {
     shape: object;
     shape_hash: string;
     imports: string[];
+    /** Path to the TypeScript source file (code-first contracts only). */
+    sourceFile?: string;
+    /** TypeScript symbol name (code-first contracts only). */
+    sourceSymbol?: string;
   }>;
   extractedBy: 'gray-matter' | 'tree-sitter';
   extractedAt: number; // unix ms
@@ -59,6 +63,10 @@ export function extractFromSpecFile(filePath: string, fileContent: string): Extr
   const validation = validateFerretSchema(ferret.shape, filePath);
   validation.warnings.forEach((w) => process.stderr.write(w + '\n'));
 
+  const source = ferret.source as { file?: unknown; symbol?: unknown } | undefined;
+  const sourceFile = typeof source?.file === 'string' ? source.file : undefined;
+  const sourceSymbol = typeof source?.symbol === 'string' ? source.symbol : undefined;
+
   return {
     filePath,
     fileType: 'spec',
@@ -69,6 +77,8 @@ export function extractFromSpecFile(filePath: string, fileContent: string): Extr
         shape: ferret.shape as object,
         shape_hash: hashSchema(ferret.shape),
         imports: Array.isArray(ferret.imports) ? (ferret.imports as string[]) : [],
+        ...(sourceFile !== undefined && { sourceFile }),
+        ...(sourceSymbol !== undefined && { sourceSymbol }),
       },
     ],
     extractedBy: 'gray-matter',
