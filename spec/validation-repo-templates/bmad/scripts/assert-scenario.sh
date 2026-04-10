@@ -37,8 +37,11 @@ const expectedReview = process.argv[3] === 'true';
 const payload = JSON.parse(await Bun.file(fsPath).text());
 const breaking = Number(payload.breaking ?? 0);
 const nonBreaking = Number(payload.nonBreaking ?? 0);
+const upwardDrift = Array.isArray(payload.upwardDrift) ? payload.upwardDrift : [];
+const upwardBreaking = upwardDrift.filter(d => d.driftClass === 'BREAKING').length;
+const upwardNonBreaking = upwardDrift.filter(d => d.driftClass === 'NON_BREAKING').length;
 
-if (expectedClass === 'clean' && (breaking !== 0 || nonBreaking !== 0)) {
+if (expectedClass === 'clean' && (breaking !== 0 || nonBreaking !== 0 || upwardDrift.length !== 0)) {
   throw new Error('Expected clean drift class but JSON reports drift.');
 }
 
@@ -50,9 +53,17 @@ if (expectedClass === 'non-breaking' && (breaking !== 0 || nonBreaking <= 0)) {
   throw new Error('Expected non-breaking drift class but counts do not match.');
 }
 
-const reviewRequiredInPayload = Boolean(breaking > 0);
+if (expectedClass === 'upward-breaking' && upwardBreaking <= 0) {
+  throw new Error('Expected upward breaking drift but upwardDrift BREAKING count is ' + upwardBreaking + '.');
+}
+
+if (expectedClass === 'upward-non-breaking' && upwardNonBreaking <= 0) {
+  throw new Error('Expected upward non-breaking drift but upwardDrift NON_BREAKING count is ' + upwardNonBreaking + '.');
+}
+
+const reviewRequiredInPayload = Boolean(breaking > 0 || upwardBreaking > 0);
 if (expectedReview !== reviewRequiredInPayload) {
-  throw new Error('Expected reviewRequired does not match inferred review requirement from breaking count.');
+  throw new Error('Expected reviewRequired does not match inferred review requirement from breaking counts.');
 }
 " artifacts/lint-ci.json "$expected_drift_class" "$expected_review_required"
 

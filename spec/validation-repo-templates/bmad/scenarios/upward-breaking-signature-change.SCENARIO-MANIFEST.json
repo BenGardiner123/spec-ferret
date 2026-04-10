@@ -1,0 +1,17 @@
+{
+  "scenario": {
+    "name": "upward-breaking-signature-change",
+    "branch": "scenario/upward-breaking-signature-change",
+    "description": "Breaking upward drift: required field 'token' removed from JwtPayload implementation"
+  },
+  "expected": {
+    "exitCode": 1,
+    "driftClass": "upward-breaking",
+    "reviewRequired": true,
+    "upwardDrift": {
+      "hasDrift": true,
+      "breaking": 1,
+      "nonBreaking": 0
+    }
+  }
+}
