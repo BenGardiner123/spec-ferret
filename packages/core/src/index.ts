@@ -15,3 +15,4 @@ export * from './reconciler/index.js';
 export * from './reconciler/import-suggestions.js';
 export * from './config.js';
 export * from './utils/paths.js';
+export * from './contract.js';
