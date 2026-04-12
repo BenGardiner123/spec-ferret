@@ -46,6 +46,10 @@ describe('isContract', () => {
   it('returns false when output is null', () => {
     expect(isContract({ value: 'x', output: null })).toBe(false);
   });
+
+  it('returns false when output is an array', () => {
+    expect(isContract({ value: 'x', output: [] })).toBe(false);
+  });
 });
 
 describe('defineContract', () => {
@@ -56,6 +60,10 @@ describe('defineContract', () => {
 
   it('does not throw when id is omitted', () => {
     expect(() => defineContract({ value: 'x', output: {} })).not.toThrow();
+  });
+
+  it('does not throw when id is explicitly undefined', () => {
+    expect(() => defineContract({ id: undefined, value: 'x', output: {} })).not.toThrow();
   });
 
   it('does not throw when id is a valid non-empty string', () => {

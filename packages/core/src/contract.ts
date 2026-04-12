@@ -32,6 +32,7 @@ export function isContract(value: unknown): value is Contract {
     typeof (value as Record<string, unknown>).value === 'string' &&
     'output' in value &&
     typeof (value as Record<string, unknown>).output === 'object' &&
-    (value as Record<string, unknown>).output !== null
+    (value as Record<string, unknown>).output !== null &&
+    !Array.isArray((value as Record<string, unknown>).output)
   );
 }
