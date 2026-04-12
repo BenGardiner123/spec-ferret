@@ -3,7 +3,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import { glob } from 'glob';
-import { extractFromSpecFile, compareSchemas, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
+import { extractFromSpecFile, extractFromContractFile, compareSchemas, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
+import type { ExtractionResult } from '@specferret/core';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
 
@@ -30,6 +31,12 @@ export const scanCommand = new Command('scan')
         const pattern = config.filePattern ?? '**/*.contract.md';
         filesToScan = await glob(pattern, { cwd: specDir, absolute: false });
         filesToScan = filesToScan.map((f) => path.join(config.specDir, f));
+
+        // Also discover .contract.ts files (opt-out model: enabled unless contractParsers.typescript === false)
+        if (config.contractParsers?.typescript !== false) {
+          const tsFiles = await glob('**/*.contract.ts', { cwd: specDir, absolute: false });
+          filesToScan = [...filesToScan, ...tsFiles.map((f) => path.join(config.specDir, f))];
+        }
       }
 
       // --changed flag: filter to staged files only
@@ -57,9 +64,13 @@ export const scanCommand = new Command('scan')
 
         const content = fs.readFileSync(absFile, 'utf-8');
 
-        let result: ReturnType<typeof extractFromSpecFile>;
+        let result: ExtractionResult;
         try {
-          result = extractFromSpecFile(relFile, content);
+          if (absFile.endsWith('.contract.ts')) {
+            result = await extractFromContractFile(absFile);
+          } else {
+            result = extractFromSpecFile(relFile, content);
+          }
         } catch (error: unknown) {
           failed++;
           const reason = error instanceof Error ? error.message : String(error);
