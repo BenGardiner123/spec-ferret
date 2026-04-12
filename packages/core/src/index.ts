@@ -2,6 +2,7 @@
 // Do not export llm-fallback — dynamic import only, never a default export.
 
 export * from './extractor/frontmatter.js';
+export * from './extractor/typescript-contract.js';
 export * from './extractor/typescript.js';
 export * from './extractor/validator.js';
 export * from './extractor/contract-types.js';

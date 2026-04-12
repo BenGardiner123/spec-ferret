@@ -20,7 +20,7 @@ export interface ExtractionResult {
     /** TypeScript symbol name (code-first contracts only). */
     sourceSymbol?: string;
   }>;
-  extractedBy: 'gray-matter' | 'tree-sitter';
+  extractedBy: 'gray-matter' | 'tree-sitter' | 'typescript';
   extractedAt: number; // unix ms
   warning?: 'no-frontmatter';
 }
