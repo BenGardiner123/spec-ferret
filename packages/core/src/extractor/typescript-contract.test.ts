@@ -112,11 +112,32 @@ describe('extractFromContractFile', () => {
     }
   });
 
-  it('filePath is set correctly in the result', async () => {
-    const path = fixtures('one-contract.fixture.ts');
-    const result = await extractFromContractFile(path);
+  it('filePath and fileType are set correctly in the result', async () => {
+    const filePath = fixtures('one-contract.fixture.ts');
+    const result = await extractFromContractFile(filePath);
 
-    assert.equal(result.filePath, path);
-    assert.equal(result.fileType, 'spec');
+    assert.equal(result.filePath, filePath);
+    assert.equal(result.fileType, 'code');
+  });
+
+  it('fileType is "code" even when no contracts found', async () => {
+    const result = await extractFromContractFile(fixtures('empty.fixture.ts'));
+
+    assert.equal(result.fileType, 'code');
+  });
+
+  it('each contract has sourceFile and sourceSymbol populated', async () => {
+    const filePath = fixtures('one-contract.fixture.ts');
+    const result = await extractFromContractFile(filePath);
+
+    assert.equal(result.contracts[0].sourceFile, filePath);
+    assert.equal(result.contracts[0].sourceSymbol, 'userContract');
+  });
+
+  it('module that throws at top-level causes extractFromContractFile to reject', async () => {
+    await assert.rejects(
+      () => extractFromContractFile(fixtures('throws-on-import.fixture.ts')),
+      /intentional module-level throw/,
+    );
   });
 });

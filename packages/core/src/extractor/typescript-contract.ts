@@ -21,7 +21,7 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
   if (exportNameMap.size === 0) {
     return {
       filePath,
-      fileType: 'spec',
+      fileType: 'code',
       contracts: [],
       extractedBy: 'typescript',
       extractedAt: Date.now(),
@@ -61,12 +61,14 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
       shape,
       shape_hash,
       imports,
+      sourceFile: filePath,
+      sourceSymbol: exportName,
     });
   }
 
   return {
     filePath,
-    fileType: 'spec',
+    fileType: 'code',
     contracts,
     extractedBy: 'typescript',
     extractedAt: Date.now(),
