@@ -175,7 +175,7 @@ flowchart TD
 
 ## Drift Direction 2: Code Changes → Spec Flagged
 
-**Sprint 3 — Not yet built.**
+**Sprint 7 — Shipped (v0.2.0).**
 
 A code file is edited. Tree-sitter checks if the change is structurally significant.
 Only signature-level changes propagate. Implementation changes are silent.
@@ -220,7 +220,7 @@ Strict separation. No layer reaches into another layer's domain. Ever.
 
 ## The ExtractionResult Interface
 
-Every parser — gray-matter today, Tree-sitter in Sprint 3 —
+Every parser — gray-matter (`.contract.md`), Tree-sitter (code-first), and TypeScript (`.contract.ts`, Sprint 8) —
 returns this exact shape. The rest of the system cannot tell them apart.
 
 ```typescript
@@ -234,7 +234,7 @@ interface ExtractionResult {
     shape_hash: string; // SHA-256 of key-sorted schema
     imports: string[]; // e.g. ["auth.jwt", "tables.document"]
   }>;
-  extractedBy: "gray-matter" | "tree-sitter";
+  extractedBy: "gray-matter" | "tree-sitter" | "typescript";
   extractedAt: number; // unix ms
   warning?: "no-frontmatter";
 }
@@ -255,7 +255,9 @@ These are not open for discussion or reconsideration.
 | Storage — default        | `bun:sqlite`                     | Built-in to Bun, synchronous, zero deps                                                                     |
 | Storage — roadmap        | Postgres via `DBStore` interface | Sprint 2                                                                                                    |
 | Annotation detection     | Regex                            | Sprint 1. `@ferret-contract:` is a predictable pattern. No parser needed.                                   |
-| Code shape extraction    | Tree-sitter TypeScript           | Sprint 1. Pulled forward from Sprint 3 — structural extraction without annotations is the primary use-case. |
+| Code shape extraction       | Tree-sitter TypeScript           | Sprint 1. Pulled forward from Sprint 3 — structural extraction without annotations is the primary use-case. |
+| Contract format (type-safe) | `.contract.ts` + Zod             | Sprint 8. TypeScript-native contracts: tsc enforces structural drift; ferret enforces invariants/value coverage. |
+| Zod → JSON Schema           | `zod-to-json-schema`             | Sprint 8. Converts Zod output schemas to JSON Schema for `shape_schema TEXT` in SQLite.                         |
 | Test runner              | `bun test`                       | Native to runtime, fast, no config                                                                          |
 
 **Do not use WASM. Do not add LLMs to the default path. Ever.**
@@ -272,21 +274,24 @@ Sprint 1 (complete)
   context.json      — auto-generated on every scan
   Performance gate  — ferret lint under 500ms on clean project
 
-Sprint 2 (roadmap)
+Sprint 2 (roadmap — not yet built)
   Postgres store implementation
   SQLite → Postgres migration
   ferret upgrade command
 
-Sprint 3 (roadmap)
-  Code node scanning — upward BFS drift detection
-  ferret place, ferret status, ferret graph commands
-  Full import integrity enforcement
+Sprints 3–7 (complete — v0.1.x through v0.2.0)
+  ferret extract    — Tree-sitter TypeScript extraction, no annotations required
+  ferret review     — interactive resolution, upward drift context, --json mode
+  ferret diagnostics— import graph diagnostics
+  ferret lint --ci  — JSON mode, GitHub Action wrapper
+  Bidirectional drift — spec→code AND code→spec live (G9)
+  source: blocks    — links code artifacts to contracts
+  context.json      — versioned, auto-migrating
 
-Sprint 4 (roadmap)
-  ferret audit — bidirectional drift report
-  ferret review — interactive resolution flow
-  Deleted contract lifecycle handling
-  Additional language grammars
+Sprint 8 (planned — v0.3.0)
+  .contract.ts support  — TypeScript-native contract format via defineContract<T>
+  Contract<T> type      — defineContract helper, isContract type guard
+  ferret status         — current drift state, --json, --export STATUS.md
 
 V3 (Sebastian's vision)
   Rust transpiler — built on the JSON Schema foundation

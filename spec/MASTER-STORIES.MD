@@ -271,7 +271,7 @@ Detailed acceptance criteria: `spec/SPRINT-6-STORIES.MD`.
 
 ---
 
-## Sprint 7 — Upward Code-to-Spec Drift (Planned)
+## Sprint 7 — Upward Code-to-Spec Drift (Complete)
 
 | Story | Description                                                                        |
 | ----- | ---------------------------------------------------------------------------------- |
@@ -282,6 +282,20 @@ Detailed acceptance criteria: `spec/SPRINT-6-STORIES.MD`.
 | S54   | Validation scenarios and release-gate evidence for bidirectional drift enforcement |
 
 Detailed acceptance criteria: `spec/SPRINT-7-STORIES.MD`.
+
+---
+
+## Sprint 8 — TypeScript-Native Contract Format (Planned)
+
+| Story | Description                                                                      |
+| ----- | -------------------------------------------------------------------------------- |
+| S55   | Contract type + defineContract helper + isContract type guard                    |
+| S56   | TypeScript contract extractor (extractFromContractFile)                          |
+| S57   | Wire .contract.ts into ferret scan file discovery and ferret.config.json         |
+| S58   | Thread .contract.ts through upward-classifier, source: blocks, inferred IDs     |
+| S59   | ferret status command                                                            |
+
+Detailed acceptance criteria: `spec/SPRINT-8-STORIES.MD`.
 
 ---
 
