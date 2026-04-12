@@ -35,7 +35,11 @@ export const scanCommand = new Command('scan')
         // Also discover .contract.ts files (opt-out model: enabled unless contractParsers.typescript === false)
         if (config.contractParsers?.typescript !== false) {
           const tsFiles = await glob('**/*.contract.ts', { cwd: specDir, absolute: false });
-          filesToScan = [...filesToScan, ...tsFiles.map((f) => path.join(config.specDir, f))];
+          const mapped = tsFiles.map((f) => path.join(config.specDir, f));
+          // Deduplicate: a custom filePattern could already match .contract.ts files,
+          // which would cause them to be processed twice (once via extractFromSpecFile,
+          // once via extractFromContractFile). Use a Set to prevent duplicate entries.
+          filesToScan = [...new Set([...filesToScan, ...mapped])];
         }
       }
 

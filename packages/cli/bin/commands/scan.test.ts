@@ -52,7 +52,8 @@ describe("ferret scan — S57 .contract.ts discovery", () => {
       "utf-8",
     );
 
-    // .contract.ts — no zod import needed; output: {} is a valid empty ZodObject for extraction
+    // .contract.ts — output: {} is a plain empty schema-definition map; z.object({}) accepts it
+    // as a valid empty Zod object schema, so extraction succeeds with no fields.
     fs.writeFileSync(
       path.join(tmpDir, "contracts", "auth.contract.ts"),
       `export const authContract = {\n  value: 'JWT authentication contract',\n  output: {},\n};\n`,
