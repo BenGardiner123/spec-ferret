@@ -32,6 +32,93 @@ async function cleanupTmpDir(tmpDir: string): Promise<void> {
   }
 }
 
+describe("ferret scan — S57 .contract.ts discovery", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-scan-ts-"));
+    runFerret(tmpDir, ["init", "--no-hook"]);
+  });
+
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
+  });
+
+  it("discovers and processes both .contract.md and .contract.ts in the same scan", () => {
+    // .contract.md — standard gray-matter contract
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "search.contract.md"),
+      `---\nferret:\n  id: api.search\n  type: api\n  shape:\n    type: object\n---\n`,
+      "utf-8",
+    );
+
+    // .contract.ts — output: {} is a plain empty schema-definition map; z.object({}) accepts it
+    // as a valid empty Zod object schema, so extraction succeeds with no fields.
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "auth.contract.ts"),
+      `export const authContract = {\n  value: 'JWT authentication contract',\n  output: {},\n};\n`,
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["scan"]);
+
+    assert.equal(result.status, 0, `scan failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stdout, /3 files scanned/);
+    assert.match(result.stdout, /3 contracts updated/);
+
+    // Verify context.json contains both contracts
+    const contextPath = path.join(tmpDir, ".ferret", "context.json");
+    assert.ok(fs.existsSync(contextPath), "context.json was not written");
+    const context = JSON.parse(fs.readFileSync(contextPath, "utf-8"));
+    const ids = context.contracts.map((c: { id: string }) => c.id);
+    assert.ok(ids.includes("api.search"), `api.search not in context: ${JSON.stringify(ids)}`);
+    assert.ok(ids.includes("authContract"), `authContract not in context: ${JSON.stringify(ids)}`);
+  });
+
+  it(".contract.ts with no valid exports emits a warning and is skipped without crashing", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "empty.contract.ts"),
+      `export const version = '1.0.0';\n`,
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["scan"]);
+
+    assert.equal(result.status, 0, `scan crashed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /no ferret frontmatter — skipped/);
+  });
+
+  it("opt-out via contractParsers.typescript=false skips .contract.ts discovery", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "search.contract.md"),
+      `---\nferret:\n  id: api.search\n  type: api\n  shape:\n    type: object\n---\n`,
+      "utf-8",
+    );
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "auth.contract.ts"),
+      `export const authContract = { value: 'auth', output: {} };\n`,
+      "utf-8",
+    );
+
+    // Write config with typescript discovery disabled
+    const configPath = path.join(tmpDir, "ferret.config.json");
+    const existing = JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<string, unknown>;
+    existing.contractParsers = { typescript: false };
+    fs.writeFileSync(configPath, JSON.stringify(existing, null, 2), "utf-8");
+
+    const result = runFerret(tmpDir, ["scan"]);
+
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /2 files scanned/);
+
+    const contextPath = path.join(tmpDir, ".ferret", "context.json");
+    const context = JSON.parse(fs.readFileSync(contextPath, "utf-8"));
+    const ids = context.contracts.map((c: { id: string }) => c.id);
+    assert.ok(ids.includes("api.search"));
+    assert.ok(!ids.includes("authContract"), "authContract should not be present when typescript=false");
+  });
+});
+
 describe("ferret scan — #31 error handling", () => {
   let tmpDir: string;
 

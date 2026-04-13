@@ -14,6 +14,9 @@ export interface FerretConfig {
     include: string[];
     watchNodes?: string[];
   };
+  contractParsers?: {
+    typescript?: boolean;
+  };
 }
 
 export const DEFAULT_CONFIG: FerretConfig = {
