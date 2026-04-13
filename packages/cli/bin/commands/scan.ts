@@ -57,6 +57,7 @@ export const scanCommand = new Command('scan')
       let changed = 0;
       let skipped = 0;
       let failed = 0;
+      const seenContractIds = new Map<string, string>(); // contractId → first-seen relFile
 
       for (const relFile of filesToScan) {
         const absFile = path.resolve(root, relFile);
@@ -115,6 +116,13 @@ export const scanCommand = new Command('scan')
         const importIds = new Set<string>();
 
         for (const contract of result.contracts) {
+          // Detect ID collision across files in the same scan run
+          const existingFile = seenContractIds.get(contract.id);
+          if (existingFile !== undefined && existingFile !== relFile) {
+            process.stderr.write(`ferret: CONFLICT ${contract.id} — defined in both ${existingFile} and ${relFile}\n`);
+          }
+          seenContractIds.set(contract.id, relFile);
+
           // Get previous contract for comparison
           const prevContract = await store.getContract(contract.id);
 

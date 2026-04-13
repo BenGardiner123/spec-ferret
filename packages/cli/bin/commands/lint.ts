@@ -12,6 +12,7 @@ import {
   readContextFile,
   classifyUpwardDrift,
   extractContractsFromTypeScript,
+  extractFromContractFile,
 } from '@specferret/core';
 import type { UpwardDriftResult } from '@specferret/core';
 import { parsePositiveMsBudget } from './parse-utils.js';
@@ -96,20 +97,31 @@ export const lintCommand = new Command('lint')
         if (!contract.code_source_file || !contract.code_source_symbol) continue;
         const sourceAbsPath = path.resolve(root, contract.code_source_file);
         if (!fs.existsSync(sourceAbsPath)) continue;
-        let fileContent: string;
+
+        let codeShape: unknown;
         try {
-          fileContent = fs.readFileSync(sourceAbsPath, 'utf-8');
+          if (sourceAbsPath.endsWith('.contract.ts')) {
+            // .contract.ts: use the TypeScript contract extractor (Zod-based, not tree-sitter)
+            const tsExtraction = await extractFromContractFile(sourceAbsPath);
+            const found = tsExtraction.contracts.find((c) => c.id === contract.code_source_symbol);
+            if (!found) continue;
+            codeShape = found.shape;
+          } else {
+            const fileContent = fs.readFileSync(sourceAbsPath, 'utf-8');
+            const extraction = extractContractsFromTypeScript(sourceAbsPath, fileContent);
+            const found = extraction.contracts.find((c) => c.sourceSymbol === contract.code_source_symbol);
+            if (!found) continue;
+            codeShape = found.shape;
+          }
         } catch {
           continue;
         }
-        const extraction = extractContractsFromTypeScript(sourceAbsPath, fileContent);
-        const codeContract = extraction.contracts.find((c) => c.sourceSymbol === contract.code_source_symbol);
-        if (!codeContract) continue;
+
         let declaredSchema: unknown = {};
         try {
           declaredSchema = JSON.parse(contract.shape_schema);
         } catch {}
-        const result = classifyUpwardDrift(contract.id, declaredSchema, codeContract.shape, contract.code_source_file, contract.code_source_symbol);
+        const result = classifyUpwardDrift(contract.id, declaredSchema, codeShape, contract.code_source_file, contract.code_source_symbol);
         if (result.driftClass !== 'NOOP') {
           upwardDrift.push(result);
         }

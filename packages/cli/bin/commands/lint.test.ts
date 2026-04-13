@@ -481,6 +481,89 @@ describe("ferret lint — #31 fail-fast scan errors", () => {
   });
 });
 
+describe("ferret lint — S58 .contract.ts upward-classifier and ID collision", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-lint-s58-"));
+    runFerret(tmpDir, ["init", "--no-hook"]);
+    runFerret(tmpDir, ["scan"]);
+  });
+
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
+  });
+
+  stableIt(
+    "lint exits 0 and does not crash when .contract.ts contracts are present",
+    () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "auth.contract.ts"),
+        `export const authContract = { value: 'JWT auth contract', output: {} };\n`,
+        "utf-8",
+      );
+
+      // Scan to establish baseline in the store
+      runFerret(tmpDir, ["scan"]);
+
+      const result = runFerret(tmpDir, ["lint"]);
+      assert.equal(
+        result.status,
+        0,
+        `lint crashed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+      );
+      assert.match(result.stdout, /0 drift/);
+    },
+  );
+
+  stableIt(
+    "--ci JSON output includes upwardDrift field when .contract.ts contracts are present",
+    () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "auth.contract.ts"),
+        `export const authContract = { value: 'JWT auth contract', output: {} };\n`,
+        "utf-8",
+      );
+
+      runFerret(tmpDir, ["scan"]);
+
+      const result = runFerret(tmpDir, ["lint", "--ci", "--ci-baseline", "rebuild"]);
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout) as Record<string, unknown>;
+      assert.ok("upwardDrift" in json, "upwardDrift field missing from CI output");
+      assert.ok(Array.isArray(json.upwardDrift));
+      assert.equal(json.consistent, true);
+    },
+  );
+
+  stableIt(
+    "ID collision between .contract.md and .contract.ts is reported on stderr",
+    () => {
+      // .contract.md declares id: sharedContract
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "shared.contract.md"),
+        `---\nferret:\n  id: sharedContract\n  type: api\n  shape:\n    type: object\n---\n`,
+        "utf-8",
+      );
+      // .contract.ts also exports sharedContract — same ID
+      fs.writeFileSync(
+        path.join(tmpDir, "contracts", "shared.contract.ts"),
+        `export const sharedContract = { value: 'shared', output: {} };\n`,
+        "utf-8",
+      );
+
+      const result = runFerret(tmpDir, ["scan"]);
+
+      assert.equal(result.status, 0, `scan failed:\nstderr: ${result.stderr}`);
+      assert.match(
+        result.stderr,
+        /CONFLICT sharedContract/,
+        `expected CONFLICT on stderr, got: ${result.stderr}`,
+      );
+    },
+  );
+});
+
 describe("ferret lint — #30 severity classification", () => {
   let tmpDir: string;
 
