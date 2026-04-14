@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **`ferret watch`** (S12) — watches `contracts/` for `.contract.md` and `.contract.ts` changes, auto-runs `ferret lint` on change with configurable debounce (`--debounce <ms>`). Clean SIGINT handling.
+  - Core: `createContractWatcher()` exported from `@specferret/core` — file system watcher with debounce, contract-file filtering, and re-entrance guard.
+- **`ferret audit`** (S21) — read-only bidirectional drift report combining downward drift (reconciler), upward drift (code → spec), status summary, and integrity violations. Always exits 0.
+  - `--json` flag for machine-readable output.
+  - Core: `buildAuditReport()` exported from `@specferret/core` — returns `AuditReport` with summary, drift arrays, integrity, and status.
+
 ## [0.3.0] - 2026-04-14
 
 ### Added (Sprint 8 — TypeScript-Native Contract Format)

@@ -18,3 +18,5 @@ export * from './config.js';
 export * from './utils/paths.js';
 export * from './contract.js';
 export * from './status/index.js';
+export * from './watch/index.js';
+export * from './audit/index.js';
