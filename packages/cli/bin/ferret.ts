@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
 
-const VERSION = '0.3.0';
+const VERSION = '0.4.0';
 
 async function main(): Promise<void> {
   if (process.argv.includes('--version') || process.argv.includes('-V')) {
@@ -13,17 +13,25 @@ async function main(): Promise<void> {
 
   program.name('ferret').description('SpecFerret keeps your specs honest.').version(VERSION);
 
-  const [{ initCommand }, { scanCommand }, { lintCommand }, { extractCommand }, { reviewCommand }, { statusCommand }, { watchCommand }, { auditCommand }] =
-    await Promise.all([
-      import('./commands/init.js'),
-      import('./commands/scan.js'),
-      import('./commands/lint.js'),
-      import('./commands/extract.js'),
-      import('./commands/review.js'),
-      import('./commands/status.js'),
-      import('./commands/watch.js'),
-      import('./commands/audit.js'),
-    ]);
+  const [
+    { initCommand },
+    { scanCommand },
+    { lintCommand },
+    { extractCommand },
+    { reviewCommand },
+    { statusCommand },
+    { watchCommand },
+    { auditCommand },
+  ] = await Promise.all([
+    import('./commands/init.js'),
+    import('./commands/scan.js'),
+    import('./commands/lint.js'),
+    import('./commands/extract.js'),
+    import('./commands/review.js'),
+    import('./commands/status.js'),
+    import('./commands/watch.js'),
+    import('./commands/audit.js'),
+  ]);
 
   program.addCommand(initCommand);
   program.addCommand(scanCommand);

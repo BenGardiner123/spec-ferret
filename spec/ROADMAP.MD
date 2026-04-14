@@ -311,11 +311,11 @@ export * from './utils/paths.js';
 
 Do not build these in Sprint 1.
 
-| Task | Description                                                                                 |
-| ---- | ------------------------------------------------------------------------------------------- |
-| S09  | Postgres store implementation — `FERRET_DATABASE_URL` wiring                                |
-| S10  | SQLite → Postgres migration                                                                 |
-| S11  | `ferret upgrade` command                                                                    |
+| Task | Description                                                                                                 |
+| ---- | ----------------------------------------------------------------------------------------------------------- |
+| S09  | Postgres store implementation — `FERRET_DATABASE_URL` wiring                                                |
+| S10  | SQLite → Postgres migration                                                                                 |
+| S11  | `ferret upgrade` command                                                                                    |
 | S12  | ~~`ferret watch` — watch `contracts/**/*.contract.md` and auto-run scan + reconcile on change~~ ✅ Complete |
 
 ---
@@ -340,12 +340,12 @@ This section is an archived planning snapshot. Current implementation status for
 
 ## Sprint 4 — Roadmap
 
-| Task | Description                                    |
-| ---- | ---------------------------------------------- |
+| Task | Description                                                 |
+| ---- | ----------------------------------------------------------- |
 | S21  | ~~`ferret audit` — bidirectional drift report~~ ✅ Complete |
-| S22  | `ferret review` — interactive resolution flow  |
-| S23  | Deleted contract lifecycle handling            |
-| S24  | Extended lifecycle: roadmap status propagation |
+| S22  | `ferret review` — interactive resolution flow               |
+| S23  | Deleted contract lifecycle handling                         |
+| S24  | Extended lifecycle: roadmap status propagation              |
 
 ---
 

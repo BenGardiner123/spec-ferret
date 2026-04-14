@@ -22,6 +22,7 @@
 
 ## 📢 News
 
+- **2026-04-14** 🎉 Released **v0.4.0** — `ferret watch`, `ferret audit`, and exported watch/audit APIs in `@specferret/core`. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-14** 🎉 Released **v0.3.0** — TypeScript-native `.contract.ts` format with `defineContract()`, Zod-based schemas, `ferret status` command, and automatic `.contract.ts` discovery. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-14** 🎉 Released **v0.2.0** — bidirectional drift enforcement (code → spec), upward drift detection in `ferret lint --ci`, `source:` blocks, and guided resolution for code-origin drift. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-09** 🎉 Released **v0.1.4** — agent mode scaffolding (`--agent-targets`), default tree-sitter TypeScript extraction (no annotations required), context schema versioning, diagnostics command, and perf budget hardening. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.4).

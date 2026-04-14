@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-14
+
 ### Added
 
 - **`ferret watch`** (S12) — watches `contracts/` for `.contract.md` and `.contract.ts` changes, auto-runs `ferret lint` on change with configurable debounce (`--debounce <ms>`). Clean SIGINT handling.

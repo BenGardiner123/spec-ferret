@@ -160,17 +160,25 @@ describe('ferret audit — with drift', () => {
     await cleanupTmpDir(tmpDir);
   });
 
-  stableIt('exits 0 even when drift is detected (read-only)', () => {
-    seedBreakingDrift(tmpDir);
-    const result = runFerret(tmpDir, ['audit']);
-    assert.equal(result.status, 0, `expected exit 0 but got ${result.status}. stderr: ${result.stderr}`);
-  }, 30_000);
+  stableIt(
+    'exits 0 even when drift is detected (read-only)',
+    () => {
+      seedBreakingDrift(tmpDir);
+      const result = runFerret(tmpDir, ['audit']);
+      assert.equal(result.status, 0, `expected exit 0 but got ${result.status}. stderr: ${result.stderr}`);
+    },
+    30_000,
+  );
 
-  stableIt('--json reports breaking drift in summary', () => {
-    seedBreakingDrift(tmpDir);
-    const result = runFerret(tmpDir, ['audit', '--json']);
-    assert.equal(result.status, 0);
-    const json = JSON.parse(result.stdout) as { summary: Record<string, number> };
-    assert.ok(json.summary.needsReview > 0, 'should show contracts needing review');
-  }, 30_000);
+  stableIt(
+    '--json reports breaking drift in summary',
+    () => {
+      seedBreakingDrift(tmpDir);
+      const result = runFerret(tmpDir, ['audit', '--json']);
+      assert.equal(result.status, 0);
+      const json = JSON.parse(result.stdout) as { summary: Record<string, number> };
+      assert.ok(json.summary.needsReview > 0, 'should show contracts needing review');
+    },
+    30_000,
+  );
 });
