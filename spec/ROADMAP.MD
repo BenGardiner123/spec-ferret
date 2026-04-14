@@ -376,13 +376,13 @@ This section is an archived planning snapshot. Current implementation status for
 
 Target: v0.3.0
 
-| Task | Description                                                                          |
-| ---- | ------------------------------------------------------------------------------------ |
-| S55  | Contract type + defineContract helper + isContract type guard                        |
-| S56  | TypeScript contract extractor (extractFromContractFile)                              |
-| S57  | Wire .contract.ts into ferret scan file discovery and ferret.config.json             |
-| S58  | Thread .contract.ts through upward-classifier, source: blocks, and inferred IDs      |
-| S59  | ferret status command                                                                |
+| Task | Description                                                                     |
+| ---- | ------------------------------------------------------------------------------- |
+| S55  | Contract type + defineContract helper + isContract type guard                   |
+| S56  | TypeScript contract extractor (extractFromContractFile)                         |
+| S57  | Wire .contract.ts into ferret scan file discovery and ferret.config.json        |
+| S58  | Thread .contract.ts through upward-classifier, source: blocks, and inferred IDs |
+| S59  | ferret status command                                                           |
 
 Detailed acceptance criteria: `spec/SPRINT-8-STORIES.MD`.
 
@@ -580,13 +580,13 @@ Sprint 8 status: Complete. (v0.3.0, shipped 2026-04-14)
 Goal: ship `.contract.ts` as a first-class contract format. `.contract.md` support unchanged.
 Warren CI pipeline depends on `ferret status` from this sprint.
 
-| Story | Scope                                                                                | Deliverable                                              | Acceptance Test                                                                  |
-| ----- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| S55   | Contract type + defineContract helper + isContract type guard                        | `packages/core/src/contract.ts` + tests                  | tsc compiles a sample .contract.ts against the type without errors               |
-| S56   | TypeScript contract extractor (extractFromContractFile)                              | `packages/core/src/extractor/typescript-contract.ts`     | .contract.ts exports extracted identically to gray-matter path                   |
-| S57   | Wire .contract.ts into ferret scan file discovery and ferret.config.json             | File pattern discovery + config schema update            | ferret scan processes .contract.ts alongside .contract.md without extra config   |
-| S58   | Thread .contract.ts through upward-classifier, source: blocks, and inferred IDs     | Upward drift + ID collision detection                    | Upward drift flagged against .contract.ts; ID collision surfaced as lint error   |
-| S59   | ferret status command                                                                | `packages/cli/bin/commands/status.ts`                    | `ferret status --json` outputs valid JSON; `--export` writes STATUS.md           |
+| Story | Scope                                                                           | Deliverable                                          | Acceptance Test                                                                |
+| ----- | ------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| S55   | Contract type + defineContract helper + isContract type guard                   | `packages/core/src/contract.ts` + tests              | tsc compiles a sample .contract.ts against the type without errors             |
+| S56   | TypeScript contract extractor (extractFromContractFile)                         | `packages/core/src/extractor/typescript-contract.ts` | .contract.ts exports extracted identically to gray-matter path                 |
+| S57   | Wire .contract.ts into ferret scan file discovery and ferret.config.json        | File pattern discovery + config schema update        | ferret scan processes .contract.ts alongside .contract.md without extra config |
+| S58   | Thread .contract.ts through upward-classifier, source: blocks, and inferred IDs | Upward drift + ID collision detection                | Upward drift flagged against .contract.ts; ID collision surfaced as lint error |
+| S59   | ferret status command                                                           | `packages/cli/bin/commands/status.ts`                | `ferret status --json` outputs valid JSON; `--export` writes STATUS.md         |
 
 Detailed acceptance criteria: `spec/SPRINT-8-STORIES.MD`.
 

@@ -161,19 +161,23 @@ When the key is absent, `.contract.ts` discovery is still enabled by default (op
 **Acceptance Criteria:**
 
 **Source blocks:**
+
 - A `.contract.ts` file can link to a code file via the Contract `consumes` field (upstream) — this is already covered by S56 `imports` mapping
 - The upward-classifier reads contracts from `.contract.ts` files identically to `.contract.md`
 - `ferret diagnostics` includes contracts from `.contract.ts` files in the import graph output
 
 **Upward-classifier:**
+
 - When a code file changes and its extracted shape drifts against a contract that came from a `.contract.ts` file, the drift is flagged with the same breaking/non-breaking classification
 - `ferret review` provides resolution context for upward drift flagged against `.contract.ts` contracts
 
 **Inferred IDs:**
+
 - Export names from `.contract.ts` files are used as contract IDs (same as S56 default)
 - ID collision between a `.contract.ts` export and a `.contract.md` id is detected and surfaced as a lint error: `CONFLICT <id> — defined in both <file1> and <file2>`
 
 **Tests must cover:**
+
 - Upward drift against a `.contract.ts` contract is classified as breaking when a required output field is removed from the matching code shape
 - ID collision between `.contract.md` and `.contract.ts` is surfaced as a lint error
 - `ferret diagnostics` output includes contracts from `.contract.ts`

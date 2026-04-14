@@ -322,20 +322,20 @@ Mixed repository mode is fully supported: inferred and annotated contracts can c
 
 ## 💻 CLI Reference
 
-| Command                 | Purpose                                                                      |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `ferret init`           | Scaffold `.ferret/` state, config, and pre-commit hook                       |
-| `ferret init --no-hook` | Scaffold without installing the pre-commit hook                              |
-| `ferret scan`           | Parse contracts and refresh `.ferret/context.json`                           |
-| `ferret lint`           | Detect and classify contract drift                                           |
-| `ferret lint --ci`      | CI mode — JSON output, exits non-zero on drift                               |
-| `ferret review`         | Resolve blocking drift interactively                                         |
-| `ferret review --json`  | Emit versioned review JSON with suggested actions and dependency context     |
-| `ferret extract`        | Generate contracts from exported TypeScript (annotation override compatible) |
-| `ferret status`         | Report current contract drift state (read-only)                             |
-| `ferret status --json`  | Machine-readable status JSON (always exits 0)                               |
-| `ferret status --export` | Write STATUS.md to the project root                                        |
-| `ferret diagnostics`    | Print import graph diagnostics                                              |
+| Command                  | Purpose                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `ferret init`            | Scaffold `.ferret/` state, config, and pre-commit hook                       |
+| `ferret init --no-hook`  | Scaffold without installing the pre-commit hook                              |
+| `ferret scan`            | Parse contracts and refresh `.ferret/context.json`                           |
+| `ferret lint`            | Detect and classify contract drift                                           |
+| `ferret lint --ci`       | CI mode — JSON output, exits non-zero on drift                               |
+| `ferret review`          | Resolve blocking drift interactively                                         |
+| `ferret review --json`   | Emit versioned review JSON with suggested actions and dependency context     |
+| `ferret extract`         | Generate contracts from exported TypeScript (annotation override compatible) |
+| `ferret status`          | Report current contract drift state (read-only)                              |
+| `ferret status --json`   | Machine-readable status JSON (always exits 0)                                |
+| `ferret status --export` | Write STATUS.md to the project root                                          |
+| `ferret diagnostics`     | Print import graph diagnostics                                               |
 
 <details>
 <summary><b>Pre-commit hook behaviour</b></summary>
