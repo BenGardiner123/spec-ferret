@@ -463,6 +463,36 @@ describe('ferret lint — S58 .contract.ts upward-classifier and ID collision', 
     assert.equal(result.status, 0, `scan failed:\nstderr: ${result.stderr}`);
     assert.match(result.stderr, /CONFLICT sharedContract/, `expected CONFLICT on stderr, got: ${result.stderr}`);
   });
+
+  stableIt(
+    'ID collision is detected when the first-defined file is unchanged on re-scan',
+    () => {
+      // Scan 1: shared.contract.md only — stored in the DB
+      fs.writeFileSync(
+        path.join(tmpDir, 'contracts', 'shared.contract.md'),
+        `---\nferret:\n  id: sharedContract\n  type: api\n  shape:\n    type: object\n---\n`,
+        'utf-8',
+      );
+      runFerret(tmpDir, ['scan']); // sharedContract now in store; file is "unchanged" on next scan
+
+      // Add .contract.ts with the same ID (new file — fileChanged = true)
+      fs.writeFileSync(
+        path.join(tmpDir, 'contracts', 'shared.contract.ts'),
+        `export const sharedContract = { value: 'shared', output: {} };\n`,
+        'utf-8',
+      );
+
+      // Scan 2: .md is unchanged (skipped by !fileChanged), .ts is new.
+      // Pre-seeding from the store must catch the collision.
+      const result = runFerret(tmpDir, ['scan']);
+      assert.equal(result.status, 0, `scan failed:\nstderr: ${result.stderr}`);
+      assert.match(
+        result.stderr,
+        /CONFLICT sharedContract/,
+        `expected CONFLICT on stderr, got: ${result.stderr}`,
+      );
+    },
+  );
 });
 
 describe('ferret lint — #30 severity classification', () => {

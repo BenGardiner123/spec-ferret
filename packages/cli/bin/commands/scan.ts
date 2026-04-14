@@ -59,6 +59,20 @@ export const scanCommand = new Command('scan')
       let failed = 0;
       const seenContractIds = new Map<string, string>(); // contractId → first-seen relFile
 
+      // Pre-seed seenContractIds from the store so unchanged files (skipped by the
+      // !fileChanged continue) still participate in cross-file collision detection.
+      // Filter to files in filesToScan so stale / deleted entries don't cause false positives.
+      const filesToScanSet = new Set(filesToScan);
+      const storedContracts = await store.getContracts();
+      const storedNodes = await store.getNodes();
+      const nodeFilePaths = new Map(storedNodes.map((n) => [n.id, n.file_path]));
+      for (const c of storedContracts) {
+        const fp = nodeFilePaths.get(c.node_id);
+        if (fp && filesToScanSet.has(fp)) {
+          seenContractIds.set(c.id, fp);
+        }
+      }
+
       for (const relFile of filesToScan) {
         const absFile = path.resolve(root, relFile);
 
@@ -116,7 +130,9 @@ export const scanCommand = new Command('scan')
         const importIds = new Set<string>();
 
         for (const contract of result.contracts) {
-          // Detect ID collision across files in the same scan run
+          // Detect ID collision across files in the same scan run.
+          // Intentionally advisory-only (stderr, exit 0) so scan never blocks a partial result;
+          // CI pipelines that need to gate on this should parse stderr for CONFLICT.
           const existingFile = seenContractIds.get(contract.id);
           if (existingFile !== undefined && existingFile !== relFile) {
             process.stderr.write(`ferret: CONFLICT ${contract.id} — defined in both ${existingFile} and ${relFile}\n`);
@@ -160,7 +176,14 @@ export const scanCommand = new Command('scan')
             shape_schema: JSON.stringify(contract.shape),
             type: contract.type,
             status: nodeStatus,
-            ...(contract.sourceFile !== undefined && { code_source_file: contract.sourceFile }),
+            ...(contract.sourceFile !== undefined && {
+              // Normalize to project-relative path — extractFromContractFile supplies an
+              // absolute path; frontmatter extractors supply a relative one. Always store
+              // relative so DB and context.json are portable across machines.
+              code_source_file: path.isAbsolute(contract.sourceFile)
+                ? path.relative(root, contract.sourceFile).replace(/\\/g, '/')
+                : contract.sourceFile,
+            }),
             ...(contract.sourceSymbol !== undefined && { code_source_symbol: contract.sourceSymbol }),
           });
 

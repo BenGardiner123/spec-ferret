@@ -14,7 +14,7 @@ import {
   extractContractsFromTypeScript,
   extractFromContractFile,
 } from '@specferret/core';
-import type { UpwardDriftResult } from '@specferret/core';
+import type { UpwardDriftResult, ExtractionResult } from '@specferret/core';
 import { parsePositiveMsBudget } from './parse-utils.js';
 import { buildLintDiagnostics, DIAGNOSTICS_SCHEMA_VERSION } from './diagnostics.js';
 
@@ -93,6 +93,9 @@ export const lintCommand = new Command('lint')
       // For each contract that has code source metadata, re-extract the live TypeScript
       // symbol and compare against the declared contract schema.
       const upwardDrift: UpwardDriftResult[] = [];
+      // Cache .contract.ts extractions — one file may export multiple contracts;
+      // without caching we'd re-import and evaluate it once per contract.
+      const tsExtractionCache = new Map<string, ExtractionResult>();
       for (const contract of contracts) {
         if (!contract.code_source_file || !contract.code_source_symbol) continue;
         const sourceAbsPath = path.resolve(root, contract.code_source_file);
@@ -102,7 +105,11 @@ export const lintCommand = new Command('lint')
         try {
           if (sourceAbsPath.endsWith('.contract.ts')) {
             // .contract.ts: use the TypeScript contract extractor (Zod-based, not tree-sitter)
-            const tsExtraction = await extractFromContractFile(sourceAbsPath);
+            let tsExtraction = tsExtractionCache.get(sourceAbsPath);
+            if (!tsExtraction) {
+              tsExtraction = await extractFromContractFile(sourceAbsPath);
+              tsExtractionCache.set(sourceAbsPath, tsExtraction);
+            }
             const found = tsExtraction.contracts.find((c) => c.id === contract.code_source_symbol);
             if (!found) continue;
             codeShape = found.shape;
