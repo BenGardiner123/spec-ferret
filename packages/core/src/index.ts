@@ -17,3 +17,4 @@ export * from './reconciler/import-suggestions.js';
 export * from './config.js';
 export * from './utils/paths.js';
 export * from './contract.js';
+export * from './status/index.js';
