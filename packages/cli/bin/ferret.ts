@@ -13,12 +13,13 @@ async function main(): Promise<void> {
 
   program.name('ferret').description('SpecFerret keeps your specs honest.').version(VERSION);
 
-  const [{ initCommand }, { scanCommand }, { lintCommand }, { extractCommand }, { reviewCommand }] = await Promise.all([
+  const [{ initCommand }, { scanCommand }, { lintCommand }, { extractCommand }, { reviewCommand }, { statusCommand }] = await Promise.all([
     import('./commands/init.js'),
     import('./commands/scan.js'),
     import('./commands/lint.js'),
     import('./commands/extract.js'),
     import('./commands/review.js'),
+    import('./commands/status.js'),
   ]);
 
   program.addCommand(initCommand);
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
   program.addCommand(lintCommand);
   program.addCommand(extractCommand);
   program.addCommand(reviewCommand);
+  program.addCommand(statusCommand);
 
   await program.parseAsync(process.argv);
 }
