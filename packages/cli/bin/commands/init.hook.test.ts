@@ -20,8 +20,11 @@ function runInit(
   });
 }
 
+// Known flake: spawnSync child process can exceed bun's default 5s test
+// timeout under load, especially on Windows CI.  Bump to 15s per-test.
 describe("ferret init hook behavior — S25 acceptance criteria", () => {
   let tmpDir: string;
+  const TEST_TIMEOUT = 15_000;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-init-hook-test-"));
@@ -51,7 +54,7 @@ describe("ferret init hook behavior — S25 acceptance criteria", () => {
       result.stdout.includes(".git/hooks/pre-commit installed"),
       `expected install message, got: ${result.stdout}`,
     );
-  });
+  }, TEST_TIMEOUT);
 
   it("--no-hook does not install a pre-commit hook", () => {
     fs.mkdirSync(path.join(tmpDir, ".git", "hooks"), { recursive: true });
@@ -61,7 +64,7 @@ describe("ferret init hook behavior — S25 acceptance criteria", () => {
     assert.equal(result.status, 0);
     const hookPath = path.join(tmpDir, ".git", "hooks", "pre-commit");
     assert.equal(fs.existsSync(hookPath), false);
-  });
+  }, TEST_TIMEOUT);
 
   it("does not overwrite an existing pre-commit hook", () => {
     const hooksDir = path.join(tmpDir, ".git", "hooks");
@@ -79,7 +82,7 @@ describe("ferret init hook behavior — S25 acceptance criteria", () => {
       result.stdout.includes("skipped (already exists)"),
       `expected skip-existing message, got: ${result.stdout}`,
     );
-  });
+  }, TEST_TIMEOUT);
 
   it("prints warning status and continues when .git/hooks is unavailable", () => {
     const result = runInit(tmpDir);
@@ -89,7 +92,7 @@ describe("ferret init hook behavior — S25 acceptance criteria", () => {
       result.stdout.includes("skipped (.git/hooks unavailable)"),
       `expected unavailable message, got: ${result.stdout}`,
     );
-  });
+  }, TEST_TIMEOUT);
 
   it("is deterministic in non-interactive mode (no prompt text appears)", () => {
     fs.mkdirSync(path.join(tmpDir, ".git", "hooks"), { recursive: true });
@@ -99,5 +102,5 @@ describe("ferret init hook behavior — S25 acceptance criteria", () => {
     assert.equal(result.status, 0);
     assert.equal(result.stdout.includes("Install pre-commit hook?"), false);
     assert.equal(result.stderr, "");
-  });
+  }, TEST_TIMEOUT);
 });

@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-14
+
+### Added (Sprint 8 — TypeScript-Native Contract Format)
+
+- **`Contract<T>` interface and `defineContract()` helper** exported from `@specferret/core` — TypeScript-native contract authoring with full `tsc --strict` enforcement.
+  - `Contract` type with `value`, `output`, optional `id`, `invariants` (typed functions), `consumes` (object references), `forbids`, `status`, `closedBy`, `closedWhen`, `dependsOn`.
+  - `defineContract<T>()` — validates and returns the contract; throws on empty/whitespace-only `id`.
+  - `isContract()` type guard for runtime contract detection.
+- **TypeScript contract extractor** (`extractFromContractFile`) — `import()`-based extraction from `.contract.ts` files.
+  - Converts Zod schemas to JSON Schema via `zod-to-json-schema`.
+  - Two-pass `consumes` resolver: reference equality → explicit `id` → `[unresolved]` with stderr warning.
+  - `extractedBy: 'typescript'` in `ExtractionResult`.
+- **Automatic `.contract.ts` file discovery** — `ferret scan` and `ferret lint` discover `**/*.contract.ts` files alongside `.contract.md` with no config required.
+  - Opt-out via `contractParsers.typescript: false` in `ferret.config.json`.
+  - Mixed `.contract.md` and `.contract.ts` projects fully supported in the same run.
+- **`ferret status` command** — read-only drift state report (never modifies store).
+  - `ferret status --json` for machine-readable output.
+  - `ferret status --export` writes `STATUS.md` to project root.
+- **ID collision detection** — lint error surfaced when a `.contract.ts` export name collides with a `.contract.md` id.
+- **Zod** and **zod-to-json-schema** added as `@specferret/core` dependencies.
+
+### Fixed
+
+- Flaky `init.hook.test.ts` — added explicit 15s per-test timeout to prevent false failures under load.
+
 ## [0.2.0] - 2026-04-14
 
 ### Added (Sprint 7 — Bidirectional Drift Enforcement, G9)

@@ -1,6 +1,6 @@
 {
   "name": "@specferret/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "SpecFerret keeps your specs honest.",
   "type": "module",
   "bin": {
@@ -17,7 +17,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@specferret/core": "0.2.0",
+    "@specferret/core": "0.3.0",
     "commander": "^14.0.3",
     "glob": "^13.0.6",
     "picocolors": "^1.1.1"
