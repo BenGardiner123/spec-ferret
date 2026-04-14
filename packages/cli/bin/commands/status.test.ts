@@ -48,13 +48,7 @@ describe('ferret status — S59 acceptance criteria', () => {
     await cleanupTmpDir(tmpDir);
   });
 
-  stableIt('exits 0 on an empty store', () => {
-    const result = runFerret(tmpDir, ['status']);
-    assert.equal(result.status, 0);
-  });
-
-  stableIt('prints "0 contracts" on an empty store', () => {
-    // Status without scan: DB is empty (init does not scan)
+  stableIt('exits 0 and prints "0 contracts" on an empty store', () => {
     const result = runFerret(tmpDir, ['status']);
     assert.equal(result.status, 0);
     assert.match(result.stdout, /ferret status\s+0 contracts/);
@@ -82,6 +76,7 @@ describe('ferret status — S59 acceptance criteria', () => {
     assert.ok('timestamp' in json, 'missing timestamp');
     assert.ok('total' in json, 'missing total');
     assert.ok('stable' in json, 'missing stable');
+    assert.ok('roadmap' in json, 'missing roadmap');
     assert.ok('needsReview' in json, 'missing needsReview');
     assert.ok('contracts' in json, 'missing contracts');
   });

@@ -20,18 +20,17 @@ export const statusCommand = new Command('status')
         fs.writeFileSync(path.join(root, 'STATUS.md'), markdown, 'utf-8');
         process.stdout.write('ferret status  STATUS.md written\n');
         process.exit(0);
-        return;
       }
 
       if (options.json) {
         const output = { ...report, contracts: report.contracts.filter((c) => c.status === 'needs-review') };
         process.stdout.write(JSON.stringify(output, null, 2) + '\n');
         process.exit(0);
-        return;
       }
 
       process.stdout.write(`ferret status  ${report.total} contract${report.total !== 1 ? 's' : ''}\n`);
       process.stdout.write(`\n  stable        ${report.stable}\n`);
+      if (report.roadmap > 0) process.stdout.write(`  roadmap       ${report.roadmap}\n`);
       process.stdout.write(`  needs-review  ${report.needsReview}\n`);
       const needsReview = report.contracts.filter((c) => c.status === 'needs-review');
       if (needsReview.length > 0) {

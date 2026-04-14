@@ -13,6 +13,7 @@ export type StatusReport = {
   timestamp: string;
   total: number;
   stable: number;
+  roadmap: number;
   needsReview: number;
   contracts: StatusContractEntry[];
 };
@@ -27,7 +28,7 @@ export async function buildStatusReport(store: DBStore): Promise<StatusReport> {
     const node = nodeById.get(dep.source_node_id);
     if (!node) continue;
     const list = dependentsByContractId.get(dep.target_contract_id) ?? [];
-    list.push(node.file_path);
+    if (!list.includes(node.file_path)) list.push(node.file_path);
     dependentsByContractId.set(dep.target_contract_id, list);
   }
 
@@ -47,6 +48,7 @@ export async function buildStatusReport(store: DBStore): Promise<StatusReport> {
     timestamp: new Date().toISOString(),
     total: contracts.length,
     stable: contracts.filter((c) => c.status === 'stable').length,
+    roadmap: contracts.filter((c) => c.status === 'roadmap').length,
     needsReview: contracts.filter((c) => c.status === 'needs-review').length,
     contracts: entries,
   };
