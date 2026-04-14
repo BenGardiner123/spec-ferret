@@ -1,6 +1,6 @@
 # Sprint 8 — TypeScript-Native Contract Format (v0.3.0)
 
-Status: Planned
+Status: Complete (v0.3.0, shipped 2026-04-14)
 Target: v0.3.0
 
 Context and design rationale: `spec/CONTRACT-TYPE-DESIGN.md`

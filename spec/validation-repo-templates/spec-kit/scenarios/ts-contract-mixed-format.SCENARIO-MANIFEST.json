@@ -1,0 +1,13 @@
+{
+  "scenario": {
+    "name": "ts-contract-mixed-format",
+    "branch": "scenario/ts-contract-mixed-format",
+    "description": "Mixed .contract.md and .contract.ts files discovered and linted in the same run"
+  },
+  "expected": {
+    "exitCode": 0,
+    "driftClass": "clean",
+    "reviewRequired": false,
+    "contractFormats": ["markdown", "typescript"]
+  }
+}

@@ -22,11 +22,11 @@
 
 ## 📢 News
 
+- **2026-04-14** 🎉 Released **v0.3.0** — TypeScript-native `.contract.ts` format with `defineContract()`, Zod-based schemas, `ferret status` command, and automatic `.contract.ts` discovery. See [CHANGELOG](CHANGELOG.md).
+- **2026-04-14** 🎉 Released **v0.2.0** — bidirectional drift enforcement (code → spec), upward drift detection in `ferret lint --ci`, `source:` blocks, and guided resolution for code-origin drift. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-09** 🎉 Released **v0.1.4** — agent mode scaffolding (`--agent-targets`), default tree-sitter TypeScript extraction (no annotations required), context schema versioning, diagnostics command, and perf budget hardening. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.4).
 - **2026-04-04** 🎉 Released **v0.1.3** — publish-safe Bun exports, smoke-fixture hardening, and npm packages refreshed. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.3).
-- **2026-04-03** 🎉 Released **v0.1.1** — package READMEs, trusted publishing via OIDC, and specferret.dev launched. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.1.1).
 - **2026-03-15** 🚀 Released **v0.1.0** — initial public release. `ferret init`, `ferret scan`, `ferret lint`, `ferret review`. Full BMAD and spec-kit validation runs passing.
-- **2026-03-01** 🛠️ Monorepo scaffolded: `@specferret/core` (store, extractor, reconciler) and `@specferret/cli` (commands) published.
 
 ---
 
@@ -38,6 +38,7 @@
 - [Quick Start](#-quick-start)
 - [Your First Contract](#-your-first-contract)
 - [CLI Reference](#-cli-reference)
+- [TypeScript-Native Contracts](#-typescript-native-contracts-v030)
 - [Contract Types](#-contract-types)
 - [Changelog](#-changelog)
 - [How Drift Resolution Works](#-how-drift-resolution-works)
@@ -54,11 +55,11 @@
 
 ## ✨ Key Features
 
-🔍 **Drift Detection** — Parses `.contract.md` files with frontmatter and detects shape changes automatically on every `ferret lint`.
+🔍 **Drift Detection** — Parses `.contract.md` and `.contract.ts` files and detects shape changes automatically on every `ferret lint`.
 
 💥 **Breaking vs Non-Breaking Classification** — Missing required fields and removed properties are `BREAKING`. Optional additions are `NON-BREAKING`. You know exactly what needs review.
 
-🕸️ **Dependency Graph** — Contracts declare dependencies with `imports`. SpecFerret computes the full direct and transitive impact graph so you know every consumer of a drifted contract.
+🕸️ **Dependency Graph** — Contracts declare dependencies with `imports` (markdown) or `consumes` (TypeScript). SpecFerret computes the full direct and transitive impact graph so you know every consumer of a drifted contract.
 
 ⚡ **Fast** — `ferret lint` on a clean project completes in under 500ms. SQLite-backed, no external service.
 
@@ -67,6 +68,8 @@
 🤖 **CI Mode** — `ferret lint --ci` exits non-zero on drift, with JSON output for downstream tooling and agents.
 
 🛠️ **TypeScript Extraction** — `ferret extract` infers contracts from exported TypeScript declarations by default, with `// @ferret-contract:` available as an override for explicit `id` and `type`.
+
+📜 **TypeScript-Native Contracts** — Define contracts as `.contract.ts` files using `defineContract()` and Zod schemas. Full type safety, runtime invariants, and zero markdown.
 
 ---
 
@@ -90,7 +93,7 @@ SpecFerret is built in five strict layers. No layer reaches into another layer's
 │  Pure function. No side effects. No I/O.        │
 ├─────────────────────────────────────────────────┤
 │  Extractor                                      │
-│  gray-matter → ExtractionResult                 │
+│  .contract.md (gray-matter) + .contract.ts      │
 │  Never talks to the store or the graph.         │
 ├─────────────────────────────────────────────────┤
 │  Store                                          │
@@ -329,6 +332,10 @@ Mixed repository mode is fully supported: inferred and annotated contracts can c
 | `ferret review`         | Resolve blocking drift interactively                                         |
 | `ferret review --json`  | Emit versioned review JSON with suggested actions and dependency context     |
 | `ferret extract`        | Generate contracts from exported TypeScript (annotation override compatible) |
+| `ferret status`         | Report current contract drift state (read-only)                             |
+| `ferret status --json`  | Machine-readable status JSON (always exits 0)                               |
+| `ferret status --export` | Write STATUS.md to the project root                                        |
+| `ferret diagnostics`    | Print import graph diagnostics                                              |
 
 <details>
 <summary><b>Pre-commit hook behaviour</b></summary>
@@ -422,7 +429,97 @@ End-to-end agent example (`ferret review --json`):
 
 ---
 
-## 📐 Contract Types
+## � TypeScript-Native Contracts (v0.3.0)
+
+Instead of markdown frontmatter, define contracts directly in TypeScript with full type safety:
+
+```ts
+// contracts/auth.contract.ts
+import { z } from 'zod';
+import { defineContract } from '@specferret/core';
+
+export const jwtPayload = defineContract({
+  id: 'auth.jwt',
+  value: 'JWT authentication payload',
+  output: {
+    sub: z.string(),
+    email: z.string().email(),
+    role: z.enum(['admin', 'user', 'viewer']),
+    iat: z.number(),
+  },
+  invariants: [(r) => r.role !== ''],
+  status: 'active',
+});
+```
+
+**Why `.contract.ts`?**
+
+- **`tsc` enforces your contract** — shape errors are compile errors, not runtime surprises
+- **Zod schemas** — converted to JSON Schema automatically via `zod-to-json-schema`
+- **Runtime invariants** — typed functions, not text descriptions
+- **`consumes` references** — object references, not string IDs. Upstream shape changes break downstream contracts at compile time
+
+**Using it:**
+
+```bash
+# .contract.ts files are discovered automatically — no config needed
+ferret lint
+
+# Disable if needed:
+# ferret.config.json → "contractParsers": { "typescript": false }
+```
+
+Both `.contract.md` and `.contract.ts` work in the same project. Mixed format is fully supported.
+
+<details>
+<summary><b>Contract with consumes (typed dependency)</b></summary>
+
+```ts
+// contracts/search.contract.ts
+import { z } from 'zod';
+import { defineContract } from '@specferret/core';
+import { jwtPayload } from './auth.contract.js';
+
+export const searchResults = defineContract({
+  value: 'Search results endpoint',
+  output: {
+    query: z.string(),
+    results: z.array(z.object({ id: z.string(), title: z.string() })),
+  },
+  consumes: [jwtPayload],
+});
+```
+
+The `consumes` reference is resolved by object identity — no string matching. If `jwtPayload` changes shape, `searchResults` is flagged as impacted.
+
+</details>
+
+<details>
+<summary><b>Check contract status</b></summary>
+
+```bash
+ferret status
+```
+
+```text
+ferret status  12 contracts
+
+  stable        10
+  needs-review   2
+
+  NEEDS REVIEW
+  auth.jwt          breaking — 3 dependents
+  tables.document   non-breaking — 1 dependent
+```
+
+Machine-readable: `ferret status --json`
+Export to markdown: `ferret status --export` (writes `STATUS.md`)
+
+</details>
+
+---
+
+## �📐 Contract Types
 
 | Type     | Use for                                          |
 | -------- | ------------------------------------------------ |
@@ -643,7 +740,8 @@ PRs welcome. The codebase is intentionally small and readable.
 - [ ] **`ferret place`** — AI-powered feature placement against the graph
 - [ ] **`ferret benchmark`** — provider benchmarking for AI-assisted review
 - [x] **GitHub Action adoption (Sprint 6)** — one-line CI enforcement via `uses: BenGardiner123/action@v1`
-- [ ] **Upward code-to-spec drift (Sprint 7)** — catch implementation drift when specs are not updated
+- [x] **Upward code-to-spec drift (Sprint 7)** — catch implementation drift when specs are not updated
+- [x] **TypeScript-native contracts (Sprint 8)** — `.contract.ts` with `defineContract()`, Zod schemas, `ferret status`
 - [x] **Tree-sitter extraction** — TypeScript shape extraction without annotations (shipped)
 - [ ] **Multi-language support** — Go, Python, OpenAPI (post Phase 5)
 - [ ] **Hosted dashboard** — team-wide contract health, analytics, SSO/RBAC

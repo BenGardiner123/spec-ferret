@@ -31,6 +31,7 @@ Single entry point for SpecFerret planning and GA validation documentation.
 - `spec/SPRINT-5-STORIES.MD` — branch-matrix dogfooding coverage stories (S38-S45)
 - `spec/SPRINT-6-STORIES.MD` — GitHub Action adoption distribution stories (S46-S49)
 - `spec/SPRINT-7-STORIES.MD` — upward code-to-spec drift stories (S50-S54)
+- `spec/SPRINT-8-STORIES.MD` — TypeScript-native contract format stories (S55-S59)
 
 ---
 

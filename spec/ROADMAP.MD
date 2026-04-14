@@ -575,6 +575,8 @@ Use this ordered checklist to close S38-S45 with no ambiguity.
 
 ### Sprint 8 — TypeScript-Native Contract Format (v0.3.0)
 
+Sprint 8 status: Complete. (v0.3.0, shipped 2026-04-14)
+
 Goal: ship `.contract.ts` as a first-class contract format. `.contract.md` support unchanged.
 Warren CI pipeline depends on `ferret status` from this sprint.
 

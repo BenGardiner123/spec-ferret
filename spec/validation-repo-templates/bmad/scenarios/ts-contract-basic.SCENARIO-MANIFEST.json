@@ -1,0 +1,13 @@
+{
+  "scenario": {
+    "name": "ts-contract-basic",
+    "branch": "scenario/ts-contract-basic",
+    "description": "TypeScript-native .contract.ts file discovered, extracted, and linted with no drift"
+  },
+  "expected": {
+    "exitCode": 0,
+    "driftClass": "clean",
+    "reviewRequired": false,
+    "contractFormat": "typescript"
+  }
+}

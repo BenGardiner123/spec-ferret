@@ -284,6 +284,64 @@ Fix:
 
 ---
 
+## 8. TypeScript-Native Contracts (v0.3.0)
+
+Instead of markdown frontmatter, you can define contracts in TypeScript:
+
+```bash
+bun add @specferret/core zod
+```
+
+Create `contracts/auth.contract.ts`:
+
+```ts
+import { z } from 'zod';
+import { defineContract } from '@specferret/core';
+
+export const jwtPayload = defineContract({
+  id: 'auth.jwt',
+  value: 'JWT authentication payload',
+  output: {
+    sub: z.string(),
+    email: z.string().email(),
+    role: z.enum(['admin', 'user', 'viewer']),
+  },
+});
+```
+
+SpecFerret discovers `.contract.ts` files automatically:
+
+```bash
+ferret lint
+```
+
+Both `.contract.md` and `.contract.ts` work in the same project.
+
+---
+
+## 9. Check Contract Status
+
+View current drift state without modifying anything:
+
+```bash
+ferret status
+```
+
+```text
+ferret status  3 contracts
+
+  stable        2
+  needs-review  1
+
+  NEEDS REVIEW
+  auth.jwt          breaking — 2 dependents
+```
+
+Machine-readable: `ferret status --json`
+Export to file: `ferret status --export` (writes `STATUS.md`)
+
+---
+
 ## What To Read Next
 
 - `README.md` for install, workflow summary, and integration overview

@@ -60,6 +60,19 @@ Both validation repositories must expose the same branch families:
 - `scenario/code-first-extract`
 - `scenario/specferret-opinionated-layout`
 
+### Sprint 7 Scenario Branches (Upward Drift)
+
+- `scenario/upward-breaking-signature-change`
+- `scenario/upward-nonbreaking-optional-add`
+- `scenario/upward-review-resolution-flow`
+
+### Sprint 8 Scenario Branches (TypeScript-Native Contracts)
+
+- `scenario/ts-contract-basic`
+- `scenario/ts-contract-breaking-drift`
+- `scenario/ts-contract-mixed-format`
+- `scenario/ts-contract-id-collision`
+
 Each scenario branch must include a small scenario manifest documenting:
 
 - expected `ferret lint --ci` exit code

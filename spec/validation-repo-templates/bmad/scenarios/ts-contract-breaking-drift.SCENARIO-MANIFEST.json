@@ -1,0 +1,13 @@
+{
+  "scenario": {
+    "name": "ts-contract-breaking-drift",
+    "branch": "scenario/ts-contract-breaking-drift",
+    "description": "Breaking drift detected against a .contract.ts file when a required output field is removed"
+  },
+  "expected": {
+    "exitCode": 1,
+    "driftClass": "breaking",
+    "reviewRequired": true,
+    "contractFormat": "typescript"
+  }
+}
