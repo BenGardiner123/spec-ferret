@@ -30,15 +30,53 @@ Ferret never reads it.
 
 const CLAUDE_MD_CONTENT = `# CLAUDE.md
 
-## Ferret Contract Graph
+## SpecFerret Contract Graph
 
-Always read \`.ferret/context.json\` before generating any code.
+Read \`.ferret/context.json\` before generating any code that touches contracts.
 This is the live contract graph. Treat it as ground truth over any contract file.
 
-Contract files live in \`contracts/\` and use the \`.contract.md\` extension.
-Do not edit contract files without running \`ferret lint\` afterward.
+## What SpecFerret Does
 
-Run \`ferret lint\` before generating any code that touches contracts.
+SpecFerret tracks contract shapes and detects drift.
+A contract is a named, typed, versioned data shape that one part of the system
+promises to provide and another part promises to consume.
+The graph tracks dependencies between contracts. When a shape changes, all
+downstream dependents are flagged and must be reviewed before merge.
+
+## Contract Types
+
+Every contract has exactly one of these six types:
+
+| Type | Use for |
+|---|---|
+| \`api\` | REST endpoints, GraphQL operations, RPC methods |
+| \`table\` | Database tables, collections, schemas |
+| \`type\` | Shared TypeScript types, interfaces, enums |
+| \`flow\` | User flows, multi-step processes, state machines |
+| \`event\` | Domain events, webhooks, message queue payloads |
+| \`config\` | Configuration shapes, feature flags, environment contracts |
+
+## Contract Files
+
+- Live in \`contracts/\` and use the \`.contract.md\` extension
+- Start with YAML frontmatter containing \`ferret: { id, type, shape }\`
+- ID format: lowercase dot-namespaced — \`api.GET/users\`, \`tables.user\`, \`events.user.created\`
+- Namespace must match the \`type\` field exactly
+
+## Daily Workflow
+
+1. Read \`.ferret/context.json\` — know what contracts exist before generating code
+2. \`ferret lint\` — before and after any contract-touching change
+3. Commit \`context.json\` after every clean lint — this is what makes the AI trustworthy
+4. \`ferret review\` — guided resolution when drift is flagged
+
+## Agent Skills
+
+Full contract authoring guide: \`.claude/skills/ferret/write-contract/SKILL.md\`
+Drift resolution guide: \`.claude/skills/ferret/resolve-drift/SKILL.md\`
+TypeScript extraction guide: \`.claude/skills/ferret/extract-contract/SKILL.md\`
+
+For bulk contract work, invoke the \`ferret-author\` agent.
 `;
 
 const DEFAULT_CONFIG = {
@@ -80,6 +118,470 @@ const CANONICAL_AGENT_RULES = `# SpecFerret Canonical Agent Rules
 - Read \`.ferret/context.json\` before making contract-sensitive changes.
 - Preserve deterministic contract IDs and avoid ad-hoc type categories.
 - Keep drift resolution explicit: \`accept\`, \`update\`, or \`reject\`.
+`;
+
+const ENFORCEMENT_RULES = `# SpecFerret Enforcement Rules
+
+Always apply these rules in any repository with a \`.ferret/\` directory.
+
+## Before generating code
+
+- Read \`.ferret/context.json\` first. Know which contracts exist, their status, and their shapes.
+- Do not generate code that consumes a contract shape you have not verified against context.json.
+
+## Before committing
+
+- Run \`ferret lint\` if you have touched any file in \`contracts/\` or any type annotated with \`@ferret-contract\`.
+- Do not commit if lint reports drift. Resolve via \`ferret review\` first.
+
+## Contract IDs are permanent
+
+- Do not rename a contract ID without treating it as a deletion + creation.
+- Renaming an ID triggers full downstream reconciliation. Flag this explicitly.
+
+## Breaking vs non-breaking
+
+Breaking (blocks merge): required field removed, field type changed, property removed, enum value removed.
+Non-breaking (no block): optional field added, enum value added, description changed.
+`;
+
+const CONTRACT_AUTHORING_RULES = `# SpecFerret Contract Authoring Rules
+
+Always apply these rules when writing or editing \`.contract.md\` files.
+
+## ID format
+
+- Lowercase, dot-namespaced: \`api.GET/users\`, \`tables.user\`, \`events.user.created\`, \`types.UserProfile\`
+- Namespace must match the \`type\` field exactly: type=api → id must start with \`api.\`
+- No spaces — use hyphens for multi-word names: \`flows.user-onboarding\`
+- IDs are globally unique across the entire repo — SpecFerret errors on duplicates
+
+## Valid type values (closed set)
+
+- \`api\` — REST endpoints, GraphQL operations, RPC methods
+- \`table\` — database tables, collections, schemas
+- \`type\` — shared TypeScript types, interfaces, enums
+- \`flow\` — user flows, multi-step processes, state machines
+- \`event\` — domain events, webhooks, message queue payloads
+- \`config\` — configuration shapes, feature flags, environment contracts
+
+Any other value fails extraction. Do not invent new type values.
+
+## Supported JSON Schema subset
+
+Supported: object, array, string, number, integer, boolean, null
+String formats: uuid, date, date-time, email, uri
+Keywords: type, properties, required, items, enum, description, additionalProperties
+
+NOT supported (SpecFerret prints a warning and continues):
+  $ref, allOf, anyOf, oneOf, not, if/then/else, $defs, patternProperties
+
+## Required array rules
+
+- Always list \`required\` as an inline array: \`required: [id, email]\`
+- Order does not affect the hash — SpecFerret sorts before hashing
+- Omit \`required\` entirely if no fields are required (not \`required: []\`)
+
+## imports
+
+- Use \`imports\` to declare explicit dependencies on other contracts
+- Every listed ID must exist in the graph — SpecFerret warns on unresolved imports
+- Omit entirely if no dependencies (not \`imports: []\`)
+`;
+
+const WRITE_CONTRACT_SKILL = `---
+name: ferret-write-contract
+description: >
+  Full authoring guide for SpecFerret contracts. Use this skill whenever you
+  need to create or review a .contract.md file. Contains the complete schema
+  reference, ID naming rules, JSON Schema subset, and one example per contract type.
+---
+
+# Write a SpecFerret Contract
+
+## Frontmatter structure
+
+Every contract file starts with YAML frontmatter. The \`ferret:\` block is required.
+Everything after the closing \`---\` is free-form prose — SpecFerret never reads it.
+
+\`\`\`markdown
+---
+ferret:
+  id: api.GET/users
+  type: api
+  shape:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+          required: [id, email]
+    required: [users]
+---
+
+# GET /users
+
+Returns the list of registered users.
+\`\`\`
+
+## ID naming
+
+| Pattern | Example |
+|---|---|
+| REST endpoint | \`api.GET/users\`, \`api.POST/auth/login\`, \`api.DELETE/users/{id}\` |
+| Database table | \`tables.user\`, \`tables.document\` |
+| Shared type | \`types.UserProfile\`, \`types.PaginatedResponse\` |
+| User flow | \`flows.user-onboarding\`, \`flows.checkout\` |
+| Domain event | \`events.user.created\`, \`events.payment.failed\` |
+| Config shape | \`config.rate-limits\`, \`config.feature-flags\` |
+
+Namespace must match \`type\` exactly. Lowercase only. No spaces.
+
+## One example per type
+
+### api — REST endpoint with request + response
+
+\`\`\`markdown
+---
+ferret:
+  id: api.POST/auth/login
+  type: api
+  shape:
+    request:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+    response:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+  imports:
+    - tables.user
+---
+\`\`\`
+
+### table — database table
+
+\`\`\`markdown
+---
+ferret:
+  id: tables.user
+  type: table
+  shape:
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+      email:
+        type: string
+        format: email
+      created_at:
+        type: string
+        format: date-time
+    required: [id, email, created_at]
+---
+\`\`\`
+
+### type — shared TypeScript type
+
+\`\`\`markdown
+---
+ferret:
+  id: types.PaginatedResponse
+  type: type
+  shape:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          type: object
+      total:
+        type: integer
+      page:
+        type: integer
+      pageSize:
+        type: integer
+    required: [items, total, page, pageSize]
+---
+\`\`\`
+
+### event — domain event
+
+\`\`\`markdown
+---
+ferret:
+  id: events.user.created
+  type: event
+  shape:
+    type: object
+    properties:
+      userId:
+        type: string
+        format: uuid
+      email:
+        type: string
+        format: email
+      occurredAt:
+        type: string
+        format: date-time
+    required: [userId, email, occurredAt]
+---
+\`\`\`
+
+### config — configuration shape
+
+\`\`\`markdown
+---
+ferret:
+  id: config.rate-limits
+  type: config
+  shape:
+    type: object
+    properties:
+      requestsPerMinute:
+        type: integer
+      burstLimit:
+        type: integer
+    required: [requestsPerMinute]
+---
+\`\`\`
+
+### flow — user flow (status enum pattern)
+
+\`\`\`markdown
+---
+ferret:
+  id: flows.checkout
+  type: flow
+  shape:
+    type: object
+    properties:
+      status:
+        type: string
+        enum: [pending, processing, completed, failed]
+      orderId:
+        type: string
+        format: uuid
+    required: [status, orderId]
+---
+\`\`\`
+
+## Roadmap contracts
+
+Use \`status: roadmap\` for planned contracts not yet built.
+SpecFerret tracks them in the graph but does not enforce drift against them.
+
+\`\`\`yaml
+ferret:
+  id: api.GET/recommendations
+  type: api
+  status: roadmap
+  shape:
+    response:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+          score:
+            type: number
+        required: [id, score]
+\`\`\`
+
+## After writing
+
+Run \`ferret lint\` to validate. First-time scan: if green, commit \`.ferret/context.json\`.
+`;
+
+const RESOLVE_DRIFT_SKILL = `---
+name: ferret-resolve-drift
+description: >
+  Guided workflow for resolving SpecFerret drift reports. Use when ferret lint
+  exits 1. Covers the accept/update/reject decision tree and how to return to stable.
+---
+
+# Resolve SpecFerret Drift
+
+## When ferret lint exits 1
+
+Drift means a contract shape changed after it was committed to the store.
+Downstream dependents are flagged \`needs-review\` until the drift is resolved.
+
+## Decision tree
+
+**BREAKING drift** (required field removed, field type changed, property removed):
+- Accept: you own all downstream consumers and have already updated them → \`ferret review --contract <id> --action accept\`
+- Reject: the shape change was a mistake → revert the contract file and re-lint
+- Update: you need to update the contract to the new shape and notify consumers → \`ferret review --contract <id> --action update\`
+
+**NON-BREAKING drift** (optional field added, enum value added):
+- Usually safe to accept → \`ferret review --contract <id> --action accept\`
+
+## Commands
+
+\`\`\`bash
+ferret lint                                        # see what is drifted
+ferret review --contract <id> --action accept      # accept the new shape as canonical
+ferret review --contract <id> --action update      # update contract + flag downstream
+ferret review --contract <id> --action reject      # revert acceptance (manual file fix needed)
+ferret review --json                               # machine-readable output for CI
+ferret lint                                        # must return 0 before committing
+\`\`\`
+
+## Contract statuses after resolution
+
+- \`stable\` — no drift, safe to merge
+- \`needs-review\` — drift exists, merge blocked
+- \`roadmap\` — planned, not enforced
+
+## CI behaviour
+
+\`ferret lint --ci\` exits 1 on any drift. Use \`ferret lint --ci --ci-baseline rebuild\` in CI
+so the pipeline never depends on a pre-committed context.json.
+`;
+
+const EXTRACT_CONTRACT_SKILL = `---
+name: ferret-extract-contract
+description: >
+  Workflow for extracting SpecFerret contracts from annotated TypeScript source.
+  Use when you have existing types or interfaces that should be tracked as contracts.
+---
+
+# Extract Contracts from TypeScript
+
+## Annotate the source
+
+Add \`// @ferret-contract\` on the line immediately above a TypeScript type, interface, or export.
+
+\`\`\`typescript
+// @ferret-contract
+export type UserResponse = {
+  users: Array<{ id: string; email: string }>;
+};
+\`\`\`
+
+## Run extraction
+
+\`\`\`bash
+ferret extract src/types/user.ts
+\`\`\`
+
+This scaffolds a \`.contract.md\` file in \`contracts/\` with the shape extracted from the type.
+The contract file gets a \`source:\` field pointing back to the TypeScript file.
+
+## Upward drift
+
+Once extracted, SpecFerret compares the live TypeScript type against the stored contract shape on every lint.
+If the TypeScript type changes, \`ferret lint\` flags it — the code drifted from the spec.
+
+## Workflow
+
+\`\`\`bash
+# Annotate the TypeScript source
+# @ferret-contract
+export type PaymentResult = { ... };
+
+ferret extract src/types/payment.ts   # scaffolds contracts/payment.contract.md
+ferret lint                           # baseline — must be green
+# Edit the TypeScript type
+ferret lint                           # detects upward drift
+\`\`\`
+`;
+
+const FERRET_AUTHOR_AGENT = `---
+name: ferret-author
+description: >
+  SpecFerret contract schema expert. Invoke this agent when creating or reviewing
+  .contract.md files, naming contracts, designing import graphs, or validating shapes
+  against the supported JSON Schema subset. Knows CONTRACT-SCHEMA.MD by heart.
+tools: ["Read", "Write", "Bash"]
+---
+
+You are a SpecFerret contract author. You know the full SpecFerret contract schema.
+
+## Your responsibilities
+
+- Write structurally correct \`.contract.md\` files with valid frontmatter
+- Name contracts using the correct dot-namespace convention (api.GET/users, tables.user, events.user.created)
+- Choose the correct \`type\` from the closed set: api, table, type, flow, event, config
+- Use only the supported JSON Schema subset (no $ref, allOf, anyOf, oneOf)
+- Declare \`imports\` edges when contracts depend on other contracts
+- Run \`ferret lint\` after writing and fix any errors before returning
+
+## What you always do
+
+1. Read \`.ferret/context.json\` first — know the existing graph before adding to it
+2. Check for ID conflicts — IDs are globally unique, duplicates are an error
+3. Use the authoring rules in \`.claude/rules/ferret/contract-authoring.md\`
+4. Validate your output with \`ferret lint\` before completing
+
+## What you never do
+
+- Invent new type values beyond the six supported ones
+- Use \`$ref\`, \`allOf\`, \`anyOf\`, \`oneOf\` — simplify to the supported subset
+- Leave a contract with an ID namespace that does not match its type field
+- Commit without a green \`ferret lint\`
+`;
+
+const FERRET_WRITE_COMMAND = `---
+description: Scaffold a new SpecFerret contract for a given endpoint, table, type, event, flow, or config shape.
+---
+
+# /ferret-write
+
+Scaffold a new SpecFerret contract.
+
+## Steps
+
+1. Read \`.ferret/context.json\` — check if a contract already exists for this shape
+2. Determine the correct \`type\` (api, table, type, flow, event, config)
+3. Name the contract ID using dot-namespace convention
+4. Write the \`.contract.md\` file in \`contracts/\` with valid frontmatter
+5. Declare \`imports\` if this contract depends on others
+6. Run \`ferret lint\` — must exit 0 before finishing
+7. Report the contract ID and file path
+
+Use the full authoring guide: \`.claude/skills/ferret/write-contract/SKILL.md\`
+Invoke the \`ferret-author\` agent for multiple contracts or complex import graphs.
+`;
+
+const FERRET_REVIEW_COMMAND = `---
+description: Resolve SpecFerret drift using the guided accept/update/reject workflow.
+---
+
+# /ferret-review
+
+Resolve drift flagged by \`ferret lint\`.
+
+## Steps
+
+1. Run \`ferret lint\` — identify what is drifted and whether it is breaking or non-breaking
+2. For each drifted contract, decide: accept / update / reject
+   - Breaking drift: is the shape change intentional? Are downstream consumers updated?
+   - Non-breaking drift: safe to accept in almost all cases
+3. Run \`ferret review --contract <id> --action <accept|update|reject>\`
+4. Re-run \`ferret lint\` — must return 0 before committing
+
+Use the full resolution guide: \`.claude/skills/ferret/resolve-drift/SKILL.md\`
 `;
 
 const COPILOT_INSTRUCTION_PACK = `---
@@ -207,7 +709,53 @@ export const initCommand = new Command('init')
       }
     }
 
-    // 7. Pre-commit hook — installed by default, explicit opt-out via --no-hook
+    // 7. Claude-layer authoring knowledge: rules, skills, agent, commands
+    if (options.agentRules !== false) {
+      // Rules
+      const claudeRulesDir = path.join(root, '.claude', 'rules', 'ferret');
+      if (!fs.existsSync(claudeRulesDir)) {
+        fs.mkdirSync(claudeRulesDir, { recursive: true });
+      }
+      writeIfAbsent(path.join(claudeRulesDir, 'enforcement.md'), ENFORCEMENT_RULES);
+      writeIfAbsent(path.join(claudeRulesDir, 'contract-authoring.md'), CONTRACT_AUTHORING_RULES);
+
+      // Skills
+      const writeContractSkillDir = path.join(root, '.claude', 'skills', 'ferret', 'write-contract');
+      const resolveDriftSkillDir = path.join(root, '.claude', 'skills', 'ferret', 'resolve-drift');
+      const extractSkillDir = path.join(root, '.claude', 'skills', 'ferret', 'extract-contract');
+      fs.mkdirSync(writeContractSkillDir, { recursive: true });
+      fs.mkdirSync(resolveDriftSkillDir, { recursive: true });
+      fs.mkdirSync(extractSkillDir, { recursive: true });
+      writeIfAbsent(path.join(writeContractSkillDir, 'SKILL.md'), WRITE_CONTRACT_SKILL);
+      writeIfAbsent(path.join(resolveDriftSkillDir, 'SKILL.md'), RESOLVE_DRIFT_SKILL);
+      writeIfAbsent(path.join(extractSkillDir, 'SKILL.md'), EXTRACT_CONTRACT_SKILL);
+
+      // Agent
+      const claudeAgentsDir = path.join(root, '.claude', 'agents');
+      if (!fs.existsSync(claudeAgentsDir)) {
+        fs.mkdirSync(claudeAgentsDir, { recursive: true });
+      }
+      writeIfAbsent(path.join(claudeAgentsDir, 'ferret-author.md'), FERRET_AUTHOR_AGENT);
+
+      // Commands
+      const claudeCommandsDir = path.join(root, '.claude', 'commands');
+      if (!fs.existsSync(claudeCommandsDir)) {
+        fs.mkdirSync(claudeCommandsDir, { recursive: true });
+      }
+      writeIfAbsent(path.join(claudeCommandsDir, 'ferret-write.md'), FERRET_WRITE_COMMAND);
+      writeIfAbsent(path.join(claudeCommandsDir, 'ferret-review.md'), FERRET_REVIEW_COMMAND);
+
+      process.stdout.write('  .claude/rules/ferret/enforcement.md  scaffolded\n');
+      process.stdout.write('  .claude/rules/ferret/contract-authoring.md  scaffolded\n');
+      process.stdout.write('  .claude/skills/ferret/write-contract/SKILL.md  scaffolded\n');
+      process.stdout.write('  .claude/skills/ferret/resolve-drift/SKILL.md  scaffolded\n');
+      process.stdout.write('  .claude/skills/ferret/extract-contract/SKILL.md  scaffolded\n');
+      process.stdout.write('  .claude/agents/ferret-author.md  scaffolded\n');
+      process.stdout.write('  .claude/commands/ferret-write.md  scaffolded\n');
+      process.stdout.write('  .claude/commands/ferret-review.md  scaffolded\n');
+    }
+
+    // 8. Pre-commit hook — installed by default, explicit opt-out via --no-hook
     if (options.hook !== false) {
       const hookResult = installHook(root);
       if (hookResult === 'installed') {
@@ -224,6 +772,12 @@ export const initCommand = new Command('init')
   });
 
 type HookInstallResult = 'installed' | 'exists' | 'unavailable';
+
+function writeIfAbsent(filePath: string, content: string): void {
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, content, 'utf-8');
+  }
+}
 
 function installHook(root: string): HookInstallResult {
   const gitHooksDir = path.join(root, '.git', 'hooks');

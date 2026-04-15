@@ -214,4 +214,67 @@ describe('ferret init — S01 acceptance criteria', () => {
     assert.match(result.stderr, /unsupported agent targets/);
     assert.match(result.stderr, /Supported targets: claude, copilot, gemini/);
   });
+
+  it('scaffolds .claude/rules/ferret rules files', () => {
+    runInit(tmpDir);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'rules', 'ferret', 'enforcement.md')), 'missing enforcement.md');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'rules', 'ferret', 'contract-authoring.md')), 'missing contract-authoring.md');
+    const authoring = fs.readFileSync(path.join(tmpDir, '.claude', 'rules', 'ferret', 'contract-authoring.md'), 'utf-8');
+    assert.ok(authoring.includes('api'), 'missing api type');
+    assert.ok(authoring.includes('table'), 'missing table type');
+    assert.ok(authoring.includes('event'), 'missing event type');
+    assert.ok(authoring.includes('$ref'), 'missing unsupported keyword reference');
+  });
+
+  it('scaffolds .claude/skills/ferret skill files', () => {
+    runInit(tmpDir);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'skills', 'ferret', 'write-contract', 'SKILL.md')), 'missing write-contract SKILL.md');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'skills', 'ferret', 'resolve-drift', 'SKILL.md')), 'missing resolve-drift SKILL.md');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'skills', 'ferret', 'extract-contract', 'SKILL.md')), 'missing extract-contract SKILL.md');
+    const writeSkill = fs.readFileSync(path.join(tmpDir, '.claude', 'skills', 'ferret', 'write-contract', 'SKILL.md'), 'utf-8');
+    assert.ok(writeSkill.includes('ferret-write-contract'), 'missing skill frontmatter name');
+    assert.ok(writeSkill.includes('api.POST/auth/login'), 'missing api example');
+    assert.ok(writeSkill.includes('tables.user'), 'missing table example');
+    assert.ok(writeSkill.includes('events.user.created'), 'missing event example');
+  });
+
+  it('scaffolds .claude/agents/ferret-author.md', () => {
+    runInit(tmpDir);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'agents', 'ferret-author.md')), 'missing ferret-author.md');
+    const agent = fs.readFileSync(path.join(tmpDir, '.claude', 'agents', 'ferret-author.md'), 'utf-8');
+    assert.ok(agent.includes('ferret-author'), 'missing agent name');
+    assert.ok(agent.includes('context.json'), 'missing context.json instruction');
+  });
+
+  it('scaffolds .claude/commands slash-entry files', () => {
+    runInit(tmpDir);
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'commands', 'ferret-write.md')), 'missing ferret-write.md');
+    assert.ok(fs.existsSync(path.join(tmpDir, '.claude', 'commands', 'ferret-review.md')), 'missing ferret-review.md');
+  });
+
+  it('--no-agent-rules skips .claude/ scaffolding', () => {
+    runInit(tmpDir, ['--no-hook', '--no-agent-rules']);
+    assert.equal(fs.existsSync(path.join(tmpDir, '.claude', 'rules', 'ferret', 'enforcement.md')), false);
+    assert.equal(fs.existsSync(path.join(tmpDir, '.claude', 'skills', 'ferret', 'write-contract', 'SKILL.md')), false);
+    assert.equal(fs.existsSync(path.join(tmpDir, '.claude', 'agents', 'ferret-author.md')), false);
+  });
+
+  it('.claude/ skill and agent files are not overwritten on second init', () => {
+    runInit(tmpDir);
+    const skillPath = path.join(tmpDir, '.claude', 'skills', 'ferret', 'write-contract', 'SKILL.md');
+    const sentinel = '# sentinel skill content';
+    fs.writeFileSync(skillPath, sentinel, 'utf-8');
+    runInit(tmpDir);
+    assert.equal(fs.readFileSync(skillPath, 'utf-8'), sentinel);
+  });
+
+  it('CLAUDE.md includes six contract types and skill pointers', () => {
+    runInit(tmpDir);
+    const content = fs.readFileSync(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+    assert.ok(content.includes('api'), 'missing api type');
+    assert.ok(content.includes('table'), 'missing table type');
+    assert.ok(content.includes('event'), 'missing event type');
+    assert.ok(content.includes('write-contract'), 'missing skill pointer');
+    assert.ok(content.includes('ferret-author'), 'missing agent pointer');
+  });
 });
