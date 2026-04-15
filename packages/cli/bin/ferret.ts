@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
 
-const VERSION = '0.4.0';
+const VERSION = '0.4.1';
 
 async function main(): Promise<void> {
   if (process.argv.includes('--version') || process.argv.includes('-V')) {
