@@ -393,15 +393,15 @@ Detailed acceptance criteria: `spec/SPRINT-8-STORIES.MD`.
 SpecFerret does not ship GA until every gate below is complete and verified.
 Validation repository execution details live in `spec/GA-VALIDATION-REPOS.MD`.
 
-| Gate | Requirement                               | Acceptance Criteria                                                                                                                                                                |
-| ---- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G1   | Zero-manual enforcement setup             | `ferret init` installs commit enforcement by default (opt-out only). Fresh repo: contract-breaking change is blocked on first commit with no extra setup commands.                 |
-| G2   | Lint-first daily UX                       | Public docs and CLI help position `ferret lint` as the default developer command. `ferret scan` is documented as advanced/manual only.                                             |
-| G3   | CI baseline correctness                   | `ferret lint --ci` cannot false-pass due to missing local state. CI path is deterministic via explicit baseline strategy (committed context or rebuild mode) and documented setup. |
-| G4   | Seamless contract bootstrap               | First-party `ferret extract` supports deterministic contract scaffolding from annotated TypeScript shapes. Team can bootstrap first 3 real contracts in under 10 minutes.          |
-| G5   | Dependency graph reliability              | Missing/invalid imports are surfaced before merge via lint checks and clear diagnostics. Contract graph gaps are visible to developers before commit.                              |
-| G6   | Guided drift resolution                   | `ferret review` provides a guided resolution flow (accept/update/reject path), not just manual file editing instructions.                                                          |
-| G7   | External workflow proof (spec-kit + BMAD) | Two dedicated validation repositories (one spec-kit, one BMAD) run the same GA smoke flow and pass in CI. No GA without both green.                                                |
+| Gate | Requirement                               | Acceptance Criteria                                                                                                                                                                                      |
+| ---- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G1   | Zero-manual enforcement setup             | `ferret init` installs commit enforcement by default (opt-out only). Fresh repo: contract-breaking change is blocked on first commit with no extra setup commands.                                       |
+| G2   | Lint-first daily UX                       | Public docs and CLI help position `ferret lint` as the default developer command. `ferret scan` is documented as advanced/manual only.                                                                   |
+| G3   | CI baseline correctness                   | `ferret lint --ci` cannot false-pass due to missing local state. CI path is deterministic via explicit baseline strategy (committed context or rebuild mode) and documented setup.                       |
+| G4   | Seamless contract bootstrap               | First-party `ferret extract` supports deterministic contract scaffolding from annotated TypeScript shapes. Team can bootstrap first 3 real contracts in under 10 minutes.                                |
+| G5   | Dependency graph reliability              | Missing/invalid imports are surfaced before merge via lint checks and clear diagnostics. Contract graph gaps are visible to developers before commit.                                                    |
+| G6   | Guided drift resolution                   | `ferret review` provides a guided resolution flow (accept/update/reject path), not just manual file editing instructions.                                                                                |
+| G7   | External workflow proof (spec-kit + BMAD) | Two dedicated validation repositories (one spec-kit, one BMAD) run the same GA smoke flow and pass in CI. No GA without both green.                                                                      |
 | G10  | Native binary distribution                | `npm install -g @specferret/cli` on Windows (Bun via npm, no official installer), macOS arm64, and Linux x64 → `ferret --version` works in the default shell with zero extra steps. No shim workarounds. |
 
 ### Current Gate Status (as of 2026-04-04)
@@ -598,8 +598,8 @@ Detailed acceptance criteria: `spec/SPRINT-8-STORIES.MD`.
 Target: pre-GA. Blocks first GA release.
 Tracking: [#77](https://github.com/BenGardiner123/spec-ferret/issues/77)
 
-| Story | Gate | Scope | Deliverable | Acceptance Test |
-| ----- | ---- | ----- | ----------- | --------------- |
+| Story | Gate | Scope                                                                                                                                                                                                                                                     | Deliverable                                                                                    | Acceptance Test                                                                                                                                                 |
+| ----- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | S61   | G10  | Ship `ferret` as platform-native binaries via `optionalDependencies` (esbuild pattern). CI matrix builds `bun build --compile` artifacts for `win32-x64`, `win32-arm64`, `darwin-arm64`, `linux-x64`. Main package becomes a thin Node.js CJS dispatcher. | 4 scoped npm packages under `@specferret/cli-{platform}` + updated dispatch script + CI matrix | `npm install -g @specferret/cli` with Bun-via-npm on Windows → `ferret --version` works in PowerShell with zero extra steps. Same on macOS arm64 and Linux x64. |
 
 ---
