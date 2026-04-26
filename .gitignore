@@ -145,4 +145,6 @@ vite.config.ts.timestamp-*
 # claude files
 .claude/*
 
+/non-uploadable-docs
+
 
