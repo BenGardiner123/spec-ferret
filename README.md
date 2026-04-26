@@ -22,6 +22,7 @@
 
 ## 📢 News
 
+- **2026-04-26** 🐛 Released **v0.4.2** — dogfooding bug fixes: zod@4 compatibility, tree-sitter native module dedup, `ContractRef` type for `consumes`/`dependsOn`, and `defineContract` now returns `schema: ZodObject<T>` for safe composition. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.4.2).
 - **2026-04-14** 🎉 Released **v0.4.0** — `ferret watch`, `ferret audit`, and exported watch/audit APIs in `@specferret/core`. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-14** 🎉 Released **v0.3.0** — TypeScript-native `.contract.ts` format with `defineContract()`, Zod-based schemas, `ferret status` command, and automatic `.contract.ts` discovery. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-14** 🎉 Released **v0.2.0** — bidirectional drift enforcement (code → spec), upward drift detection in `ferret lint --ci`, `source:` blocks, and guided resolution for code-origin drift. See [CHANGELOG](CHANGELOG.md).
@@ -459,6 +460,10 @@ export const jwtPayload = defineContract({
 - **Zod schemas** — converted to JSON Schema automatically via `zod-to-json-schema`
 - **Runtime invariants** — typed functions, not text descriptions
 - **`consumes` references** — object references, not string IDs. Upstream shape changes break downstream contracts at compile time
+- **`contract.schema`** — `defineContract` returns a `ZodObject<T>` on every contract. Use it for composition: `z.array(jwtPayload.schema)`, `z.object({ token: jwtPayload.schema })`. Do not compose with `contract.output` — that is the raw shape, not a schema.
+
+> [!NOTE]
+> v0.4.2 requires **zod@4**. If your project is on zod@3, upgrade: `bun add zod@4`.
 
 **Using it:**
 
