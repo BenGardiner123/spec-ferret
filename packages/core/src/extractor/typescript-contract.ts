@@ -34,7 +34,8 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
   for (const [exportName, exportValue] of Object.entries(mod)) {
     if (!isContract(exportValue)) continue;
 
-    const shape = zodToJsonSchema(z.object(exportValue.output), { $refStrategy: 'none' });
+    // zod-to-json-schema@3 types reference zod@3's ZodTypeDef; cast is safe — runtime supports zod@4
+    const shape = zodToJsonSchema(z.object(exportValue.output) as any, { $refStrategy: 'none' });
     const shape_hash = hashSchema(shape);
 
     // Pass 2: resolve consumes → import IDs

@@ -6,22 +6,31 @@ export interface Contract<
   id?: string;
   value: string;
   output: T;
+  schema?: z.ZodObject<T>;
   invariants?: Array<(r: z.infer<z.ZodObject<T>>) => boolean>;
-  consumes?: Contract[];
+  // ContractRef avoids invariance errors — dependency arrays don't need invariant type safety
+  consumes?: ContractRef[];
   forbids?: string[];
   status?: 'complete' | 'active' | 'pending';
   closedBy?: string;
   closedWhen?: string;
-  dependsOn?: Contract[];
+  dependsOn?: ContractRef[];
 }
+
+// Non-generic reference type for dependency arrays.
+// Uses (r: any) => boolean so contracts with different output shapes are assignable without casts.
+export type ContractRef = Omit<Contract<any>, 'invariants' | 'schema'> & {
+  invariants?: Array<(r: any) => boolean>;
+  schema?: z.ZodObject<any>;
+};
 
 export function defineContract<T extends Record<string, z.ZodTypeAny>>(
   contract: Contract<T>,
-): Contract<T> {
+): Contract<T> & { schema: z.ZodObject<T> } {
   if ('id' in contract && contract.id !== undefined && contract.id.trim() === '') {
     throw new Error('defineContract: id must be a non-empty string if provided');
   }
-  return contract;
+  return Object.assign(contract, { schema: z.object(contract.output) });
 }
 
 export function isContract(value: unknown): value is Contract {

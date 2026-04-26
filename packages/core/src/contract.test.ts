@@ -53,9 +53,11 @@ describe('isContract', () => {
 });
 
 describe('defineContract', () => {
-  it('returns the exact object passed to it when valid', () => {
+  it('returns the same object reference with schema added in-place', () => {
     const contract = { value: 'x', output: {} };
-    expect(defineContract(contract)).toBe(contract);
+    const result = defineContract(contract);
+    expect(result === contract).toBe(true);
+    expect(result.schema).toBeDefined();
   });
 
   it('does not throw when id is omitted', () => {
@@ -95,5 +97,30 @@ describe('defineContract', () => {
       ],
     });
     expect(isContract(contract)).toBe(true);
+  });
+
+  it('schema is present on the returned object', () => {
+    const result = defineContract({ value: 'x', output: { ok: z.boolean() } });
+    expect(result.schema).toBeDefined();
+  });
+
+  it('schema is a ZodObject that validates the output shape', () => {
+    const contract = defineContract({ value: 'x', output: { name: z.string(), age: z.number() } });
+    expect(contract.schema.safeParse({ name: 'Alice', age: 30 }).success).toBe(true);
+    expect(contract.schema.safeParse({ name: 'Alice' }).success).toBe(false);
+  });
+
+  it('schema enables composition — z.array(contract.schema) parses correctly', () => {
+    const item = defineContract({ value: 'item', output: { id: z.string() } });
+    const list = z.array(item.schema);
+    expect(list.safeParse([{ id: 'a' }, { id: 'b' }]).success).toBe(true);
+  });
+
+  it('consumes accepts contracts with distinct output shapes without casting', () => {
+    const a = defineContract({ id: 'a', value: 'a', output: { x: z.string() } });
+    const b = defineContract({ id: 'b', value: 'b', output: { y: z.number() } });
+    // TypeScript must accept this without error — this is the variance regression test
+    const c = defineContract({ id: 'c', value: 'c', output: {}, consumes: [a, b] });
+    expect(c.consumes).toHaveLength(2);
   });
 });
