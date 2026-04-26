@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'bun:test';
-import pkg from '../package.json';
+import pkg from '../package.json' with { type: 'json' };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, './ferret.ts');

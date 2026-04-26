@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
-import pkg from '../package.json';
+import pkg from '../package.json' with { type: 'json' };
 
 const VERSION = pkg.version;
 
