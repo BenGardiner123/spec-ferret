@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 import { Command } from 'commander';
+import pkg from '../package.json';
 
-const VERSION = '0.4.1';
+const VERSION = pkg.version;
 
 async function main(): Promise<void> {
   if (process.argv.includes('--version') || process.argv.includes('-V')) {
