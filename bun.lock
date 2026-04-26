@@ -4,6 +4,10 @@
   "workspaces": {
     "": {
       "name": "specferret-workspace",
+      "dependencies": {
+        "tree-sitter": "^0.22.4",
+        "tree-sitter-typescript": "^0.23.2",
+      },
     },
     "apps/site": {
       "name": "@specferret/site",
