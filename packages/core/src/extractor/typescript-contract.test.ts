@@ -61,9 +61,7 @@ describe('extractFromContractFile', () => {
   });
 
   it('zod schema with optional fields extracts without throwing', async () => {
-    await assert.doesNotReject(() =>
-      extractFromContractFile(fixtures('optional-fields.fixture.ts')),
-    );
+    await assert.doesNotReject(() => extractFromContractFile(fixtures('optional-fields.fixture.ts')));
 
     const result = await extractFromContractFile(fixtures('optional-fields.fixture.ts'));
     assert.equal(result.contracts.length, 1);
@@ -134,10 +132,25 @@ describe('extractFromContractFile', () => {
     assert.equal(result.contracts[0].sourceSymbol, 'userContract');
   });
 
+  it('stored contract id uses .id field when present, not export name', async () => {
+    const result = await extractFromContractFile(fixtures('same-file-dotted-id-consumes.fixture.ts'));
+
+    const ids = result.contracts.map((c) => c.id);
+    assert.ok(ids.includes('tables.dataSource'), 'expected tables.dataSource stored id');
+    assert.ok(ids.includes('tables.ingestionRun'), 'expected tables.ingestionRun stored id');
+    assert.ok(!ids.includes('tables_dataSource'), 'export name must not be used as stored id when .id is present');
+    assert.ok(!ids.includes('tables_ingestionRun'), 'export name must not be used as stored id when .id is present');
+  });
+
+  it('same-file consumes with dotted .id resolves to .id, not export name', async () => {
+    const result = await extractFromContractFile(fixtures('same-file-dotted-id-consumes.fixture.ts'));
+
+    const ingestionRun = result.contracts.find((c) => c.id === 'tables.ingestionRun');
+    assert.ok(ingestionRun, 'tables.ingestionRun not found');
+    assert.deepEqual(ingestionRun.imports, ['tables.dataSource']);
+  });
+
   it('module that throws at top-level causes extractFromContractFile to reject', async () => {
-    await assert.rejects(
-      () => extractFromContractFile(fixtures('throws-on-import.fixture.ts')),
-      /intentional module-level throw/,
-    );
+    await assert.rejects(() => extractFromContractFile(fixtures('throws-on-import.fixture.ts')), /intentional module-level throw/);
   });
 });

@@ -44,7 +44,7 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
       for (const consumed of exportValue.consumes) {
         const samefile = exportNameMap.get(consumed);
         if (samefile !== undefined) {
-          imports.push(samefile);
+          imports.push(consumed.id ?? samefile);
         } else if (consumed.id !== undefined) {
           imports.push(consumed.id);
         } else {
@@ -57,7 +57,7 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
     }
 
     contracts.push({
-      id: exportName,
+      id: exportValue.id ?? exportName,
       type: 'type',
       shape,
       shape_hash,
