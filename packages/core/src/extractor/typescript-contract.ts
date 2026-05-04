@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { isContract } from '../contract.js';
 import { hashSchema } from './hash.js';
+import { mapToContractStatus } from './frontmatter.js';
 import type { ExtractionResult } from './frontmatter.js';
-import type { ContractStatus } from '../store/types.js';
 
 export async function extractFromContractFile(filePath: string): Promise<ExtractionResult> {
   const mod = (await import(filePath)) as Record<string, unknown>;
@@ -63,7 +63,7 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
       shape,
       shape_hash,
       imports,
-      contractStatus: (exportValue.status === 'active' || exportValue.status === 'complete') ? 'stable' as ContractStatus : 'pending' as ContractStatus,
+      contractStatus: mapToContractStatus(exportValue.status),
       sourceFile: filePath,
       sourceSymbol: exportName,
     });

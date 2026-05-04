@@ -7,6 +7,14 @@ import { hashSchema } from './hash.js';
 import type { ContractType } from './contract-types.js';
 import type { ContractStatus } from '../store/types.js';
 
+/**
+ * Maps a raw `ferret.status` string value to a normalised ContractStatus.
+ * `active` and `complete` map to `'stable'`; anything else (including `undefined`) maps to `'pending'`.
+ */
+export function mapToContractStatus(rawStatus: unknown): ContractStatus {
+  return rawStatus === 'active' || rawStatus === 'complete' ? 'stable' : 'pending';
+}
+
 export interface ExtractionResult {
   filePath: string;
   fileType: 'spec' | 'code';
@@ -70,8 +78,7 @@ export function extractFromSpecFile(filePath: string, fileContent: string): Extr
   const sourceSymbol = typeof source?.symbol === 'string' ? source.symbol : undefined;
 
   const rawStatus = ferret.status as string | undefined;
-  const contractStatus: ContractStatus =
-    rawStatus === 'active' || rawStatus === 'complete' ? 'stable' : 'pending';
+  const contractStatus: ContractStatus = mapToContractStatus(rawStatus);
 
   return {
     filePath,

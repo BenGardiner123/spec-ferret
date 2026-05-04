@@ -48,8 +48,12 @@ function normalizeContext(raw: unknown): FerretContext {
   if (contextVersion === "2.0") {
     const legacy = candidate as Partial<LegacyFerretContextV2>;
     const migratedContracts = (Array.isArray(legacy.contracts) ? legacy.contracts : []).map(
-      (c: ContextContract) => ({ ...c, status: c.status === 'roadmap' ? 'pending' : c.status })
-    );
+      (c: unknown) => {
+        if (!c || typeof c !== 'object') return c;
+        const entry = c as Partial<ContextContract>;
+        return { ...entry, status: entry.status === 'roadmap' ? 'pending' : entry.status };
+      }
+    ) as ContextContract[];
     return {
       version: CONTEXT_VERSION,
       schemaVersion: CONTEXT_SCHEMA_VERSION,
