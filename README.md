@@ -486,7 +486,8 @@ export type KeywordsResponse = {
 ```
 
 Now `ferret lint` detects drift between the Zod contract and the actual `KeywordsResponse` type — two representations, one enforcement check, no markdown spec needed.
-```
+
+````
 
 **Why `.contract.ts`?**
 
@@ -507,7 +508,7 @@ ferret lint
 
 # Disable if needed:
 # ferret.config.json → "contractParsers": { "typescript": false }
-```
+````
 
 Both `.contract.md` and `.contract.ts` work in the same project. Mixed format is fully supported.
 

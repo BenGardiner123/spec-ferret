@@ -8,7 +8,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
-- **`source` field on `defineContract()`** (S63) — `.contract.ts` authors can now point upward drift tracking at a *different* source file and symbol via `source: { file: string; symbol: string }`. When set, `ferret audit` / `ferret lint` run tree-sitter against the specified `src/` path instead of the contract file itself. Falls back to the contract file path and export name when `source` is absent — no breaking change.
+- **`source` field on `defineContract()`** (S63) — `.contract.ts` authors can now point upward drift tracking at a _different_ source file and symbol via `source: { file: string; symbol: string }`. When set, `ferret audit` / `ferret lint` run tree-sitter against the specified `src/` path instead of the contract file itself. Falls back to the contract file path and export name when `source` is absent — no breaking change.
   - Core: `source?: { file: string; symbol: string }` added to `Contract<T>` interface.
   - Extractor: `extractFromContractFile()` reads `source.file` / `source.symbol` when present (`||` fallback guards against empty strings).
 
