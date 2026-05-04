@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-04
+
+### Added
+
+- **`source` field on `defineContract()`** (S63) — `.contract.ts` authors can now point upward drift tracking at a *different* source file and symbol via `source: { file: string; symbol: string }`. When set, `ferret audit` / `ferret lint` run tree-sitter against the specified `src/` path instead of the contract file itself. Falls back to the contract file path and export name when `source` is absent — no breaking change.
+  - Core: `source?: { file: string; symbol: string }` added to `Contract<T>` interface.
+  - Extractor: `extractFromContractFile()` reads `source.file` / `source.symbol` when present (`||` fallback guards against empty strings).
+
+### Changed
+
+- **`roadmap` status renamed to `pending`** (S62) — the contract lifecycle now uses `pending` instead of `roadmap` everywhere. `ferret lint` shows `✓` only when pending count is zero. Default status on first scan is `pending`.
+  - `context.json` bumped to v3.0; existing v2.0 graphs are auto-migrated on next `ferret lint` run.
+  - `NodeStatus` enum: `'stable' | 'needs-review' | 'pending' | 'blocked'` (was `roadmap`).
+  - `ContractStatus` enum: `'stable' | 'pending' | 'needs-review'` (was `roadmap`).
+
 ## [0.4.0] - 2026-04-14
 
 ### Added
