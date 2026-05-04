@@ -3,7 +3,7 @@ import type { DBStore, ContractStatus } from '../store/types.js';
 export type StatusContractEntry = {
   id: string;
   status: ContractStatus;
-  driftClass: 'breaking' | 'stable' | 'roadmap';
+  driftClass: 'breaking' | 'stable' | 'pending';
   dependentCount: number;
   dependents: string[];
 };
@@ -13,7 +13,7 @@ export type StatusReport = {
   timestamp: string;
   total: number;
   stable: number;
-  roadmap: number;
+  pending: number;
   needsReview: number;
   contracts: StatusContractEntry[];
 };
@@ -37,7 +37,7 @@ export async function buildStatusReport(store: DBStore): Promise<StatusReport> {
     return {
       id: c.id,
       status: c.status,
-      driftClass: c.status === 'needs-review' ? 'breaking' : c.status === 'roadmap' ? 'roadmap' : 'stable',
+      driftClass: c.status === 'needs-review' ? 'breaking' : c.status === 'pending' ? 'pending' : 'stable',
       dependentCount: dependents.length,
       dependents,
     };
@@ -48,7 +48,7 @@ export async function buildStatusReport(store: DBStore): Promise<StatusReport> {
     timestamp: new Date().toISOString(),
     total: contracts.length,
     stable: contracts.filter((c) => c.status === 'stable').length,
-    roadmap: contracts.filter((c) => c.status === 'roadmap').length,
+    pending: contracts.filter((c) => c.status === 'pending').length,
     needsReview: contracts.filter((c) => c.status === 'needs-review').length,
     contracts: entries,
   };

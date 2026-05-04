@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import type { DBStore } from "../store/types.js";
 
-export const CONTEXT_VERSION = "2.0" as const;
+export const CONTEXT_VERSION = "3.0" as const;
 export const CONTEXT_SCHEMA_VERSION = "1.0.0" as const;
 
 type LegacyFerretContextV2 = {
@@ -43,6 +43,31 @@ function normalizeContext(raw: unknown): FerretContext {
 
   const candidate = raw as Record<string, unknown>;
   const contextVersion = candidate.version;
+
+  // Migration: v2.0 → v3.0 (roadmap → pending)
+  if (contextVersion === "2.0") {
+    const legacy = candidate as Partial<LegacyFerretContextV2>;
+    const migratedContracts = (Array.isArray(legacy.contracts) ? legacy.contracts : [])
+      .filter((c: unknown): c is Record<string, unknown> => !!c && typeof c === 'object')
+      .map((entry) => ({
+        ...entry,
+        status: entry['status'] === 'roadmap' ? 'pending' : entry['status'],
+      })) as ContextContract[];
+    return {
+      version: CONTEXT_VERSION,
+      schemaVersion: CONTEXT_SCHEMA_VERSION,
+      generated:
+        typeof legacy.generated === "string"
+          ? legacy.generated
+          : new Date(0).toISOString(),
+      contracts: migratedContracts,
+      edges: Array.isArray(legacy.edges) ? legacy.edges : [],
+      needsReview: Array.isArray(legacy.needsReview)
+        ? legacy.needsReview
+        : [],
+    };
+  }
+
   if (contextVersion !== CONTEXT_VERSION) {
     throw new Error(
       `ferret: unsupported context.json version '${String(contextVersion)}'. Run 'ferret scan' with the current CLI to regenerate .ferret/context.json.`,
@@ -56,7 +81,7 @@ function normalizeContext(raw: unknown): FerretContext {
     );
   }
 
-  // Known migration path: V2 payloads created before schemaVersion was introduced.
+  // Known migration path: V3 payloads created before schemaVersion was introduced.
   const legacy = candidate as Partial<LegacyFerretContextV2>;
   return {
     version: CONTEXT_VERSION,

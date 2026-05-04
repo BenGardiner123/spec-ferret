@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import { glob } from 'glob';
 import { extractFromSpecFile, extractFromContractFile, compareSchemas, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
-import type { ExtractionResult } from '@specferret/core';
+import type { ExtractionResult, ContractStatus } from '@specferret/core';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
 
@@ -143,7 +143,7 @@ export const scanCommand = new Command('scan')
           const prevContract = await store.getContract(contract.id);
 
           // Determine status from schema comparison
-          let nodeStatus: 'stable' | 'needs-review' = 'stable';
+          let nodeStatus: ContractStatus = contract.contractStatus ?? 'pending';
 
           if (prevContract && prevContract.shape_schema) {
             let prevShape: unknown = {};

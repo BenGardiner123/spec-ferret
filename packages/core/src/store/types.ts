@@ -1,5 +1,5 @@
-export type NodeStatus = 'stable' | 'needs-review' | 'roadmap' | 'blocked';
-export type ContractStatus = 'stable' | 'roadmap' | 'needs-review';
+export type NodeStatus = 'stable' | 'needs-review' | 'pending' | 'blocked';
+export type ContractStatus = 'stable' | 'pending' | 'needs-review';
 
 export interface FerretNode {
   id: string;

@@ -83,11 +83,19 @@ export class SqliteStore implements DBStore {
 
     try {
       this.db.exec(`ALTER TABLE ferret_contracts ADD COLUMN code_source_file TEXT;`);
-    } catch {}
+    } catch (e: unknown) {
+      if (!(e instanceof Error && e.message.includes('duplicate column'))) throw e;
+    }
 
     try {
       this.db.exec(`ALTER TABLE ferret_contracts ADD COLUMN code_source_symbol TEXT;`);
-    } catch {}
+    } catch (e: unknown) {
+      if (!(e instanceof Error && e.message.includes('duplicate column'))) throw e;
+    }
+
+    // S62 migration: rename legacy 'roadmap' status to 'pending'
+    this.db.exec(`UPDATE ferret_contracts SET status = 'pending' WHERE status = 'roadmap';`);
+    this.db.exec(`UPDATE ferret_nodes SET status = 'pending' WHERE status = 'roadmap';`);
   }
 
   async close(): Promise<void> {

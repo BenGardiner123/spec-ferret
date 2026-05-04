@@ -289,3 +289,74 @@ ferret:
     assert.equal(r1.contracts[0].shape_hash, r2.contracts[0].shape_hash);
   });
 });
+
+describe('extractFromSpecFile — S62 contractStatus mapping', () => {
+  it('no status field → contractStatus is "pending"', () => {
+    const spec = `---
+ferret:
+  id: api.no-status
+  type: api
+  shape:
+    type: object
+---
+`;
+    const result = extractFromSpecFile('contracts/no-status.contract.md', spec);
+    assert.equal(result.contracts[0].contractStatus, 'pending');
+  });
+
+  it('status: active → contractStatus is "stable"', () => {
+    const spec = `---
+ferret:
+  id: api.active
+  type: api
+  status: active
+  shape:
+    type: object
+---
+`;
+    const result = extractFromSpecFile('contracts/active.contract.md', spec);
+    assert.equal(result.contracts[0].contractStatus, 'stable');
+  });
+
+  it('status: complete → contractStatus is "stable"', () => {
+    const spec = `---
+ferret:
+  id: api.complete
+  type: api
+  status: complete
+  shape:
+    type: object
+---
+`;
+    const result = extractFromSpecFile('contracts/complete.contract.md', spec);
+    assert.equal(result.contracts[0].contractStatus, 'stable');
+  });
+
+  it('status: pending → contractStatus is "pending"', () => {
+    const spec = `---
+ferret:
+  id: api.pending
+  type: api
+  status: pending
+  shape:
+    type: object
+---
+`;
+    const result = extractFromSpecFile('contracts/pending.contract.md', spec);
+    assert.equal(result.contracts[0].contractStatus, 'pending');
+  });
+
+  it('unknown status value → contractStatus defaults to "pending"', () => {
+    const spec = `---
+ferret:
+  id: api.unknown
+  type: api
+  status: some-unknown-value
+  shape:
+    type: object
+---
+`;
+    const result = extractFromSpecFile('contracts/unknown.contract.md', spec);
+    assert.equal(result.contracts[0].contractStatus, 'pending');
+  });
+});

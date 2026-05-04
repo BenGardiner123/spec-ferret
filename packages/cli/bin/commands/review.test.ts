@@ -262,17 +262,17 @@ function seedBreakingDrift(tmpDir: string): void {
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'auth', 'jwt.contract.md'),
-    `---\nferret:\n  id: auth.jwt\n  type: type\n  shape:\n    type: object\n    properties:\n      sub:\n        type: string\n      exp:\n        type: string\n    required:\n      - sub\n      - exp\n---\n`,
+    `---\nferret:\n  id: auth.jwt\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      sub:\n        type: string\n      exp:\n        type: string\n    required:\n      - sub\n      - exp\n---\n`,
     'utf-8',
   );
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'search', 'results.contract.md'),
-    `---\nferret:\n  id: api.GET/search\n  type: api\n  imports:\n    - auth.jwt\n  shape:\n    type: object\n    properties:\n      results:\n        type: array\n---\n`,
+    `---\nferret:\n  id: api.GET/search\n  type: api\n  status: active\n  imports:\n    - auth.jwt\n  shape:\n    type: object\n    properties:\n      results:\n        type: array\n---\n`,
     'utf-8',
   );
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'recommendations', 'items.contract.md'),
-    `---\nferret:\n  id: api.GET/recommendations\n  type: api\n  imports:\n    - api.GET/search\n  shape:\n    type: object\n    properties:\n      items:\n        type: array\n---\n`,
+    `---\nferret:\n  id: api.GET/recommendations\n  type: api\n  status: active\n  imports:\n    - api.GET/search\n  shape:\n    type: object\n    properties:\n      items:\n        type: array\n---\n`,
     'utf-8',
   );
 
@@ -281,7 +281,7 @@ function seedBreakingDrift(tmpDir: string): void {
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'auth', 'jwt.contract.md'),
-    `---\nferret:\n  id: auth.jwt\n  type: type\n  shape:\n    type: object\n    properties:\n      sub:\n        type: string\n    required:\n      - sub\n---\n`,
+    `---\nferret:\n  id: auth.jwt\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      sub:\n        type: string\n    required:\n      - sub\n---\n`,
     'utf-8',
   );
 }
@@ -293,12 +293,12 @@ function seedMultipleBreakingDrift(tmpDir: string): void {
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'billing', 'invoice.contract.md'),
-    `---\nferret:\n  id: billing.invoice\n  type: type\n  shape:\n    type: object\n    properties:\n      id:\n        type: string\n      total:\n        type: number\n    required:\n      - id\n      - total\n---\n`,
+    `---\nferret:\n  id: billing.invoice\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      id:\n        type: string\n      total:\n        type: number\n    required:\n      - id\n      - total\n---\n`,
     'utf-8',
   );
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'invoices', 'list.contract.md'),
-    `---\nferret:\n  id: api.GET/invoices\n  type: api\n  imports:\n    - billing.invoice\n  shape:\n    type: object\n    properties:\n      invoices:\n        type: array\n---\n`,
+    `---\nferret:\n  id: api.GET/invoices\n  type: api\n  status: active\n  imports:\n    - billing.invoice\n  shape:\n    type: object\n    properties:\n      invoices:\n        type: array\n---\n`,
     'utf-8',
   );
 
@@ -307,7 +307,7 @@ function seedMultipleBreakingDrift(tmpDir: string): void {
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'billing', 'invoice.contract.md'),
-    `---\nferret:\n  id: billing.invoice\n  type: type\n  shape:\n    type: object\n    properties:\n      id:\n        type: string\n    required:\n      - id\n---\n`,
+    `---\nferret:\n  id: billing.invoice\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      id:\n        type: string\n    required:\n      - id\n---\n`,
     'utf-8',
   );
 }

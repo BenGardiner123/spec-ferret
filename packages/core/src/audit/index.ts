@@ -19,7 +19,7 @@ export interface AuditSummary {
   totalContracts: number;
   stable: number;
   needsReview: number;
-  roadmap: number;
+  pending: number;
   downwardBreaking: number;
   downwardNonBreaking: number;
   upwardBreaking: number;
@@ -104,7 +104,7 @@ export async function buildAuditReport(store: DBStore, projectRoot: string): Pro
       totalContracts: contracts.length,
       stable: statusReport.stable,
       needsReview: statusReport.needsReview,
-      roadmap: statusReport.roadmap,
+      pending: statusReport.pending,
       downwardBreaking,
       downwardNonBreaking,
       upwardBreaking,

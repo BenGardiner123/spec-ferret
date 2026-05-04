@@ -139,10 +139,10 @@ export class Reconciler {
 
         if (!dependentNode) continue;
 
-        // Skip nodes that are already reviewing or roadmap, per S011 instructions.
+        // Skip nodes that are already reviewing or pending, per S011 instructions.
         if (
           dependentNode.status === "needs-review" ||
-          dependentNode.status === "roadmap"
+          dependentNode.status === "pending"
         ) {
           continue;
         }
@@ -169,12 +169,12 @@ export class Reconciler {
       }
     }
 
-    // S012: graph is consistent when no nodes need review and all nodes are stable or roadmap.
-    // Roadmap nodes are planned-but-not-yet-built and are an acceptable stable state.
+    // S012: graph is consistent when no nodes need review and all nodes are stable or pending.
+    // Pending nodes are unverified and are an acceptable stable state.
     return {
       consistent:
         flaggedNodes.length === 0 &&
-        nodes.every((n) => n.status === "stable" || n.status === "roadmap"),
+        nodes.every((n) => n.status === "stable" || n.status === "pending"),
       flagged: flaggedNodes,
       integrityViolations,
       importSuggestions,

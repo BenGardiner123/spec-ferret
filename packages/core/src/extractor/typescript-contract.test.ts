@@ -153,4 +153,16 @@ describe('extractFromContractFile', () => {
   it('module that throws at top-level causes extractFromContractFile to reject', async () => {
     await assert.rejects(() => extractFromContractFile(fixtures('throws-on-import.fixture.ts')), /intentional module-level throw/);
   });
+
+  it('S62: contract with status: active → contractStatus is "stable"', async () => {
+    const result = await extractFromContractFile(fixtures('active-status.fixture.ts'));
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].contractStatus, 'stable');
+  });
+
+  it('S62: contract with no status field → contractStatus is "pending"', async () => {
+    const result = await extractFromContractFile(fixtures('no-status.fixture.ts'));
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].contractStatus, 'pending');
+  });
 });

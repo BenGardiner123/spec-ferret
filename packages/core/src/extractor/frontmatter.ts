@@ -5,6 +5,15 @@ import matter from 'gray-matter';
 import { validateContractType, validateFerretSchema } from './validator.js';
 import { hashSchema } from './hash.js';
 import type { ContractType } from './contract-types.js';
+import type { ContractStatus } from '../store/types.js';
+
+/**
+ * Maps a raw `ferret.status` string value to a normalised ContractStatus.
+ * `active` and `complete` map to `'stable'`; anything else (including `undefined`) maps to `'pending'`.
+ */
+export function mapToContractStatus(rawStatus: unknown): ContractStatus {
+  return rawStatus === 'active' || rawStatus === 'complete' ? 'stable' : 'pending';
+}
 
 export interface ExtractionResult {
   filePath: string;
@@ -15,6 +24,7 @@ export interface ExtractionResult {
     shape: object;
     shape_hash: string;
     imports: string[];
+    contractStatus?: ContractStatus;
     /** Path to the TypeScript source file (code-first contracts only). */
     sourceFile?: string;
     /** TypeScript symbol name (code-first contracts only). */
@@ -67,6 +77,9 @@ export function extractFromSpecFile(filePath: string, fileContent: string): Extr
   const sourceFile = typeof source?.file === 'string' ? source.file : undefined;
   const sourceSymbol = typeof source?.symbol === 'string' ? source.symbol : undefined;
 
+  const rawStatus = ferret.status as string | undefined;
+  const contractStatus: ContractStatus = mapToContractStatus(rawStatus);
+
   return {
     filePath,
     fileType: 'spec',
@@ -77,6 +90,7 @@ export function extractFromSpecFile(filePath: string, fileContent: string): Extr
         shape: ferret.shape as object,
         shape_hash: hashSchema(ferret.shape),
         imports: Array.isArray(ferret.imports) ? (ferret.imports as string[]) : [],
+        contractStatus,
         ...(sourceFile !== undefined && { sourceFile }),
         ...(sourceSymbol !== undefined && { sourceSymbol }),
       },

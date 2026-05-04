@@ -148,3 +148,11 @@ vite.config.ts.timestamp-*
 /non-uploadable-docs
 
 
+
+# ferret runtime artifacts (test/dev runs)
+.ferret/
+ferret.config.json
+/contracts/
+.github/specferret/
+.github/instructions/
+CLAUDE.md
