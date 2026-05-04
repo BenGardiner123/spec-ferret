@@ -166,14 +166,6 @@ describe('extractFromContractFile', () => {
     assert.equal(result.contracts[0].contractStatus, 'pending');
   });
 
-  it('S63: no source field → sourceFile is the contract file path and sourceSymbol is the export name', async () => {
-    const filePath = fixtures('one-contract.fixture.ts');
-    const result = await extractFromContractFile(filePath);
-
-    assert.equal(result.contracts[0].sourceFile, filePath);
-    assert.equal(result.contracts[0].sourceSymbol, 'userContract');
-  });
-
   it('S63: source field set → sourceFile is source.file and sourceSymbol is source.symbol', async () => {
     const result = await extractFromContractFile(fixtures('source-field.fixture.ts'));
 

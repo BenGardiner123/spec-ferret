@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-export interface Contract<T extends Record<string, z.ZodTypeAny> = Record<string, z.ZodTypeAny>> {
+export interface Contract<
+  T extends Record<string, z.ZodTypeAny> = Record<string, z.ZodTypeAny>,
+> {
   id?: string;
   value: string;
   output: T;
@@ -23,7 +25,9 @@ export type ContractRef = Omit<Contract<any>, 'invariants' | 'schema'> & {
   schema?: z.ZodObject<any>;
 };
 
-export function defineContract<T extends Record<string, z.ZodTypeAny>>(contract: Contract<T>): Contract<T> & { schema: z.ZodObject<T> } {
+export function defineContract<T extends Record<string, z.ZodTypeAny>>(
+  contract: Contract<T>,
+): Contract<T> & { schema: z.ZodObject<T> } {
   if ('id' in contract && contract.id !== undefined && contract.id.trim() === '') {
     throw new Error('defineContract: id must be a non-empty string if provided');
   }
