@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import { glob } from 'glob';
-import { extractFromSpecFile, extractFromContractFile, compareSchemas, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
+import { extractFromSpecFile, extractFromContractFile, extractContractsFromTypeScript, compareSchemas, classifyUpwardDrift, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
 import type { ExtractionResult, ContractStatus } from '@specferret/core';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
@@ -159,6 +159,56 @@ export const scanCommand = new Command('scan')
             } else if (comparison.classification === 'non-breaking') {
               const label = options.ci ? 'NON-BREAKING' : pc.yellow('NON-BREAKING');
               process.stdout.write(`  ${label}  ${contract.id} — ${comparison.reason}\n`);
+            }
+          }
+
+          // Auto-promote to stable when source resolves clean.
+          // Only runs when the declared status is still pending (not already stable/needs-review)
+          // and source points to an external implementation file (not the contract file itself —
+          // without this guard, every .contract.ts without explicit source would trivially pass
+          // NOOP by comparing its own shape against itself).
+          const normalizedSourceFile = contract.sourceFile
+            ? (path.isAbsolute(contract.sourceFile)
+                ? path.relative(root, contract.sourceFile).replace(/\\/g, '/')
+                : contract.sourceFile)
+            : undefined;
+
+          if (
+            nodeStatus === 'pending' &&
+            normalizedSourceFile &&
+            contract.sourceSymbol &&
+            normalizedSourceFile !== relFile.replace(/\\/g, '/')
+          ) {
+            const sourceAbsPath = path.resolve(root, normalizedSourceFile);
+            if (fs.existsSync(sourceAbsPath)) {
+              try {
+                let codeShape: unknown | undefined;
+                if (sourceAbsPath.endsWith('.contract.ts')) {
+                  const tsExtraction = await extractFromContractFile(sourceAbsPath);
+                  const found = tsExtraction.contracts.find((c) => c.id === contract.sourceSymbol);
+                  if (found) codeShape = found.shape;
+                } else {
+                  const fileContent = fs.readFileSync(sourceAbsPath, 'utf-8');
+                  const extraction = extractContractsFromTypeScript(sourceAbsPath, fileContent);
+                  const found = extraction.contracts.find((c) => c.sourceSymbol === contract.sourceSymbol);
+                  if (found) codeShape = found.shape;
+                }
+
+                if (codeShape !== undefined) {
+                  const upward = classifyUpwardDrift(
+                    contract.id,
+                    contract.shape,
+                    codeShape,
+                    normalizedSourceFile,
+                    contract.sourceSymbol,
+                  );
+                  if (upward.driftClass === 'NOOP') {
+                    nodeStatus = 'stable';
+                  }
+                }
+              } catch {
+                // Extraction failure — leave as pending, do not error
+              }
             }
           }
 
