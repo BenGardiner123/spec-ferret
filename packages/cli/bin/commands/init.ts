@@ -103,7 +103,6 @@ const CANONICAL_AGENT_RULES = `# SpecFerret Canonical Agent Rules
 
 - \`stable\` means no active drift and no pending review action.
 - \`needs-review\` means drift exists and downstream impact must be reviewed.
-- \`roadmap\` means planned but not yet active for enforcement.
 - \`pending\` means unverified — written but not yet confirmed as implemented.
 - \`blocked\` means merge must not proceed until review or remediation is complete.
 
@@ -452,7 +451,6 @@ ferret lint                                        # must return 0 before commit
 
 - \`stable\` — no drift, safe to merge
 - \`needs-review\` — drift exists, merge blocked
-- \`roadmap\` — planned, not enforced
 - \`pending\` — unverified, not enforced
 
 ## CI behaviour
