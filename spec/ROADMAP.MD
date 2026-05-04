@@ -372,9 +372,9 @@ This section is an archived planning snapshot. Current implementation status for
 
 ---
 
-## Sprint 8 — TypeScript-Native Contract Format (Planned)
+## Sprint 8 — TypeScript-Native Contract Format (Complete)
 
-Target: v0.3.0
+Shipped: v0.3.0 — 2026-04-14
 
 | Task | Description                                                                     |
 | ---- | ------------------------------------------------------------------------------- |

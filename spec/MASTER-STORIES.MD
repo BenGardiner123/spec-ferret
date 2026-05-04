@@ -285,15 +285,15 @@ Detailed acceptance criteria: `spec/SPRINT-7-STORIES.MD`.
 
 ---
 
-## Sprint 8 — TypeScript-Native Contract Format (Planned)
+## Sprint 8 — TypeScript-Native Contract Format (Complete)
 
-| Story | Description                                                                      |
-| ----- | -------------------------------------------------------------------------------- |
-| S55   | Contract type + defineContract helper + isContract type guard                    |
-| S56   | TypeScript contract extractor (extractFromContractFile)                          |
-| S57   | Wire .contract.ts into ferret scan file discovery and ferret.config.json         |
-| S58   | Thread .contract.ts through upward-classifier, source: blocks, inferred IDs     |
-| S59   | ferret status command                                                            |
+| Story | Description                                                                 |
+| ----- | --------------------------------------------------------------------------- |
+| S55   | Contract type + defineContract helper + isContract type guard               |
+| S56   | TypeScript contract extractor (extractFromContractFile)                     |
+| S57   | Wire .contract.ts into ferret scan file discovery and ferret.config.json    |
+| S58   | Thread .contract.ts through upward-classifier, source: blocks, inferred IDs |
+| S59   | ferret status command                                                       |
 
 Detailed acceptance criteria: `spec/SPRINT-8-STORIES.MD`.
 

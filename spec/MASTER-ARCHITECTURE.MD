@@ -220,13 +220,13 @@ Strict separation. No layer reaches into another layer's domain. Ever.
 
 ## The ExtractionResult Interface
 
-Every parser — gray-matter (`.contract.md`), Tree-sitter (code-first), and TypeScript (`.contract.ts`, Sprint 8) —
+Every parser — gray-matter (`.contract.md`), Tree-sitter (code-first), and TypeScript (`.contract.ts`, v0.3.0) —
 returns this exact shape. The rest of the system cannot tell them apart.
 
 ```typescript
 interface ExtractionResult {
   filePath: string;
-  fileType: "spec" | "code";
+  fileType: 'spec' | 'code';
   contracts: Array<{
     id: string; // e.g. "api.GET/search"
     type: string; // e.g. "api"
@@ -234,9 +234,9 @@ interface ExtractionResult {
     shape_hash: string; // SHA-256 of key-sorted schema
     imports: string[]; // e.g. ["auth.jwt", "tables.document"]
   }>;
-  extractedBy: "gray-matter" | "tree-sitter" | "typescript";
+  extractedBy: 'gray-matter' | 'tree-sitter' | 'typescript';
   extractedAt: number; // unix ms
-  warning?: "no-frontmatter";
+  warning?: 'no-frontmatter';
 }
 ```
 
@@ -246,19 +246,19 @@ interface ExtractionResult {
 
 These are not open for discussion or reconsideration.
 
-| Job                      | Tool                             | Reason                                                                                                      |
-| ------------------------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Runtime                  | Bun 1.0+                         | Performance, native SQLite, TypeScript native, Claude Code alignment                                        |
-| Spec frontmatter parsing | `gray-matter`                    | Synchronous, proven, zero deps                                                                              |
-| JSON Schema validation   | `ajv` + `ajv-formats`            | 50M weekly downloads. Proven.                                                                               |
-| Schema hashing           | `node:crypto` SHA-256            | Built-in, deterministic, fast                                                                               |
-| Storage — default        | `bun:sqlite`                     | Built-in to Bun, synchronous, zero deps                                                                     |
-| Storage — roadmap        | Postgres via `DBStore` interface | Sprint 2                                                                                                    |
-| Annotation detection     | Regex                            | Sprint 1. `@ferret-contract:` is a predictable pattern. No parser needed.                                   |
-| Code shape extraction       | Tree-sitter TypeScript           | Sprint 1. Pulled forward from Sprint 3 — structural extraction without annotations is the primary use-case. |
-| Contract format (type-safe) | `.contract.ts` + Zod             | Sprint 8. TypeScript-native contracts: tsc enforces structural drift; ferret enforces invariants/value coverage. |
-| Zod → JSON Schema           | `zod-to-json-schema`             | Sprint 8. Converts Zod output schemas to JSON Schema for `shape_schema TEXT` in SQLite.                         |
-| Test runner              | `bun test`                       | Native to runtime, fast, no config                                                                          |
+| Job                         | Tool                             | Reason                                                                                                                             |
+| --------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime                     | Bun 1.0+                         | Performance, native SQLite, TypeScript native, Claude Code alignment                                                               |
+| Spec frontmatter parsing    | `gray-matter`                    | Synchronous, proven, zero deps                                                                                                     |
+| JSON Schema validation      | `ajv` + `ajv-formats`            | 50M weekly downloads. Proven.                                                                                                      |
+| Schema hashing              | `node:crypto` SHA-256            | Built-in, deterministic, fast                                                                                                      |
+| Storage — default           | `bun:sqlite`                     | Built-in to Bun, synchronous, zero deps                                                                                            |
+| Storage — roadmap           | Postgres via `DBStore` interface | Sprint 2                                                                                                                           |
+| Annotation detection        | Regex                            | Sprint 1. `@ferret-contract:` is a predictable pattern. No parser needed.                                                          |
+| Code shape extraction       | Tree-sitter TypeScript           | Sprint 1. Pulled forward from Sprint 3 — structural extraction without annotations is the primary use-case.                        |
+| Contract format (type-safe) | `.contract.ts` + Zod             | Sprint 8 (v0.3.0, shipped). TypeScript-native contracts: tsc enforces structural drift; ferret enforces invariants/value coverage. |
+| Zod → JSON Schema           | `zod-to-json-schema`             | Sprint 8 (v0.3.0, shipped). Converts Zod output schemas to JSON Schema for `shape_schema TEXT` in SQLite.                          |
+| Test runner                 | `bun test`                       | Native to runtime, fast, no config                                                                                                 |
 
 **Do not use WASM. Do not add LLMs to the default path. Ever.**
 
@@ -288,7 +288,7 @@ Sprints 3–7 (complete — v0.1.x through v0.2.0)
   source: blocks    — links code artifacts to contracts
   context.json      — versioned, auto-migrating
 
-Sprint 8 (planned — v0.3.0)
+Sprint 8 (complete — v0.3.0, shipped 2026-04-14)
   .contract.ts support  — TypeScript-native contract format via defineContract<T>
   Contract<T> type      — defineContract helper, isContract type guard
   ferret status         — current drift state, --json, --export STATUS.md
