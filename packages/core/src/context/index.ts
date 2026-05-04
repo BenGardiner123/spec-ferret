@@ -47,13 +47,12 @@ function normalizeContext(raw: unknown): FerretContext {
   // Migration: v2.0 → v3.0 (roadmap → pending)
   if (contextVersion === "2.0") {
     const legacy = candidate as Partial<LegacyFerretContextV2>;
-    const migratedContracts = (Array.isArray(legacy.contracts) ? legacy.contracts : []).map(
-      (c: unknown) => {
-        if (!c || typeof c !== 'object') return c;
-        const entry = c as Partial<ContextContract>;
-        return { ...entry, status: entry.status === 'roadmap' ? 'pending' : entry.status };
-      }
-    ) as ContextContract[];
+    const migratedContracts = (Array.isArray(legacy.contracts) ? legacy.contracts : [])
+      .filter((c: unknown): c is Record<string, unknown> => !!c && typeof c === 'object')
+      .map((entry) => ({
+        ...entry,
+        status: entry['status'] === 'roadmap' ? 'pending' : entry['status'],
+      })) as ContextContract[];
     return {
       version: CONTEXT_VERSION,
       schemaVersion: CONTEXT_SCHEMA_VERSION,
