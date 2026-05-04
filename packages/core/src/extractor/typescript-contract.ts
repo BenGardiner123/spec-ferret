@@ -2,7 +2,6 @@
 // Uses Bun's native import() — no ts-morph, no AST, no compile step.
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import { isContract } from '../contract.js';
 import { hashSchema } from './hash.js';
 import { mapToContractStatus } from './frontmatter.js';
@@ -35,8 +34,7 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
   for (const [exportName, exportValue] of Object.entries(mod)) {
     if (!isContract(exportValue)) continue;
 
-    // zod-to-json-schema@3 types reference zod@3's ZodTypeDef; cast is safe — runtime supports zod@4
-    const shape = zodToJsonSchema(z.object(exportValue.output) as any, { $refStrategy: 'none' });
+    const shape = z.toJSONSchema(z.object(exportValue.output as any), { reused: 'inline' });
     const shape_hash = hashSchema(shape);
 
     // Pass 2: resolve consumes → import IDs
