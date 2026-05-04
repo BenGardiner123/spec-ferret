@@ -22,6 +22,7 @@
 
 ## 📢 News
 
+- **2026-05-04** 🎉 Released **v0.5.0** — `source` field on `defineContract()` for cross-file upward drift (S63) and `roadmap` → `pending` status rename with `context.json` v3.0 (S62). See [CHANGELOG](CHANGELOG.md).
 - **2026-04-26** 🐛 Released **v0.4.2** — dogfooding bug fixes: zod@4 compatibility, tree-sitter native module dedup, `ContractRef` type for `consumes`/`dependsOn`, and `defineContract` now returns `schema: ZodObject<T>` for safe composition. See [release notes](https://github.com/BenGardiner123/spec-ferret/releases/tag/v0.4.2).
 - **2026-04-14** 🎉 Released **v0.4.0** — `ferret watch`, `ferret audit`, and exported watch/audit APIs in `@specferret/core`. See [CHANGELOG](CHANGELOG.md).
 - **2026-04-14** 🎉 Released **v0.3.0** — TypeScript-native `.contract.ts` format with `defineContract()`, Zod-based schemas, `ferret status` command, and automatic `.contract.ts` discovery. See [CHANGELOG](CHANGELOG.md).
@@ -457,6 +458,36 @@ export const jwtPayload = defineContract({
 });
 ```
 
+**Cross-file upward drift with `source` (v0.5.0)**
+
+Add a `source` field to point upward drift tracking at a named TypeScript type in your `src/` directory. SpecFerret will compare the Zod `output` schema against the live implementation type via tree-sitter on every `ferret lint`:
+
+```ts
+// contracts/keywords.contract.ts
+export const apiGetKeywords = defineContract({
+  id: 'api.getKeywords',
+  value: 'Keywords endpoint',
+  output: {
+    keywords: z.array(z.object({ keyword: z.string(), created_at: z.string() })),
+    limit: z.number(),
+    remaining: z.number(),
+  },
+  source: { file: 'src/routes/keywords.ts', symbol: 'KeywordsResponse' },
+});
+```
+
+```ts
+// src/routes/keywords.ts
+export type KeywordsResponse = {
+  keywords: Array<{ keyword: string; created_at: string }>;
+  limit: number;
+  remaining: number;
+};
+```
+
+Now `ferret lint` detects drift between the Zod contract and the actual `KeywordsResponse` type — two representations, one enforcement check, no markdown spec needed.
+```
+
 **Why `.contract.ts`?**
 
 - **`tsc` enforces your contract** — shape errors are compile errors, not runtime surprises
@@ -747,6 +778,8 @@ PRs welcome. The codebase is intentionally small and readable.
 
 - [ ] **Postgres store** — production-grade persistence without SQLite
 - [x] **`ferret audit`** — bidirectional drift report across all contracts (shipped v0.4.0)
+- [x] **`roadmap` → `pending` status rename** — contract lifecycle uses `pending` everywhere; `ferret lint` shows `✓` only when pending count is zero; `context.json` v3.0 (shipped v0.5.0 / S62)
+- [x] **`source` field on `defineContract()`** — cross-file upward drift for `.contract.ts` projects without the three-representation trap (shipped v0.5.0 / S63)
 - [ ] **`ferret upgrade`** — SQLite → Postgres migration command
 - [ ] **`ferret place`** — AI-powered feature placement against the graph
 - [ ] **`ferret benchmark`** — provider benchmarking for AI-assisted review
