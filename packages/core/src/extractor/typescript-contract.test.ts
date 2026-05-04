@@ -165,4 +165,12 @@ describe('extractFromContractFile', () => {
     assert.equal(result.contracts.length, 1);
     assert.equal(result.contracts[0].contractStatus, 'pending');
   });
+
+  it('S63: source field set → sourceFile is source.file and sourceSymbol is source.symbol', async () => {
+    const result = await extractFromContractFile(fixtures('source-field.fixture.ts'));
+
+    assert.equal(result.contracts.length, 1);
+    assert.equal(result.contracts[0].sourceFile, 'src/routes/keywords.ts');
+    assert.equal(result.contracts[0].sourceSymbol, 'KeywordsResponse');
+  });
 });
