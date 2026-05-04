@@ -20,7 +20,7 @@ export const auditCommand = new Command('audit')
 
       const healthy = s.needsReview === 0 && s.downwardBreaking === 0 && s.upwardBreaking === 0;
       process.stdout.write(`\n  ${healthy ? pc.green('✓') : pc.yellow('⚠')} ferret audit  ${s.totalContracts} contracts\n\n`);
-      process.stdout.write(`  stable ${s.stable}  needs-review ${s.needsReview}${s.roadmap > 0 ? `  roadmap ${s.roadmap}` : ''}\n\n`);
+      process.stdout.write(`  stable ${s.stable}  needs-review ${s.needsReview}${s.pending > 0 ? `  pending ${s.pending}` : ''}\n\n`);
 
       for (const item of report.downwardDrift) {
         process.stdout.write(`  ${pc.red('↓')} ${item.triggeredByContractId} → ${item.filePath}  (${item.impact}, depth ${item.depth})\n`);

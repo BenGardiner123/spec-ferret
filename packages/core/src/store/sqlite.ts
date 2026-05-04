@@ -88,6 +88,11 @@ export class SqliteStore implements DBStore {
     try {
       this.db.exec(`ALTER TABLE ferret_contracts ADD COLUMN code_source_symbol TEXT;`);
     } catch {}
+
+    try {
+      this.db.exec(`UPDATE ferret_contracts SET status = 'pending' WHERE status = 'roadmap';`);
+      this.db.exec(`UPDATE ferret_nodes SET status = 'pending' WHERE status = 'roadmap';`);
+    } catch {}
   }
 
   async close(): Promise<void> {

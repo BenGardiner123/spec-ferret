@@ -104,6 +104,7 @@ const CANONICAL_AGENT_RULES = `# SpecFerret Canonical Agent Rules
 - \`stable\` means no active drift and no pending review action.
 - \`needs-review\` means drift exists and downstream impact must be reviewed.
 - \`roadmap\` means planned but not yet active for enforcement.
+- \`pending\` means unverified — written but not yet confirmed as implemented.
 - \`blocked\` means merge must not proceed until review or remediation is complete.
 
 ## Enforcement Gates
@@ -383,16 +384,16 @@ ferret:
 ---
 \`\`\`
 
-## Roadmap contracts
+## Pending contracts
 
-Use \`status: roadmap\` for planned contracts not yet built.
-SpecFerret tracks them in the graph but does not enforce drift against them.
+Use \`status: pending\` (or omit status) for contracts not yet verified as implemented.
+SpecFerret tracks them in the graph but shows them as unverified (not blocking).
 
 \`\`\`yaml
 ferret:
   id: api.GET/recommendations
   type: api
-  status: roadmap
+  status: pending
   shape:
     response:
       type: array
@@ -452,6 +453,7 @@ ferret lint                                        # must return 0 before commit
 - \`stable\` — no drift, safe to merge
 - \`needs-review\` — drift exists, merge blocked
 - \`roadmap\` — planned, not enforced
+- \`pending\` — unverified, not enforced
 
 ## CI behaviour
 
@@ -593,7 +595,7 @@ applyTo: "**"
 
 When working in this repository:
 
-- Respect contract lifecycle states: \`stable\`, \`needs-review\`, \`roadmap\`, \`blocked\`.
+- Respect contract lifecycle states: \`stable\`, \`needs-review\`, \`pending\`, \`blocked\`.
 - Run \`ferret lint\` before and after contract-affecting edits.
 - If drift appears, use \`ferret review\` and document whether action is \`accept\`, \`update\`, or \`reject\`.
 - For automated flows, prefer machine output from \`ferret lint --ci\` and \`ferret review --json\`.

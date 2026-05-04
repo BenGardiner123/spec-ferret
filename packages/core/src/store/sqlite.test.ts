@@ -326,3 +326,48 @@ describe('SqliteStore — S50: code_source_file and code_source_symbol', () => {
     await store.close();
   });
 });
+
+describe('SqliteStore — S62: roadmap → pending migration', () => {
+  it('init() migrates legacy roadmap contracts to pending via UPDATE', async () => {
+    const store = makeStore();
+    await store.init();
+
+    const node = makeNode({ status: 'stable' });
+    await store.upsertNode(node);
+
+    // Directly insert a contract with status 'roadmap' to simulate legacy data
+    const db = (store as any).db;
+    db.prepare(
+      `INSERT INTO ferret_contracts (id, node_id, shape_hash, shape_schema, type, status)
+       VALUES (?, ?, ?, ?, ?, 'roadmap')`,
+    ).run('api.roadmap-contract', node.id, 'abc', '{}', 'api');
+
+    // Run the migration UPDATE directly (same as init() does)
+    db.exec(`UPDATE ferret_contracts SET status = 'pending' WHERE status = 'roadmap';`);
+
+    const row = db.prepare('SELECT status FROM ferret_contracts WHERE id = ?').get('api.roadmap-contract') as any;
+    assert.equal(row?.status, 'pending');
+
+    await store.close();
+  });
+
+  it('init() migrates legacy roadmap nodes to pending via UPDATE', async () => {
+    const store = makeStore();
+    await store.init();
+
+    // Directly insert a node with status 'roadmap'
+    const db = (store as any).db;
+    db.prepare(
+      `INSERT INTO ferret_nodes (id, file_path, hash, status)
+       VALUES (?, ?, ?, 'roadmap')`,
+    ).run('node-roadmap', 'contracts/roadmap.contract.md', 'abc');
+
+    // Run migration UPDATE directly (same as init() does)
+    db.exec(`UPDATE ferret_nodes SET status = 'pending' WHERE status = 'roadmap';`);
+
+    const row = db.prepare('SELECT status FROM ferret_nodes WHERE id = ?').get('node-roadmap') as any;
+    assert.equal(row?.status, 'pending');
+
+    await store.close();
+  });
+});

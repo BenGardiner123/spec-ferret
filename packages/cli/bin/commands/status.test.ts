@@ -54,12 +54,24 @@ describe('ferret status — S59 acceptance criteria', () => {
     assert.match(result.stdout, /ferret status\s+0 contracts/);
   });
 
-  stableIt('exits 0 on a clean project with stable contracts', () => {
-    // Remove init sample so we control exactly what's in the store
+  stableIt('fresh scan without status field shows contract as pending', () => {
     fs.rmSync(path.join(tmpDir, 'contracts', 'example.contract.md'), { force: true });
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'api.contract.md'),
       '---\nferret:\n  id: api.endpoint\n  type: api\n  shape:\n    type: object\n---\n',
+      'utf-8',
+    );
+    runFerret(tmpDir, ['scan']);
+    const result = runFerret(tmpDir, ['status']);
+    assert.equal(result.status, 0);
+    assert.match(result.stdout, /pending\s+1/);
+  });
+
+  stableIt('contract with status: active shows as stable after scan', () => {
+    fs.rmSync(path.join(tmpDir, 'contracts', 'example.contract.md'), { force: true });
+    fs.writeFileSync(
+      path.join(tmpDir, 'contracts', 'api.contract.md'),
+      '---\nferret:\n  id: api.endpoint\n  type: api\n  status: active\n  shape:\n    type: object\n---\n',
       'utf-8',
     );
     runFerret(tmpDir, ['scan']);
@@ -76,7 +88,7 @@ describe('ferret status — S59 acceptance criteria', () => {
     assert.ok('timestamp' in json, 'missing timestamp');
     assert.ok('total' in json, 'missing total');
     assert.ok('stable' in json, 'missing stable');
-    assert.ok('roadmap' in json, 'missing roadmap');
+    assert.ok('pending' in json, 'missing pending');
     assert.ok('needsReview' in json, 'missing needsReview');
     assert.ok('contracts' in json, 'missing contracts');
   });

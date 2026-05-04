@@ -84,6 +84,7 @@ export const lintCommand = new Command('lint')
       const contractCount = contracts.length;
       const ms = Math.round(performance.now() - start);
       const perfExceeded = perfBudgetMs !== undefined && ms > perfBudgetMs;
+      const pendingCount = contracts.filter((c) => c.status === 'pending').length;
       const hasIntegrityViolations =
         report.integrityViolations.unresolvedImports.length > 0 ||
         report.integrityViolations.selfImports.length > 0 ||
@@ -163,6 +164,7 @@ export const lintCommand = new Command('lint')
           consistent: report.consistent && !hasUpwardDrift,
           breaking,
           nonBreaking,
+          pending: pendingCount,
           durationMs: ms,
           flagged: report.flagged,
           upwardDrift,
@@ -190,9 +192,24 @@ export const lintCommand = new Command('lint')
         return;
       }
 
-      if (report.consistent && !hasUpwardDrift) {
+      if (report.consistent && !hasUpwardDrift && pendingCount === 0) {
         // Boris clean state — exactly one line
         process.stdout.write(pc.green('✓ ferret') + `  ${contractCount} contracts  0 drift  ${ms}ms\n`);
+        if (suggestionsEnabled) {
+          renderImportSuggestions(report.importSuggestions, true);
+        }
+        if (perfExceeded) {
+          process.stderr.write(`ferret: performance budget exceeded for lint (${ms}ms > ${perfBudgetMs}ms).\n`);
+          process.exit(1);
+          return;
+        }
+        process.exit(0);
+        return;
+      }
+
+      if (report.consistent && !hasUpwardDrift && pendingCount > 0) {
+        // Clean but unverified — no check mark, no green
+        process.stdout.write(`  ferret  ${contractCount} contracts  ${pendingCount} pending  0 drift  ${ms}ms\n`);
         if (suggestionsEnabled) {
           renderImportSuggestions(report.importSuggestions, true);
         }
@@ -281,7 +298,7 @@ type CommittedContext = {
     id: string;
     type: string;
     shape: unknown;
-    status: 'stable' | 'roadmap' | 'needs-review';
+    status: 'stable' | 'pending' | 'needs-review';
     specFile: string | null;
   }>;
   edges: Array<{
@@ -322,8 +339,8 @@ async function restoreCommittedBaseline(store: Awaited<ReturnType<typeof getStor
     const fileContracts = contractsByFilePath.get(filePath) ?? [];
     const nodeStatus = fileContracts.some((contract) => contract.status === 'needs-review' || context.needsReview.includes(contract.id))
       ? 'needs-review'
-      : fileContracts.some((contract) => contract.status === 'roadmap')
-        ? 'roadmap'
+      : fileContracts.some((contract) => contract.status === 'pending')
+        ? 'pending'
         : 'stable';
 
     await store.upsertNode({

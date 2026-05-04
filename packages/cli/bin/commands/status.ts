@@ -30,7 +30,7 @@ export const statusCommand = new Command('status')
 
       process.stdout.write(`ferret status  ${report.total} contract${report.total !== 1 ? 's' : ''}\n`);
       process.stdout.write(`\n  stable        ${report.stable}\n`);
-      if (report.roadmap > 0) process.stdout.write(`  roadmap       ${report.roadmap}\n`);
+      if (report.pending > 0) process.stdout.write(`  pending       ${report.pending}\n`);
       process.stdout.write(`  needs-review  ${report.needsReview}\n`);
       const needsReview = report.contracts.filter((c) => c.status === 'needs-review');
       if (needsReview.length > 0) {

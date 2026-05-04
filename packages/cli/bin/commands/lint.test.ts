@@ -509,14 +509,15 @@ describe('ferret lint — #30 severity classification', () => {
 
   stableIt('CI breaking/nonBreaking counts reflect trigger severity, not graph depth', () => {
     // Baseline: two contracts, downstream imports upstream
+    // Use status: active to ensure they start as stable (not pending)
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'upstream.contract.md'),
-      `---\nferret:\n  id: api.upstream\n  type: api\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n    required:\n      - name\n---\n`,
+      `---\nferret:\n  id: api.upstream\n  type: api\n  status: active\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n    required:\n      - name\n---\n`,
       'utf-8',
     );
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'downstream.contract.md'),
-      `---\nferret:\n  id: api.downstream\n  type: api\n  imports:\n    - api.upstream\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
+      `---\nferret:\n  id: api.downstream\n  type: api\n  status: active\n  imports:\n    - api.upstream\n  shape:\n    type: object\n    properties:\n      ok:\n        type: boolean\n---\n`,
       'utf-8',
     );
 
@@ -526,7 +527,7 @@ describe('ferret lint — #30 severity classification', () => {
     // Now introduce a breaking change to upstream (add a required field)
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'upstream.contract.md'),
-      `---\nferret:\n  id: api.upstream\n  type: api\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n      email:\n        type: string\n    required:\n      - name\n      - email\n---\n`,
+      `---\nferret:\n  id: api.upstream\n  type: api\n  status: active\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n      email:\n        type: string\n    required:\n      - name\n      - email\n---\n`,
       'utf-8',
     );
 
@@ -546,15 +547,16 @@ describe('ferret lint — #30 severity classification', () => {
   });
 
   stableIt('human output counts match trigger severity for mixed drift', () => {
-    // Baseline: two independent contracts
+    // Baseline: two contracts with status: active (so they start as stable)
+    // This ensures downstream nodes participate in breaking drift cascade
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'auth.contract.md'),
-      `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n    required:\n      - token\n---\n`,
+      `---\nferret:\n  id: api.auth\n  type: api\n  status: active\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n    required:\n      - token\n---\n`,
       'utf-8',
     );
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'profile.contract.md'),
-      `---\nferret:\n  id: api.profile\n  type: api\n  imports:\n    - api.auth\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n---\n`,
+      `---\nferret:\n  id: api.profile\n  type: api\n  status: active\n  imports:\n    - api.auth\n  shape:\n    type: object\n    properties:\n      name:\n        type: string\n---\n`,
       'utf-8',
     );
 
@@ -563,7 +565,7 @@ describe('ferret lint — #30 severity classification', () => {
     // Breaking change to auth (add required field)
     fs.writeFileSync(
       path.join(tmpDir, 'contracts', 'auth.contract.md'),
-      `---\nferret:\n  id: api.auth\n  type: api\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      refreshToken:\n        type: string\n    required:\n      - token\n      - refreshToken\n---\n`,
+      `---\nferret:\n  id: api.auth\n  type: api\n  status: active\n  shape:\n    type: object\n    properties:\n      token:\n        type: string\n      refreshToken:\n        type: string\n    required:\n      - token\n      - refreshToken\n---\n`,
       'utf-8',
     );
 

@@ -113,7 +113,7 @@ describe("writeContext — Task 5", () => {
     await store.close();
   });
 
-  it('contains version "2.0"', async () => {
+  it('contains version "3.0"', async () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const { store } = await makeStoreWithData(tmpDir);
@@ -123,7 +123,7 @@ describe("writeContext — Task 5", () => {
     const ctx = JSON.parse(
       fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
     ) as FerretContext;
-    assert.equal(ctx.version, "2.0");
+    assert.equal(ctx.version, "3.0");
 
     await store.close();
   });
@@ -143,7 +143,7 @@ describe("writeContext — Task 5", () => {
     await store.close();
   });
 
-  it("readContextFile migrates known legacy V2 payload without schemaVersion", () => {
+  it("readContextFile migrates v2.0 payload to v3.0 (no schemaVersion)", () => {
     const tmpDir = makeTmpDir();
     tmps.push(tmpDir);
     const ferretDir = path.join(tmpDir, ".ferret");
@@ -166,7 +166,7 @@ describe("writeContext — Task 5", () => {
     );
 
     const context = readContextFile(contextPath);
-    assert.equal(context.version, "2.0");
+    assert.equal(context.version, "3.0");
     assert.equal(context.schemaVersion, CONTEXT_SCHEMA_VERSION);
     assert.deepEqual(context.contracts, []);
     assert.deepEqual(context.edges, []);
@@ -207,7 +207,7 @@ describe("writeContext — Task 5", () => {
     fs.writeFileSync(
       contextPath,
       JSON.stringify({
-        version: "2.0",
+        version: "3.0",
         schemaVersion: "9.0.0",
         generated: new Date().toISOString(),
         contracts: [],
@@ -270,5 +270,34 @@ describe("writeContext — Task 5", () => {
     assert.equal(edge!.from, "contracts/search.contract.md");
 
     await store.close();
+  });
+
+  it("readContextFile v2.0 migration: roadmap entries become pending", () => {
+    const tmpDir = makeTmpDir();
+    tmps.push(tmpDir);
+    const ferretDir = path.join(tmpDir, ".ferret");
+    fs.mkdirSync(ferretDir, { recursive: true });
+    const contextPath = path.join(ferretDir, "context.json");
+    fs.writeFileSync(
+      contextPath,
+      JSON.stringify({
+        version: "2.0",
+        generated: "2026-01-01T00:00:00.000Z",
+        contracts: [
+          { id: "api.roadmap", type: "api", shape: {}, status: "roadmap", specFile: "contracts/api.contract.md", codeFile: null },
+          { id: "api.stable", type: "api", shape: {}, status: "stable", specFile: "contracts/stable.contract.md", codeFile: null },
+        ],
+        edges: [],
+        needsReview: [],
+      }),
+      "utf-8",
+    );
+
+    const context = readContextFile(contextPath);
+    assert.equal(context.version, "3.0");
+    const roadmapContract = context.contracts.find((c) => c.id === "api.roadmap");
+    const stableContract = context.contracts.find((c) => c.id === "api.stable");
+    assert.equal(roadmapContract?.status, "pending");
+    assert.equal(stableContract?.status, "stable");
   });
 });
