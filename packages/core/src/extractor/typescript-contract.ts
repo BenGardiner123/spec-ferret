@@ -64,8 +64,8 @@ export async function extractFromContractFile(filePath: string): Promise<Extract
       shape_hash,
       imports,
       contractStatus: mapToContractStatus(exportValue.status),
-      sourceFile: filePath,
-      sourceSymbol: exportName,
+      sourceFile: exportValue.source?.file ?? filePath,
+      sourceSymbol: exportValue.source?.symbol ?? exportName,
     });
   }
 
