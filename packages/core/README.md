@@ -11,7 +11,7 @@ Core engine for SpecFerret contract extraction, validation, graph reconciliation
 
 It includes:
 
-- Store implementations (`sqlite`, `postgres`)
+- Store implementations (`sqlite`; postgres on roadmap)
 - Frontmatter extraction and schema validation
 - Reconciler logic for direct/transitive impact
 - Context graph generation utilities

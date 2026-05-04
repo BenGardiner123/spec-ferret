@@ -83,6 +83,7 @@ SpecFerret is built in five strict layers. No layer reaches into another layer's
 ┌─────────────────────────────────────────────────┐
 │  CLI                                            │
 │  ferret.ts · init · scan · lint · review        │
+│  extract · status · watch · audit               │
 │  Reads config, calls core, prints, exits.       │
 │  Max 50 lines per command file.                 │
 ├─────────────────────────────────────────────────┤
@@ -95,7 +96,7 @@ SpecFerret is built in five strict layers. No layer reaches into another layer's
 │  Pure function. No side effects. No I/O.        │
 ├─────────────────────────────────────────────────┤
 │  Extractor                                      │
-│  .contract.md (gray-matter) + .contract.ts      │
+│  .contract.md · .contract.ts · .ts (tree-sitter)│
 │  Never talks to the store or the graph.         │
 ├─────────────────────────────────────────────────┤
 │  Store                                          │
@@ -337,6 +338,8 @@ Mixed repository mode is fully supported: inferred and annotated contracts can c
 | `ferret status`          | Report current contract drift state (read-only)                              |
 | `ferret status --json`   | Machine-readable status JSON (always exits 0)                                |
 | `ferret status --export` | Write STATUS.md to the project root                                          |
+| `ferret watch`           | Watch contract files and re-lint on change                                   |
+| `ferret audit`           | Full bidirectional drift report (downward + upward + integrity)              |
 | `ferret diagnostics`     | Print import graph diagnostics                                               |
 
 <details>
@@ -718,14 +721,16 @@ specferret/
 │   ├── core/               @specferret/core
 │   │   └── src/
 │   │       ├── store/      # DBStore interface · SQLite · Postgres · factory
-│   │       ├── extractor/  # frontmatter.ts · validator.ts · hash.ts
+│   │       ├── extractor/  # frontmatter.ts · typescript.ts · typescript-contract.ts · validator.ts · upward-classifier.ts · hash.ts
 │   │       ├── reconciler/ # BFS engine — dirty node flagging
 │   │       ├── context/    # context.json writer
+│   │       ├── watch/      # file watcher
+│   │       ├── audit/      # bidirectional audit report
 │   │       ├── config.ts   # project config loader
 │   │       └── index.ts    # public re-exports
 │   └── cli/                @specferret/cli
 │       └── bin/
-│           ├── commands/   # init · scan · lint · review · extract · status
+│           ├── commands/   # init · scan · lint · review · extract · status · watch · audit
 │           └── ferret.ts   # CLI entrypoint
 ├── apps/
 │   └── site/               specferret.dev (Astro)
@@ -741,7 +746,7 @@ specferret/
 PRs welcome. The codebase is intentionally small and readable.
 
 - [ ] **Postgres store** — production-grade persistence without SQLite
-- [ ] **`ferret audit`** — bidirectional drift report across all contracts
+- [x] **`ferret audit`** — bidirectional drift report across all contracts (shipped v0.4.0)
 - [ ] **`ferret upgrade`** — SQLite → Postgres migration command
 - [ ] **`ferret place`** — AI-powered feature placement against the graph
 - [ ] **`ferret benchmark`** — provider benchmarking for AI-assisted review
