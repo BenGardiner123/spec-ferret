@@ -191,3 +191,144 @@ describe("ferret scan — #31 error handling", () => {
     assert.match(result.stderr, /scan failed for contracts[\\/]bad\.contract\.md/);
   });
 });
+
+describe("ferret scan — auto-inference of stable status from source", () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ferret-scan-status-"));
+    runFerret(tmpDir, ["init", "--no-hook"]);
+    fs.mkdirSync(path.join(tmpDir, "src"), { recursive: true });
+  });
+
+  afterEach(async () => {
+    await cleanupTmpDir(tmpDir);
+  });
+
+  it("source resolves clean → contract auto-promoted to stable", () => {
+    // Implementation file in src/ (outside specDir so it is not scanned as a contract)
+    fs.writeFileSync(
+      path.join(tmpDir, "src", "impl.contract.ts"),
+      `export const implContract = { value: 'Implementation', output: {} };\n`,
+      "utf-8",
+    );
+
+    // Contract with an empty declared shape pointing to the impl above
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "main.contract.md"),
+      [
+        "---",
+        "ferret:",
+        "  id: api.main",
+        "  type: api",
+        "  shape: {}",
+        "  source:",
+        "    file: src/impl.contract.ts",
+        "    symbol: implContract",
+        "---",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["scan"]);
+    assert.equal(result.status, 0, `scan failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+
+    const context = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
+    ) as { contracts: Array<{ id: string; status: string }> };
+    const contract = context.contracts.find((c) => c.id === "api.main");
+    assert.ok(contract, "api.main not found in context.json");
+    assert.equal(contract.status, "stable", `expected stable but got ${contract.status}`);
+  });
+
+  it("source shape mismatches declared → contract stays pending", () => {
+    // Implementation has an empty shape — does not match the declared required field
+    fs.writeFileSync(
+      path.join(tmpDir, "src", "impl2.contract.ts"),
+      `export const impl2Contract = { value: 'Impl', output: {} };\n`,
+      "utf-8",
+    );
+
+    // Contract declares a required field the impl does not have → breaking upward drift → stays pending
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "mismatch.contract.md"),
+      [
+        "---",
+        "ferret:",
+        "  id: api.mismatch",
+        "  type: api",
+        "  shape:",
+        "    type: object",
+        "    properties:",
+        "      name:",
+        "        type: string",
+        "    required:",
+        "      - name",
+        "  source:",
+        "    file: src/impl2.contract.ts",
+        "    symbol: impl2Contract",
+        "---",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["scan"]);
+    assert.equal(result.status, 0, `scan failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+
+    const context = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
+    ) as { contracts: Array<{ id: string; status: string }> };
+    const contract = context.contracts.find((c) => c.id === "api.mismatch");
+    assert.ok(contract, "api.mismatch not found in context.json");
+    assert.equal(contract.status, "pending", `expected pending but got ${contract.status}`);
+  });
+
+  it("no source field → contract stays pending (regression guard)", () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "nosource.contract.md"),
+      [
+        "---",
+        "ferret:",
+        "  id: api.nosource",
+        "  type: api",
+        "  shape: {}",
+        "---",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["scan"]);
+    assert.equal(result.status, 0, `scan failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+
+    const context = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
+    ) as { contracts: Array<{ id: string; status: string }> };
+    const contract = context.contracts.find((c) => c.id === "api.nosource");
+    assert.ok(contract, "api.nosource not found in context.json");
+    assert.equal(contract.status, "pending", `expected pending but got ${contract.status}`);
+  });
+
+  it(".contract.ts without explicit source stays pending (self-reference guard)", () => {
+    // A .contract.ts without an explicit source.file has sourceFile default to the file
+    // itself. The guard normalizedSourceFile !== relFile must block promotion so that
+    // no contract ever auto-promotes by comparing its shape against itself.
+    fs.writeFileSync(
+      path.join(tmpDir, "contracts", "self.contract.ts"),
+      `export const selfContract = { value: 'Self', output: {} };\n`,
+      "utf-8",
+    );
+
+    const result = runFerret(tmpDir, ["scan"]);
+    assert.equal(result.status, 0, `scan failed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
+
+    const context = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".ferret", "context.json"), "utf-8"),
+    ) as { contracts: Array<{ id: string; status: string }> };
+    const contract = context.contracts.find((c) => c.id === "selfContract");
+    assert.ok(contract, "selfContract not found in context.json");
+    assert.equal(contract.status, "pending", `expected pending but got ${contract.status}`);
+  });
+});
