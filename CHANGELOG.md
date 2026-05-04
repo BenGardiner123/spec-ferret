@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-04
+
+### Added
+
+- **Auto-infer `stable` status from `source` during `ferret scan`** — when a contract declares `source: { file, symbol }` pointing to an external implementation file, `ferret scan` now runs an upward drift check inline and auto-promotes the contract from `pending` → `stable` when the source resolves cleanly (NOOP). No manual `status: active` declaration needed.
+  - Contracts with no `source` field are unaffected — they stay `pending` as before.
+  - Contracts whose source file does not yet exist stay `pending` safely (Gate 2 skips missing files).
+  - `.contract.ts` files without an explicit `source.file` are guarded against trivial self-promotion.
+  - `status: active` (manual declaration) continues to work unchanged — the new block only fires on `pending` contracts.
+
 ## [0.5.0] - 2026-05-04
 
 ### Added
