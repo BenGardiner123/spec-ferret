@@ -2,17 +2,16 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, it, beforeEach, afterEach } from 'bun:test';
+import { runFerretCli } from '../test-utils/run-ferret';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, '../ferret.ts');
 
-function runFerret(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
-  return spawnSync(process.execPath, [ferretBin, ...args], {
+function runFerret(cwd: string, args: string[]): ReturnType<typeof runFerretCli> {
+  return runFerretCli(ferretBin, args, {
     cwd,
-    encoding: 'utf-8',
     timeout: 15_000,
   });
 }
@@ -37,16 +36,14 @@ async function cleanupTmpDir(tmpDir: string): Promise<void> {
 
 describe('ferret watch — command registration', () => {
   stableIt('appears in ferret --help output', () => {
-    const result = spawnSync(process.execPath, [ferretBin, '--help'], {
-      encoding: 'utf-8',
+    const result = runFerretCli(ferretBin, ['--help'], {
       timeout: 10_000,
     });
     assert.match(result.stdout, /watch/);
   });
 
   stableIt('ferret watch --help shows description and options', () => {
-    const result = spawnSync(process.execPath, [ferretBin, 'watch', '--help'], {
-      encoding: 'utf-8',
+    const result = runFerretCli(ferretBin, ['watch', '--help'], {
       timeout: 10_000,
     });
     assert.match(result.stdout, /Watch contract files/);

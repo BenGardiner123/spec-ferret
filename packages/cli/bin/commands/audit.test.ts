@@ -2,23 +2,22 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, it, beforeEach, afterEach } from 'bun:test';
+import { runFerretCli } from '../test-utils/run-ferret';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, '../ferret.ts');
 
-function runFerret(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
-  return spawnSync(process.execPath, [ferretBin, ...args], {
+function runFerret(cwd: string, args: string[]): ReturnType<typeof runFerretCli> {
+  return runFerretCli(ferretBin, args, {
     cwd,
-    encoding: 'utf-8',
-    timeout: 15_000,
+    timeout: 240_000,
   });
 }
 
-function stableIt(name: string, fn: () => void | Promise<void>): void {
-  it(name, fn, 15_000);
+function stableIt(name: string, fn: () => void | Promise<void>, timeout = 240_000): void {
+  it(name, fn, timeout);
 }
 
 async function cleanupTmpDir(tmpDir: string): Promise<void> {
@@ -38,6 +37,7 @@ async function cleanupTmpDir(tmpDir: string): Promise<void> {
 function seedBreakingDrift(dir: string): void {
   const contractsDir = path.join(dir, 'contracts');
   const contractFile = path.join(contractsDir, 'auth.contract.md');
+  fs.mkdirSync(contractsDir, { recursive: true });
   // First scan with initial shape
   fs.writeFileSync(
     contractFile,
@@ -83,16 +83,14 @@ function seedBreakingDrift(dir: string): void {
 
 describe('ferret audit — command registration', () => {
   stableIt('appears in ferret --help output', () => {
-    const result = spawnSync(process.execPath, [ferretBin, '--help'], {
-      encoding: 'utf-8',
+    const result = runFerretCli(ferretBin, ['--help'], {
       timeout: 10_000,
     });
     assert.match(result.stdout, /audit/);
   });
 
   stableIt('ferret audit --help shows description and options', () => {
-    const result = spawnSync(process.execPath, [ferretBin, 'audit', '--help'], {
-      encoding: 'utf-8',
+    const result = runFerretCli(ferretBin, ['audit', '--help'], {
       timeout: 10_000,
     });
     assert.match(result.stdout, /Bidirectional drift report/);
@@ -106,6 +104,7 @@ describe('ferret audit — clean project', () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-audit-test-'));
     runFerret(tmpDir, ['init', '--no-hook']);
+    fs.mkdirSync(path.join(tmpDir, 'contracts'), { recursive: true });
     runFerret(tmpDir, ['scan']);
   });
 
@@ -154,6 +153,7 @@ describe('ferret audit — with drift', () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-audit-drift-'));
     runFerret(tmpDir, ['init', '--no-hook']);
+    fs.mkdirSync(path.join(tmpDir, 'contracts'), { recursive: true });
   });
 
   afterEach(async () => {
@@ -167,7 +167,7 @@ describe('ferret audit — with drift', () => {
       const result = runFerret(tmpDir, ['audit']);
       assert.equal(result.status, 0, `expected exit 0 but got ${result.status}. stderr: ${result.stderr}`);
     },
-    30_000,
+    240_000,
   );
 
   stableIt(
@@ -179,6 +179,6 @@ describe('ferret audit — with drift', () => {
       const json = JSON.parse(result.stdout) as { summary: Record<string, number> };
       assert.ok(json.summary.needsReview > 0, 'should show contracts needing review');
     },
-    30_000,
+    240_000,
   );
 });

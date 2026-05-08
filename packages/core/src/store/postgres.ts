@@ -2,22 +2,14 @@
 // This stub exists so factory.ts compiles.
 // Do not use this in production until Sprint 2 is complete.
 
-import type {
-  DBStore,
-  FerretNode,
-  FerretContract,
-  FerretDependency,
-  FerretReconciliationLog,
-  FerretPlacementDecision,
-  NodeStatus,
-} from "./types.js";
+import type { DBStore, FerretNode, FerretContract, FerretDependency, FerretReconciliationLog, FerretPlacementDecision, NodeStatus } from './types.js';
 
 export class PostgresStore implements DBStore {
   constructor(private connectionString: string) {}
 
   private notImplemented(): never {
     throw new Error(
-      "PostgresStore: Postgres support is Sprint 2 roadmap. " +
+      'PostgresStore: Postgres support is Sprint 2 roadmap. ' +
         'Set FERRET_DATABASE_URL to use Postgres, or remove the store: "postgres" config to use SQLite.',
     );
   }
@@ -43,10 +35,7 @@ export class PostgresStore implements DBStore {
   async upsertDependency(_dependency: FerretDependency): Promise<void> {
     this.notImplemented();
   }
-  async replaceDependenciesForSourceNode(
-    _sourceNodeId: string,
-    _targetNodeIds: string[],
-  ): Promise<void> {
+  async replaceDependenciesForSourceNode(_sourceNodeId: string, _targetNodeIds: string[]): Promise<void> {
     this.notImplemented();
   }
   async getNodes(): Promise<FerretNode[]> {
@@ -73,12 +62,13 @@ export class PostgresStore implements DBStore {
   async getReconciliationLogs(): Promise<FerretReconciliationLog[]> {
     this.notImplemented();
   }
-  async insertPlacementDecision(
-    _decision: FerretPlacementDecision,
-  ): Promise<void> {
+  async insertPlacementDecision(_decision: FerretPlacementDecision): Promise<void> {
     this.notImplemented();
   }
   async getPlacementDecisions(): Promise<FerretPlacementDecision[]> {
+    this.notImplemented();
+  }
+  async pruneStaleNodes(_keepFilePaths: Set<string>): Promise<number> {
     this.notImplemented();
   }
 }

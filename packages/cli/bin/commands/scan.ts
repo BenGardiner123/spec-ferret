@@ -3,7 +3,18 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import { glob } from 'glob';
-import { extractFromSpecFile, extractFromContractFile, extractContractsFromTypeScript, compareSchemas, classifyUpwardDrift, writeContext, getStore, loadConfig, findProjectRoot, hashSchema } from '@specferret/core';
+import {
+  extractFromSpecFile,
+  extractFromContractFile,
+  extractContractsFromTypeScript,
+  compareSchemas,
+  classifyUpwardDrift,
+  writeContext,
+  getStore,
+  loadConfig,
+  findProjectRoot,
+  hashSchema,
+} from '@specferret/core';
 import type { ExtractionResult, ContractStatus } from '@specferret/core';
 import { randomUUID } from 'node:crypto';
 import pc from 'picocolors';
@@ -168,17 +179,12 @@ export const scanCommand = new Command('scan')
           // without this guard, every .contract.ts without explicit source would trivially pass
           // NOOP by comparing its own shape against itself).
           const normalizedSourceFile = contract.sourceFile
-            ? (path.isAbsolute(contract.sourceFile)
-                ? path.relative(root, contract.sourceFile).replace(/\\/g, '/')
-                : contract.sourceFile)
+            ? path.isAbsolute(contract.sourceFile)
+              ? path.relative(root, contract.sourceFile).replace(/\\/g, '/')
+              : contract.sourceFile
             : undefined;
 
-          if (
-            nodeStatus === 'pending' &&
-            normalizedSourceFile &&
-            contract.sourceSymbol &&
-            normalizedSourceFile !== relFile.replace(/\\/g, '/')
-          ) {
+          if (nodeStatus === 'pending' && normalizedSourceFile && contract.sourceSymbol && normalizedSourceFile !== relFile.replace(/\\/g, '/')) {
             const sourceAbsPath = path.resolve(root, normalizedSourceFile);
             if (fs.existsSync(sourceAbsPath)) {
               try {
@@ -195,13 +201,7 @@ export const scanCommand = new Command('scan')
                 }
 
                 if (codeShape !== undefined) {
-                  const upward = classifyUpwardDrift(
-                    contract.id,
-                    contract.shape,
-                    codeShape,
-                    normalizedSourceFile,
-                    contract.sourceSymbol,
-                  );
+                  const upward = classifyUpwardDrift(contract.id, contract.shape, codeShape, normalizedSourceFile, contract.sourceSymbol);
                   if (upward.driftClass === 'NOOP') {
                     nodeStatus = 'stable';
                   }
@@ -243,6 +243,19 @@ export const scanCommand = new Command('scan')
         }
 
         await store.replaceDependenciesForSourceNode(nodeId, [...importIds]);
+      }
+
+      // Prune stale nodes on a full scan (not on explicit-file or --changed partial scans).
+      // This removes contracts for files that were deleted since the last run so they no
+      // longer appear in context.json or contribute pending counts.
+      const isFullScan = files.length === 0 && !options.changed;
+      if (isFullScan) {
+        const pruned = await store.pruneStaleNodes(new Set(filesToScan));
+        if (pruned > 0) {
+          process.stderr.write(
+            `⚠ ferret: pruned ${pruned} stale node${pruned !== 1 ? 's' : ''} (contract file${pruned !== 1 ? 's' : ''} removed from disk)\n`,
+          );
+        }
       }
 
       // Always write context.json after scan

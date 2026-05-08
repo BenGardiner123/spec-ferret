@@ -371,13 +371,18 @@ async function runScan(root: string, options: { changed?: boolean; force?: boole
   const args = ['node', 'scan'];
   if (options.changed) args.push('--changed');
   if (options.force) args.push('--force');
-  // Silently suppress scan output for lint's own run
+  // Silently suppress scan output for lint's own run. Lint owns the user-facing
+  // contract for both stdout and stderr, so scan's progress or prune notices
+  // should not leak into lint output.
   const savedWrite = process.stdout.write.bind(process.stdout);
+  const savedErrWrite = process.stderr.write.bind(process.stderr);
   process.stdout.write = () => true;
+  process.stderr.write = () => true;
   try {
     await scanCommand.parseAsync(args, { from: 'node' });
   } finally {
     process.stdout.write = savedWrite;
+    process.stderr.write = savedErrWrite;
   }
 }
 

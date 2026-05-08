@@ -98,4 +98,11 @@ export interface DBStore {
   insertPlacementDecision(decision: FerretPlacementDecision): Promise<void>;
 
   getPlacementDecisions(): Promise<FerretPlacementDecision[]>;
+
+  /**
+   * Removes nodes whose file_path is NOT in keepFilePaths, along with their
+   * contracts and outgoing dependency edges. Only called during a full scan.
+   * Returns the number of nodes pruned.
+   */
+  pruneStaleNodes(keepFilePaths: Set<string>): Promise<number>;
 }

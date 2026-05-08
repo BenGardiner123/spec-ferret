@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-05-08
+
+### Fixed
+
+- Deleted contract files are now pruned from the SQLite graph and `.ferret/context.json` on the next full `ferret scan`, preventing stale contracts from surviving after removal.
+- `ferret lint --ci` no longer leaks internal prune warnings into machine-readable CI stderr output.
+
+### Changed
+
+- The repo test entry now runs Bun tests one file at a time for more reliable CLI integration coverage on Windows and in CI.
+
 ## [0.6.0] - 2026-05-04
 
 ### Added
