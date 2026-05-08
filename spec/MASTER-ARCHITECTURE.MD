@@ -296,6 +296,29 @@ That means:
 - one file can depend on many contracts
 - reconciliation is contract-triggered, but node statuses are what get flagged
 
+### How SQLite stores the graph
+
+SQLite is not used as a native graph database here. It stores the graph as normal relational tables in `.ferret/graph.db`.
+
+The shape is:
+
+- file -> node row in `ferret_nodes`
+- node -> one or more contract rows in `ferret_contracts`
+- source node -> dependency rows in `ferret_dependencies` -> target contract IDs
+
+In practical terms:
+
+- `ferret_nodes` is the file-level table
+- `ferret_contracts` is the contract-level table
+- `ferret_dependencies` is the edge table
+
+That means the graph is persisted in SQLite, but SQLite does not do the graph reasoning itself. The reconciler loads nodes, contracts, and dependencies into memory and then performs the downstream walk and integrity checks.
+
+This split is important:
+
+- SQLite remembers the graph
+- the reconciler interprets the graph
+
 ### Migration details
 
 The SQLite store migrates legacy `roadmap` statuses to `pending` on init.
