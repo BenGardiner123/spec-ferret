@@ -236,4 +236,33 @@ export class SqliteStore implements DBStore {
   async getPlacementDecisions(): Promise<FerretPlacementDecision[]> {
     return this.db!.prepare('SELECT id, node_id, placed_by, reasoning FROM ferret_placement_decisions').all() as unknown as FerretPlacementDecision[];
   }
+
+  async pruneStaleNodes(keepFilePaths: Set<string>): Promise<number> {
+    if (keepFilePaths.size === 0) {
+      // All files deleted — remove everything
+      const count = (this.db!.prepare('SELECT COUNT(*) as n FROM ferret_nodes').get() as any).n as number;
+      this.db!.exec(`DELETE FROM ferret_dependencies; DELETE FROM ferret_contracts; DELETE FROM ferret_nodes;`);
+      return count;
+    }
+
+    // Use json_each to avoid the SQLite 999-variable limit on large repos
+    const keepJson = JSON.stringify([...keepFilePaths]);
+    const staleNodes = this.db!.prepare(`SELECT id FROM ferret_nodes WHERE file_path NOT IN (SELECT value FROM json_each(?))`).all(
+      keepJson,
+    ) as Array<{ id: string }>;
+
+    if (staleNodes.length === 0) return 0;
+
+    const staleIds = staleNodes.map((n) => n.id);
+    const staleIdsJson = JSON.stringify(staleIds);
+
+    const prune = this.db!.transaction(() => {
+      this.db!.prepare(`DELETE FROM ferret_dependencies WHERE source_node_id IN (SELECT value FROM json_each(?))`).run(staleIdsJson);
+      this.db!.prepare(`DELETE FROM ferret_contracts WHERE node_id IN (SELECT value FROM json_each(?))`).run(staleIdsJson);
+      this.db!.prepare(`DELETE FROM ferret_nodes WHERE id IN (SELECT value FROM json_each(?))`).run(staleIdsJson);
+    });
+
+    prune();
+    return staleIds.length;
+  }
 }

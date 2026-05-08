@@ -12,7 +12,7 @@
     "apps/site"
   ],
   "scripts": {
-    "test": "bun test",
+    "test": "bun scripts/test-all.ts",
     "build": "bun run --filter '*' build",
     "site:dev": "bun run --filter @specferret/site dev",
     "site:build": "bun run --filter @specferret/site build",

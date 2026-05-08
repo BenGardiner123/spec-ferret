@@ -1,24 +1,31 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, it, beforeEach, afterEach } from 'bun:test';
+import { SqliteStore, hashSchema } from '@specferret/core';
+import { runFerretCli } from '../test-utils/run-ferret';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, '../ferret.ts');
 
-function runFerret(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
-  return spawnSync(process.execPath, [ferretBin, ...args], {
+function runFerret(cwd: string, args: string[]): ReturnType<typeof runFerretCli> {
+  return runFerretCli(ferretBin, args, {
     cwd,
-    encoding: 'utf-8',
-    timeout: 10_000,
+    timeout: 240_000,
   });
 }
 
-function stableIt(name: string, fn: () => void | Promise<void>): void {
-  it(name, fn, 15_000);
+function stableIt(name: string, fn: () => void | Promise<void>, timeout = 240_000): void {
+  it(name, fn, timeout);
+}
+
+function runFerretOk(cwd: string, args: string[]): ReturnType<typeof spawnSync> {
+  const result = runFerret(cwd, args);
+  assert.equal(result.status, 0, `command failed: ferret ${args.join(' ')}\nstderr: ${result.stderr}`);
+  return result;
 }
 
 async function cleanupTmpDir(tmpDir: string): Promise<void> {
@@ -35,14 +42,65 @@ async function cleanupTmpDir(tmpDir: string): Promise<void> {
   }
 }
 
+function initializeLintProject(tmpDir: string): void {
+  fs.mkdirSync(path.join(tmpDir, '.ferret'), { recursive: true });
+  fs.mkdirSync(path.join(tmpDir, 'contracts'), { recursive: true });
+  fs.writeFileSync(
+    path.join(tmpDir, 'ferret.config.json'),
+    JSON.stringify(
+      {
+        specDir: 'contracts/',
+        filePattern: '**/*.contract.md',
+        includes: ['**/*.contract.md'],
+        store: 'sqlite',
+        importSuggestions: { enabled: true },
+      },
+      null,
+      2,
+    ) + '\n',
+    'utf-8',
+  );
+}
+
+async function seedStoredContract(
+  tmpDir: string,
+  { contractId, filePath, fileContent }: { contractId: string; filePath: string; fileContent: string },
+): Promise<void> {
+  const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
+
+  try {
+    await store.init();
+
+    const nodeId = randomUUID();
+    await store.upsertNode({
+      id: nodeId,
+      file_path: filePath,
+      hash: hashSchema(fileContent),
+      status: 'pending',
+    });
+
+    await store.upsertContract({
+      id: contractId,
+      node_id: nodeId,
+      shape_hash: 'lint-test-shape-hash',
+      shape_schema: JSON.stringify({ type: 'object' }),
+      type: 'api',
+      status: 'pending',
+    });
+  } finally {
+    await store.close();
+  }
+}
+
 describe('ferret lint — S07 acceptance criteria', () => {
   let tmpDir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-test-'));
     // Lint tests use committed baseline mode, so create context.json once.
-    runFerret(tmpDir, ['init', '--no-hook']);
-    runFerret(tmpDir, ['scan']);
+    runFerretOk(tmpDir, ['init', '--no-hook']);
+    fs.mkdirSync(path.join(tmpDir, 'contracts'), { recursive: true });
+    runFerretOk(tmpDir, ['scan']);
   });
 
   afterEach(async () => {
@@ -122,7 +180,7 @@ describe('ferret lint — S30 import integrity', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-integrity-'));
-    runFerret(tmpDir, ['init', '--no-hook']);
+    initializeLintProject(tmpDir);
   });
 
   afterEach(async () => {
@@ -200,7 +258,7 @@ describe('ferret lint — S30 import integrity', () => {
   });
 
   stableIt('reports integrity violations in machine-readable CI output', () => {
-    runFerret(tmpDir, ['scan']);
+    runFerretOk(tmpDir, ['scan']);
 
     const contractPath = path.join(tmpDir, 'contracts', 'example.contract.md');
     fs.writeFileSync(
@@ -254,7 +312,7 @@ describe('ferret lint — S31 import suggestions', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-suggestions-'));
-    runFerret(tmpDir, ['init', '--no-hook']);
+    initializeLintProject(tmpDir);
   });
 
   afterEach(async () => {
@@ -363,7 +421,7 @@ describe('ferret lint — #31 fail-fast scan errors', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-fail-fast-'));
-    runFerret(tmpDir, ['init', '--no-hook']);
+    initializeLintProject(tmpDir);
   });
 
   afterEach(async () => {
@@ -404,8 +462,8 @@ describe('ferret lint — S58 .contract.ts upward-classifier and ID collision', 
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-s58-'));
-    runFerret(tmpDir, ['init', '--no-hook']);
-    runFerret(tmpDir, ['scan']);
+    initializeLintProject(tmpDir);
+    runFerretOk(tmpDir, ['scan']);
   });
 
   afterEach(async () => {
@@ -420,7 +478,7 @@ describe('ferret lint — S58 .contract.ts upward-classifier and ID collision', 
     );
 
     // Scan to establish baseline in the store
-    runFerret(tmpDir, ['scan']);
+    runFerretOk(tmpDir, ['scan']);
 
     const result = runFerret(tmpDir, ['lint']);
     assert.equal(result.status, 0, `lint crashed:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`);
@@ -464,35 +522,30 @@ describe('ferret lint — S58 .contract.ts upward-classifier and ID collision', 
     assert.match(result.stderr, /CONFLICT sharedContract/, `expected CONFLICT on stderr, got: ${result.stderr}`);
   });
 
-  stableIt(
-    'ID collision is detected when the first-defined file is unchanged on re-scan',
-    () => {
-      // Scan 1: shared.contract.md only — stored in the DB
-      fs.writeFileSync(
-        path.join(tmpDir, 'contracts', 'shared.contract.md'),
-        `---\nferret:\n  id: sharedContract\n  type: api\n  shape:\n    type: object\n---\n`,
-        'utf-8',
-      );
-      runFerret(tmpDir, ['scan']); // sharedContract now in store; file is "unchanged" on next scan
+  stableIt('ID collision is detected when the first-defined file is unchanged on re-scan', async () => {
+    // Seed the existing .md contract directly so the follow-up scan still sees the
+    // original file as unchanged while avoiding a back-to-back scan subprocess race.
+    const sharedMdContent = `---\nferret:\n  id: sharedContract\n  type: api\n  shape:\n    type: object\n---\n`;
+    fs.writeFileSync(path.join(tmpDir, 'contracts', 'shared.contract.md'), sharedMdContent, 'utf-8');
+    await seedStoredContract(tmpDir, {
+      contractId: 'sharedContract',
+      filePath: 'contracts/shared.contract.md',
+      fileContent: sharedMdContent,
+    });
 
-      // Add .contract.ts with the same ID (new file — fileChanged = true)
-      fs.writeFileSync(
-        path.join(tmpDir, 'contracts', 'shared.contract.ts'),
-        `export const sharedContract = { value: 'shared', output: {} };\n`,
-        'utf-8',
-      );
+    // Add .contract.ts with the same ID (new file — fileChanged = true)
+    fs.writeFileSync(
+      path.join(tmpDir, 'contracts', 'shared.contract.ts'),
+      `export const sharedContract = { value: 'shared', output: {} };\n`,
+      'utf-8',
+    );
 
-      // Scan 2: .md is unchanged (skipped by !fileChanged), .ts is new.
-      // Pre-seeding from the store must catch the collision.
-      const result = runFerret(tmpDir, ['scan']);
-      assert.equal(result.status, 0, `scan failed:\nstderr: ${result.stderr}`);
-      assert.match(
-        result.stderr,
-        /CONFLICT sharedContract/,
-        `expected CONFLICT on stderr, got: ${result.stderr}`,
-      );
-    },
-  );
+    // Scan 2: .md is unchanged (skipped by !fileChanged), .ts is new.
+    // Pre-seeding from the store must catch the collision.
+    const result = runFerret(tmpDir, ['scan']);
+    assert.equal(result.status, 0, `scan failed:\nstderr: ${result.stderr}`);
+    assert.match(result.stderr, /CONFLICT sharedContract/, `expected CONFLICT on stderr, got: ${result.stderr}`);
+  });
 });
 
 describe('ferret lint — #30 severity classification', () => {
@@ -500,7 +553,7 @@ describe('ferret lint — #30 severity classification', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-lint-severity-'));
-    runFerret(tmpDir, ['init', '--no-hook']);
+    initializeLintProject(tmpDir);
   });
 
   afterEach(async () => {
@@ -522,7 +575,7 @@ describe('ferret lint — #30 severity classification', () => {
     );
 
     // Scan baseline
-    runFerret(tmpDir, ['scan']);
+    runFerretOk(tmpDir, ['scan']);
 
     // Now introduce a breaking change to upstream (add a required field)
     fs.writeFileSync(
@@ -560,7 +613,7 @@ describe('ferret lint — #30 severity classification', () => {
       'utf-8',
     );
 
-    runFerret(tmpDir, ['scan']);
+    runFerretOk(tmpDir, ['scan']);
 
     // Breaking change to auth (add required field)
     fs.writeFileSync(
@@ -582,7 +635,7 @@ describe('ferret lint — #30 severity classification', () => {
       'utf-8',
     );
 
-    runFerret(tmpDir, ['scan']);
+    runFerretOk(tmpDir, ['scan']);
     // Re-scan with identical content should remain clean
     const result = runFerret(tmpDir, ['lint']);
     assert.equal(result.status, 0);

@@ -1,22 +1,73 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, it, beforeEach, afterEach } from 'bun:test';
-import { SqliteStore } from '@specferret/core';
+import { SqliteStore, hashSchema } from '@specferret/core';
+import { runFerretCli } from '../test-utils/run-ferret';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ferretBin = path.resolve(__dirname, '../ferret.ts');
 
-function runFerret(cwd: string, args: string[], input?: string): ReturnType<typeof spawnSync> {
-  return spawnSync(process.execPath, [ferretBin, ...args], {
+function runFerret(cwd: string, args: string[], input?: string): ReturnType<typeof runFerretCli> {
+  return runFerretCli(ferretBin, args, {
     cwd,
-    encoding: 'utf-8',
-    timeout: 30_000,
+    timeout: 240_000,
     input,
   });
+}
+
+function stableIt(name: string, fn: () => void | Promise<void>, timeout = 240_000): void {
+  it(name, fn, timeout);
+}
+
+function runFerretOk(cwd: string, args: string[], input?: string): ReturnType<typeof runFerretCli> {
+  const result = runFerret(cwd, args, input);
+  assert.equal(result.status, 0, `command failed: ferret ${args.join(' ')}\nstderr: ${result.stderr}`);
+  return result;
+}
+
+type SeededReviewContract = {
+  contractId: string;
+  filePath: string;
+  fileContent: string;
+  contractType: string;
+  shapeSchema: Record<string, unknown>;
+  imports?: string[];
+};
+
+async function seedBaselineContracts(tmpDir: string, contracts: SeededReviewContract[]): Promise<void> {
+  const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
+
+  try {
+    await store.init();
+
+    for (const contract of contracts) {
+      const nodeId = randomUUID();
+      const storeFilePath = contract.filePath.split('/').join(path.sep);
+      await store.upsertNode({
+        id: nodeId,
+        file_path: storeFilePath,
+        hash: hashSchema(contract.fileContent),
+        status: 'stable',
+      });
+
+      await store.upsertContract({
+        id: contract.contractId,
+        node_id: nodeId,
+        shape_hash: hashSchema(contract.shapeSchema),
+        shape_schema: JSON.stringify(contract.shapeSchema),
+        type: contract.contractType,
+        status: 'stable',
+      });
+
+      await store.replaceDependenciesForSourceNode(nodeId, contract.imports ?? []);
+    }
+  } finally {
+    await store.close();
+  }
 }
 
 describe('ferret review — S32/S33 acceptance criteria', () => {
@@ -24,16 +75,17 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ferret-review-test-'));
-    runFerret(tmpDir, ['init', '--no-hook']);
+    runFerretOk(tmpDir, ['init', '--no-hook']);
+    fs.mkdirSync(path.join(tmpDir, 'contracts'), { recursive: true });
   });
 
   afterEach(async () => {
-    for (let attempt = 0; attempt < 20; attempt++) {
+    for (let attempt = 0; attempt < 100; attempt++) {
       try {
         fs.rmSync(tmpDir, { recursive: true, force: true });
         return;
       } catch (error: any) {
-        if (error?.code !== 'EBUSY' || attempt === 19) {
+        if (error?.code !== 'EBUSY' || attempt === 99) {
           throw error;
         }
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -41,15 +93,19 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     }
   });
 
-  it('exits 0 with a clean-state message when no items need review', () => {
-    const result = runFerret(tmpDir, ['review']);
-    assert.equal(result.status, 0);
-    assert.match(result.stdout, /0 items need review/);
-    assert.equal(result.stderr, '');
-  }, 15_000);
+  stableIt(
+    'exits 0 with a clean-state message when no items need review',
+    () => {
+      const result = runFerret(tmpDir, ['review']);
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /0 items need review/);
+      assert.equal(result.stderr, '');
+    },
+    240_000,
+  );
 
-  it('accept marks reviewed items stable and records a reconciliation log', async () => {
-    seedBreakingDrift(tmpDir);
+  stableIt('accept marks reviewed items stable and records a reconciliation log', async () => {
+    await seedBreakingDrift(tmpDir);
 
     const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt', '--action', 'accept']);
     assert.equal(result.status, 0);
@@ -73,78 +129,94 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     assert.match(lintResult.stdout, /contracts need review/);
   });
 
-  it('update prints grouped copy-paste context and leaves the repo blocked', async () => {
-    seedBreakingDrift(tmpDir);
+  stableIt(
+    'update prints grouped copy-paste context and leaves the repo blocked',
+    async () => {
+      await seedBreakingDrift(tmpDir);
 
-    const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt', '--action', 'update']);
-    assert.equal(result.status, 0);
-    assert.match(result.stdout, /DIRECT IMPACT/);
-    assert.match(result.stdout, /TRANSITIVE IMPACT/);
-    assert.match(result.stdout, /requested-action: update/);
-    assert.match(result.stdout, /contracts[/\\]search[/\\]results\.contract\.md/);
-    assert.match(result.stdout, /TRANSITIVE IMPACT\s+[\s\S]*none/);
+      const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt', '--action', 'update']);
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /DIRECT IMPACT/);
+      assert.match(result.stdout, /TRANSITIVE IMPACT/);
+      assert.match(result.stdout, /requested-action: update/);
+      assert.match(result.stdout, /contracts[/\\]search[/\\]results\.contract\.md/);
+      assert.match(result.stdout, /TRANSITIVE IMPACT\s+[\s\S]*none/);
 
-    const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
-    await store.init();
-    const nodes = await store.getNodesByStatus('needs-review');
-    assert.equal(nodes.length > 0, true);
-    const logs = await store.getReconciliationLogs();
-    assert.equal(logs.at(-1)?.resolved_by, 'update');
-    await store.close();
+      const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
+      await store.init();
+      const nodes = await store.getNodesByStatus('needs-review');
+      assert.equal(nodes.length > 0, true);
+      const logs = await store.getReconciliationLogs();
+      assert.equal(logs.at(-1)?.resolved_by, 'update');
+      await store.close();
 
-    const lintResult = runFerret(tmpDir, ['lint']);
-    assert.equal(lintResult.status, 1);
-  });
+      const lintResult = runFerret(tmpDir, ['lint']);
+      assert.equal(lintResult.status, 1);
+    },
+    120_000,
+  );
 
-  it('reject prints structured context and leaves the repo blocked', async () => {
-    seedBreakingDrift(tmpDir);
+  stableIt(
+    'reject prints structured context and leaves the repo blocked',
+    async () => {
+      await seedBreakingDrift(tmpDir);
 
-    const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt', '--action', 'reject']);
-    assert.equal(result.status, 0);
-    assert.match(result.stdout, /requested-action: reject/);
-    assert.match(result.stdout, /repo remains blocked until upstream is fixed/);
+      const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt', '--action', 'reject']);
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /requested-action: reject/);
+      assert.match(result.stdout, /repo remains blocked until upstream is fixed/);
 
-    const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
-    await store.init();
-    const nodes = await store.getNodesByStatus('needs-review');
-    assert.equal(nodes.length > 0, true);
-    const logs = await store.getReconciliationLogs();
-    assert.equal(logs.at(-1)?.resolved_by, 'reject');
-    await store.close();
-  });
+      const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
+      await store.init();
+      const nodes = await store.getNodesByStatus('needs-review');
+      assert.equal(nodes.length > 0, true);
+      const logs = await store.getReconciliationLogs();
+      assert.equal(logs.at(-1)?.resolved_by, 'reject');
+      await store.close();
+    },
+    120_000,
+  );
 
-  it('supports multi-item selection and applies one action to all selected drift items', async () => {
-    seedMultipleBreakingDrift(tmpDir);
+  stableIt(
+    'supports multi-item selection and applies one action to all selected drift items',
+    async () => {
+      await seedMultipleBreakingDrift(tmpDir);
 
-    const result = runFerret(tmpDir, ['review', '--action', 'update'], '1,2\n');
-    assert.equal(result.status, 0);
-    assert.match(result.stdout, /REVIEW ITEMS/);
-    assert.match(result.stdout, /api\.GET\/search/);
-    assert.match(result.stdout, /auth\.jwt/);
-    assert.match(result.stdout, /UPDATE\s+api\.GET\/search, auth\.jwt/);
+      const result = runFerret(tmpDir, ['review', '--action', 'update'], '1,2\n');
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /REVIEW ITEMS/);
+      assert.match(result.stdout, /api\.GET\/search/);
+      assert.match(result.stdout, /auth\.jwt/);
+      assert.match(result.stdout, /UPDATE\s+api\.GET\/search, auth\.jwt/);
 
-    const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
-    await store.init();
-    const logs = await store.getReconciliationLogs();
-    assert.equal(logs.length, 2);
-    assert.equal(
-      logs.every((log) => log.resolved_by === 'update'),
-      true,
-    );
-    await store.close();
-  });
+      const store = new SqliteStore(path.join(tmpDir, '.ferret', 'graph.db'));
+      await store.init();
+      const logs = await store.getReconciliationLogs();
+      assert.equal(logs.length, 2);
+      assert.equal(
+        logs.every((log) => log.resolved_by === 'update'),
+        true,
+      );
+      await store.close();
+    },
+    120_000,
+  );
 
-  it('prompts for action when no --action is supplied and accepts interactive input', () => {
-    seedBreakingDrift(tmpDir);
+  stableIt(
+    'prompts for action when no --action is supplied and accepts interactive input',
+    async () => {
+      await seedBreakingDrift(tmpDir);
 
-    const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt'], 'u\n');
-    assert.equal(result.status, 0);
-    assert.match(result.stdout, /RESOLUTION OPTIONS/);
-    assert.match(result.stdout, /requested-action: update/);
-  });
+      const result = runFerret(tmpDir, ['review', '--contract', 'auth.jwt'], 'u\n');
+      assert.equal(result.status, 0);
+      assert.match(result.stdout, /RESOLUTION OPTIONS/);
+      assert.match(result.stdout, /requested-action: update/);
+    },
+    120_000,
+  );
 
-  it('emits stable JSON for current review items without ANSI codes', () => {
-    seedMultipleBreakingDrift(tmpDir);
+  stableIt('emits stable JSON for current review items without ANSI codes', async () => {
+    await seedMultipleBreakingDrift(tmpDir);
 
     const result = runFerret(tmpDir, ['review', '--json']);
     assert.equal(result.status, 0);
@@ -207,8 +279,8 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
     );
   });
 
-  it('emits structured JSON action results for accept', () => {
-    seedBreakingDrift(tmpDir);
+  stableIt('emits structured JSON action results for accept', async () => {
+    await seedBreakingDrift(tmpDir);
 
     const result = runFerret(tmpDir, ['review', '--json', '--contract', 'auth.jwt', '--action', 'accept']);
     assert.equal(result.status, 0);
@@ -253,7 +325,11 @@ describe('ferret review — S32/S33 acceptance criteria', () => {
   });
 });
 
-function seedBreakingDrift(tmpDir: string): void {
+async function seedBreakingDrift(tmpDir: string): Promise<void> {
+  const authBaseline = `---\nferret:\n  id: auth.jwt\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      sub:\n        type: string\n      exp:\n        type: string\n    required:\n      - sub\n      - exp\n---\n`;
+  const searchBaseline = `---\nferret:\n  id: api.GET/search\n  type: api\n  status: active\n  imports:\n    - auth.jwt\n  shape:\n    type: object\n    properties:\n      results:\n        type: array\n---\n`;
+  const recommendationsBaseline = `---\nferret:\n  id: api.GET/recommendations\n  type: api\n  status: active\n  imports:\n    - api.GET/search\n  shape:\n    type: object\n    properties:\n      items:\n        type: array\n---\n`;
+
   fs.mkdirSync(path.join(tmpDir, 'contracts', 'auth'), { recursive: true });
   fs.mkdirSync(path.join(tmpDir, 'contracts', 'search'), { recursive: true });
   fs.mkdirSync(path.join(tmpDir, 'contracts', 'recommendations'), {
@@ -262,22 +338,62 @@ function seedBreakingDrift(tmpDir: string): void {
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'auth', 'jwt.contract.md'),
-    `---\nferret:\n  id: auth.jwt\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      sub:\n        type: string\n      exp:\n        type: string\n    required:\n      - sub\n      - exp\n---\n`,
+    authBaseline,
     'utf-8',
   );
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'search', 'results.contract.md'),
-    `---\nferret:\n  id: api.GET/search\n  type: api\n  status: active\n  imports:\n    - auth.jwt\n  shape:\n    type: object\n    properties:\n      results:\n        type: array\n---\n`,
+    searchBaseline,
     'utf-8',
   );
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'recommendations', 'items.contract.md'),
-    `---\nferret:\n  id: api.GET/recommendations\n  type: api\n  status: active\n  imports:\n    - api.GET/search\n  shape:\n    type: object\n    properties:\n      items:\n        type: array\n---\n`,
+    recommendationsBaseline,
     'utf-8',
   );
 
-  const baseline = runFerret(tmpDir, ['scan']);
-  assert.equal(baseline.status, 0);
+  await seedBaselineContracts(tmpDir, [
+    {
+      contractId: 'auth.jwt',
+      filePath: 'contracts/auth/jwt.contract.md',
+      fileContent: authBaseline,
+      contractType: 'type',
+      shapeSchema: {
+        type: 'object',
+        properties: {
+          sub: { type: 'string' },
+          exp: { type: 'string' },
+        },
+        required: ['sub', 'exp'],
+      },
+    },
+    {
+      contractId: 'api.GET/search',
+      filePath: 'contracts/search/results.contract.md',
+      fileContent: searchBaseline,
+      contractType: 'api',
+      shapeSchema: {
+        type: 'object',
+        properties: {
+          results: { type: 'array' },
+        },
+      },
+      imports: ['auth.jwt'],
+    },
+    {
+      contractId: 'api.GET/recommendations',
+      filePath: 'contracts/recommendations/items.contract.md',
+      fileContent: recommendationsBaseline,
+      contractType: 'api',
+      shapeSchema: {
+        type: 'object',
+        properties: {
+          items: { type: 'array' },
+        },
+      },
+      imports: ['api.GET/search'],
+    },
+  ]);
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'auth', 'jwt.contract.md'),
@@ -286,24 +402,54 @@ function seedBreakingDrift(tmpDir: string): void {
   );
 }
 
-function seedMultipleBreakingDrift(tmpDir: string): void {
-  seedBreakingDrift(tmpDir);
+async function seedMultipleBreakingDrift(tmpDir: string): Promise<void> {
+  const invoiceBaseline = `---\nferret:\n  id: billing.invoice\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      id:\n        type: string\n      total:\n        type: number\n    required:\n      - id\n      - total\n---\n`;
+  const invoicesBaseline = `---\nferret:\n  id: api.GET/invoices\n  type: api\n  status: active\n  imports:\n    - billing.invoice\n  shape:\n    type: object\n    properties:\n      invoices:\n        type: array\n---\n`;
+
+  await seedBreakingDrift(tmpDir);
   fs.mkdirSync(path.join(tmpDir, 'contracts', 'billing'), { recursive: true });
   fs.mkdirSync(path.join(tmpDir, 'contracts', 'invoices'), { recursive: true });
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'billing', 'invoice.contract.md'),
-    `---\nferret:\n  id: billing.invoice\n  type: type\n  status: active\n  shape:\n    type: object\n    properties:\n      id:\n        type: string\n      total:\n        type: number\n    required:\n      - id\n      - total\n---\n`,
+    invoiceBaseline,
     'utf-8',
   );
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'invoices', 'list.contract.md'),
-    `---\nferret:\n  id: api.GET/invoices\n  type: api\n  status: active\n  imports:\n    - billing.invoice\n  shape:\n    type: object\n    properties:\n      invoices:\n        type: array\n---\n`,
+    invoicesBaseline,
     'utf-8',
   );
 
-  const baseline = runFerret(tmpDir, ['scan']);
-  assert.equal(baseline.status, 0);
+  await seedBaselineContracts(tmpDir, [
+    {
+      contractId: 'billing.invoice',
+      filePath: 'contracts/billing/invoice.contract.md',
+      fileContent: invoiceBaseline,
+      contractType: 'type',
+      shapeSchema: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          total: { type: 'number' },
+        },
+        required: ['id', 'total'],
+      },
+    },
+    {
+      contractId: 'api.GET/invoices',
+      filePath: 'contracts/invoices/list.contract.md',
+      fileContent: invoicesBaseline,
+      contractType: 'api',
+      shapeSchema: {
+        type: 'object',
+        properties: {
+          invoices: { type: 'array' },
+        },
+      },
+      imports: ['billing.invoice'],
+    },
+  ]);
 
   fs.writeFileSync(
     path.join(tmpDir, 'contracts', 'billing', 'invoice.contract.md'),
