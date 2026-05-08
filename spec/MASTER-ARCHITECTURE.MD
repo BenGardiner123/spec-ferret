@@ -43,7 +43,7 @@ flowchart TD
 				EX[Extractors]
 				VAL[Schema validation\nand comparison]
 				STORE[(SQLite / Postgres)]
-				REC[Reconciler\nBFS + integrity checks]
+				REC[Reconciler\nlevel-by-level graph walk + integrity checks]
 				CTX[context.json writer]
 				REP[Status / Audit / Watch helpers]
 		end
@@ -377,7 +377,7 @@ Current responsibilities:
 2. Validate import integrity.
 3. Suggest likely missing imports.
 4. Find trigger contracts by selecting contracts whose parent node is `needs-review`.
-5. Perform breadth-first propagation across downstream dependents.
+5. Walk downstream dependents level by level.
 6. Mark impacted nodes as `needs-review`.
 7. Return a `ReconcileReport`.
 
@@ -392,9 +392,9 @@ The reconciler explicitly reports:
 
 When integrity violations exist, reconciliation returns `consistent: false` and stops propagation.
 
-### BFS propagation
+### Downstream walk
 
-Propagation characteristics:
+Current runtime flow:
 
 - downstream only
 - starts from trigger contracts
@@ -570,12 +570,25 @@ Flow:
 
 The current code implements bidirectional drift enforcement.
 
+In plain language, the enforcement mechanisms are:
+
+- no prose-spec parser for stories or planning docs
+- `gray-matter` for `.contract.md` extraction
+- Bun `import()` plus Zod schema conversion for `.contract.ts`
+- `compareSchemas()` for deciding whether a declared contract changed
+- the store for saving contract records and dependency edges
+- the reconciler for following dependency edges and flagging downstream impact
+- `tree-sitter` for extracting live shapes from ordinary TypeScript source
+- `classifyUpwardDrift()` for comparing live code shape to declared contract shape
+
+That means top-down enforcement is mostly parser or import plus schema comparison plus stored dependency graph plus reconciler walk, while bottom-up enforcement is mostly TypeScript shape extraction plus schema comparison. The runtime does not currently enforce prose spec -> contract creation.
+
 ```mermaid
 flowchart LR
 		A[Contract changes] --> B[scan]
 		B --> C[compareSchemas]
 		C --> D[mark trigger contracts\nand nodes needs-review]
-		D --> E[reconcile BFS]
+		D --> E[walk the graph\nlevel by level]
 		E --> F[flag downstream dependents]
 
 		G[Code changes] --> H[tree-sitter or .contract.ts extraction]
