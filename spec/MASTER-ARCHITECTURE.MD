@@ -1,303 +1,651 @@
-# SpecFerret V2 — Architecture
+# SpecFerret — Current Architecture
 
-Generated: March 2026
-Status: Sprint 1 complete. Approved for Sprint 2.
+This document describes the architecture that exists in the codebase today.
+It is derived from `packages/core` and `packages/cli` only.
+If this document and the code disagree, the code is authoritative.
 
-Runtime: Bun 1.0+
-Default local storage: `bun:sqlite` behind the `DBStore` interface.
-Test runner: `bun test`
-Language: TypeScript strict mode
+Runtime:
+
+- Bun CLI runtime
+- `@specferret/core` for extraction, storage, reconciliation, reporting, and watch utilities
+- `@specferret/cli` for command orchestration and human / CI output
 
 ---
 
 ## System Overview
 
-```mermaid
-graph TB
-    subgraph Sources["Source Layer"]
-        SPEC[Spec Files<br/>Markdown with Frontmatter]
-        CODE[Code Files<br/>TypeScript / JS<br/>Sprint 3]
-    end
+SpecFerret is a local-first contract drift engine.
 
-    subgraph Detection["Detection Layer"]
-        GH[Git Hook<br/>pre-commit]
-        HASH[Hash Differ<br/>SHA-256 per file]
-    end
+It does four things:
 
-    subgraph Parse["Parse Layer"]
-        GM[gray-matter<br/>YAML Frontmatter Parser<br/>synchronous, zero deps]
-        AJV[ajv + ajv-formats<br/>JSON Schema Validator<br/>breaking vs non-breaking]
-        RX[Regex Detector<br/>annotation comment matching<br/>Sprint 3]
-        TS_CODE[Tree-sitter TypeScript<br/>structural shape extraction<br/>Sprint 3]
-    end
+1. Extract contracts from markdown specs, TypeScript-native contract files, and TypeScript source.
+2. Persist those contracts and their dependency edges in a local graph store.
+3. Classify drift in both directions:
+   - contract change -> downstream dependents
+   - code change -> declared contract
+4. Present the result through CLI commands, JSON reports, `context.json`, and a file watcher.
 
-    subgraph Core["Core Engine"]
-        EXT[Contract Extractor<br/>ExtractionResult interface]
-        DAG[DAG Store<br/>DBStore interface<br/>bun:sqlite / Postgres]
-        REC[Reconciler<br/>BFS]
-    end
-
-    subgraph Propagation["Propagation Layer"]
-        DOWN[Spec → Dependents<br/>Walk DOWN the DAG<br/>flag affected spec nodes]
-        UP[Code → Spec<br/>Walk UP the DAG<br/>Sprint 3]
-    end
-
-    subgraph Output["Output Layer"]
-        CTX[context.json<br/>auto-generated on scan<br/>.ferret/context.json]
-        CLI[CLI Report<br/>human readable]
-        JSON[JSON Report<br/>CI / machine readable]
-    end
-
-    SPEC --> GH
-    CODE --> GH
-
-    GH --> HASH
-
-    HASH -->|spec file changed| GM
-    HASH -->|code annotation detected — Sprint 3| RX
-    HASH -->|code shape extraction — Sprint 3| TS_CODE
-
-    GM --> AJV
-    AJV --> EXT
-    RX --> EXT
-    TS_CODE --> EXT
-
-    EXT --> DAG
-    DAG --> REC
-
-    REC -->|spec-first change| DOWN
-    REC -->|code-first change — Sprint 3| UP
-
-    DOWN --> CTX
-    DOWN --> CLI
-    DOWN --> JSON
-    UP --> CTX
-    UP --> CLI
-    UP --> JSON
-```
-
----
-
-## The Data Model
-
-Every file SpecFerret tracks is a `ferret_node`.
-The `type` field distinguishes spec nodes from code nodes.
-The rest of the schema is identical across both types.
-
-```mermaid
-erDiagram
-    ferret_nodes {
-        string id PK
-        string file_path
-        string hash
-        string status "stable | needs-review | roadmap | blocked"
-        datetime updated_at
-    }
-
-    ferret_contracts {
-        string id PK
-        string node_id FK
-        string type "api | table | type | flow | event | config"
-        string shape_schema "JSON Schema object as JSON string"
-        string shape_hash "SHA-256 of key-sorted schema"
-        string status "stable | needs-review | roadmap"
-    }
-
-    ferret_dependencies {
-        string id PK
-        string source_node_id FK
-        string target_contract_id FK
-    }
-
-    ferret_nodes ||--o{ ferret_contracts : "exports"
-    ferret_nodes ||--o{ ferret_dependencies : "source"
-    ferret_contracts ||--o{ ferret_dependencies : "target"
-```
-
----
-
-## The DAG Model
-
-Spec nodes and code nodes live in the same graph.
-Edges are always contract-mediated — a node depends on a contract,
-not directly on another node.
-
-Today: spec nodes only. Code nodes arrive in Sprint 3.
-
-```mermaid
-graph LR
-    subgraph Spec["Spec Nodes — Sprint 1"]
-        S1[auth.md<br/>exports: auth.jwt]
-        S2[search.md<br/>exports: api.GET/search<br/>imports: auth.jwt]
-        S3[document.md<br/>exports: tables.document]
-    end
-
-    subgraph Code["Code Nodes — Sprint 3"]
-        C1[auth.ts<br/>@ferret-contract: auth.jwt]
-        C2[search.handler.ts<br/>@ferret-contract: api.GET/search]
-        C3[schema.ts<br/>@ferret-contract: tables.document]
-    end
-
-    S1 -->|auth.jwt| S2
-    S3 -->|tables.document| S2
-    S1 -->|auth.jwt| C1
-    S2 -->|api.GET/search| C2
-    S3 -->|tables.document| C3
-```
-
----
-
-## Drift Direction 1: Spec Changes → Dependents Flagged
-
-**Sprint 1 — Built and shipping.**
-
-A spec file is edited. The contract shape inside it changes.
-The source node stays stable. Its dependents get flagged.
+There is no hosted service, no daemon, and no planning-doc parser in the runtime path.
+The system is a CLI plus a reusable core library.
 
 ```mermaid
 flowchart TD
-    A[spec file edited<br/>contract shape updated] --> B[Hash diff detects file changed]
-    B --> C[gray-matter extracts frontmatter]
-    C --> D{Shape hash changed?}
-    D -->|no — cosmetic edit only| E[Update file hash only<br/>no flags raised<br/>exit 0]
-    D -->|yes — contract changed| F[compareSchemas: breaking or non-breaking?]
-    F -->|non-breaking| NB[Update shape_hash and shape_schema<br/>no downstream flags<br/>exit 0]
-    F -->|breaking| G[Update shape_schema + shape_hash<br/>mark contract needs-review]
-    G --> H[BFS walks DOWN the DAG<br/>from changed contract]
-    H --> I[Dependent spec nodes flagged: needs-review]
-    I --> J[Report generated]
-    J --> K{CI mode?}
-    K -->|yes| L[Exit 1 + JSON report to stdout]
-    K -->|no| M[Human-readable CLI output]
+		CLI[CLI Commands\ninit scan lint extract\nreview status watch audit]
+
+		subgraph Inputs[Inputs]
+				MD[.contract.md]
+				CTS[.contract.ts]
+				TS[TypeScript source]
+				CFG[ferret.config.json]
+		end
+
+		subgraph Core[@specferret/core]
+				EX[Extractors]
+				VAL[Schema validation\nand comparison]
+				STORE[(SQLite / Postgres)]
+				REC[Reconciler\nBFS + integrity checks]
+				CTX[context.json writer]
+				REP[Status / Audit / Watch helpers]
+		end
+
+		CLI --> CFG
+		CLI --> EX
+		MD --> EX
+		CTS --> EX
+		TS --> EX
+		EX --> VAL
+		VAL --> STORE
+		STORE --> REC
+		STORE --> CTX
+		STORE --> REP
+		REC --> REP
+
+		REP --> OUT1[Human CLI output]
+		REP --> OUT2[JSON output]
+		CTX --> OUT3[.ferret/context.json]
 ```
 
 ---
 
-## Drift Direction 2: Code Changes → Spec Flagged
+## Package Structure
 
-**Sprint 7 — Shipped (v0.2.0).**
+### `packages/cli`
 
-A code file is edited. Tree-sitter checks if the change is structurally significant.
-Only signature-level changes propagate. Implementation changes are silent.
+The CLI entry point is `packages/cli/bin/ferret.ts`.
+It loads eight commands in parallel:
+
+- `init`
+- `scan`
+- `lint`
+- `extract`
+- `review`
+- `status`
+- `watch`
+- `audit`
+
+The CLI layer is orchestration only. Most actual logic lives in `@specferret/core`.
+
+### `packages/core`
+
+The core package exports the current public architecture surface from `packages/core/src/index.ts`:
+
+- extractor modules
+- context writer
+- store interface and implementations
+- reconciler
+- config and path utilities
+- TypeScript-native contract helpers
+- status builder
+- watch helper
+- audit builder
+
+---
+
+## Architectural Components
+
+The current implementation is best understood as eight components rather than the older five-layer model.
+
+| Component                  | Responsibility                                                                                   | Primary files                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI orchestration          | Parse flags, call core, print, exit                                                              | `packages/cli/bin/ferret.ts`, `packages/cli/bin/commands/*.ts`                                                                                       |
+| Config and path resolution | Load `ferret.config.json`, find project root                                                     | `packages/core/src/config.ts`, `packages/core/src/utils/paths.ts`                                                                                    |
+| Extraction                 | Turn files into normalized contract records                                                      | `packages/core/src/extractor/frontmatter.ts`, `packages/core/src/extractor/typescript-contract.ts`, `packages/core/src/extractor/typescript.ts`      |
+| Validation and comparison  | Validate contract types, warn on unsupported schema keywords, classify drift                     | `packages/core/src/extractor/validator.ts`, `packages/core/src/extractor/upward-classifier.ts`                                                       |
+| Store                      | Persist nodes, contracts, dependencies, review logs, placement decisions                         | `packages/core/src/store/types.ts`, `packages/core/src/store/sqlite.ts`, `packages/core/src/store/postgres.ts`, `packages/core/src/store/factory.ts` |
+| Reconciliation             | Validate graph integrity, walk dependency graph, flag downstream impact, suggest missing imports | `packages/core/src/reconciler/index.ts`, `packages/core/src/reconciler/import-suggestions.ts`                                                        |
+| Reporting                  | Build status, review, audit, and context snapshots                                               | `packages/core/src/status/index.ts`, `packages/core/src/context/index.ts`, `packages/core/src/audit/index.ts`, `packages/cli/bin/commands/review.ts` |
+| Watch                      | Watch contract files and rerun lint                                                              | `packages/core/src/watch/index.ts`, `packages/cli/bin/commands/watch.ts`                                                                             |
+
+---
+
+## Contract Inputs
+
+The current code supports three inputs.
+
+### 1. Markdown contracts
+
+File format: `.contract.md`
+
+Extractor: `extractFromSpecFile()` in `packages/core/src/extractor/frontmatter.ts`
+
+Implementation details:
+
+- Uses `gray-matter`
+- Reads `ferret.id`, `ferret.type`, `ferret.shape`
+- Optionally reads `ferret.imports`, `ferret.status`, `ferret.source.file`, `ferret.source.symbol`
+- Normalizes status with this mapping:
+  - `active` or `complete` -> `stable`
+  - anything else -> `pending`
+- Returns `warning: 'no-frontmatter'` when the file has no `ferret:` block
+
+### 2. TypeScript-native contract files
+
+File format: `.contract.ts`
+
+Extractor: `extractFromContractFile()` in `packages/core/src/extractor/typescript-contract.ts`
+
+Implementation details:
+
+- Uses Bun `import()` at runtime
+- Detects exported values via `isContract()` from `packages/core/src/contract.ts`
+- Converts `output` Zod shapes to JSON Schema with `z.toJSONSchema()`
+- Resolves `consumes` into dependency imports
+- Uses `source.file` and `source.symbol` when provided
+- Defaults `sourceFile` to the contract file and `sourceSymbol` to the export name
+
+### 3. TypeScript source files
+
+File format: regular `.ts` source files
+
+Extractor: `extractContractsFromTypeScript()` in `packages/core/src/extractor/typescript.ts`
+
+Implementation details:
+
+- Uses `tree-sitter` and `tree-sitter-typescript`
+- Extracts exported interfaces, type aliases, enumerations, and functions
+- Generates deterministic inferred contract IDs when explicit metadata is absent
+- Produces hard `errors` and soft `diagnostics`
+- Is used in two places:
+  - `ferret extract` to scaffold `.contract.md` files
+  - upward drift checks to compare live code against stored contract schemas
+
+---
+
+## Type System and Contract Model
+
+### Contract categories
+
+The code enforces a closed set of contract types in `packages/core/src/extractor/contract-types.ts`:
+
+- `api`
+- `table`
+- `type`
+- `event`
+- `flow`
+- `config`
+
+### TypeScript-native contract authoring
+
+`packages/core/src/contract.ts` defines the runtime shape for `.contract.ts` exports.
+
+Important fields:
+
+- `id`
+- `value`
+- `output`
+- `invariants`
+- `consumes`
+- `dependsOn`
+- `forbids`
+- `status`
+- `source`
+- `closedBy`
+- `closedWhen`
+
+`defineContract()` returns the contract plus `schema: z.object(output)`.
+
+### Normalized extraction output
+
+All extractors converge on the same normalized shape:
+
+- `filePath`
+- `fileType` as `spec` or `code`
+- `contracts[]`
+- `extractedBy` as `gray-matter`, `tree-sitter`, or `typescript`
+- `extractedAt`
+
+Each extracted contract record contains:
+
+- `id`
+- `type`
+- `shape`
+- `shape_hash`
+- `imports`
+- optional `contractStatus`
+- optional `sourceFile`
+- optional `sourceSymbol`
+
+---
+
+## Store and Persisted Graph Model
+
+The persistence interface is `DBStore` in `packages/core/src/store/types.ts`.
+
+The store persists five table families:
+
+1. `ferret_nodes`
+2. `ferret_contracts`
+3. `ferret_dependencies`
+4. `ferret_reconciliation_log`
+5. `ferret_placement_decisions`
+
+SQLite is implemented in `packages/core/src/store/sqlite.ts`.
+Postgres is implemented in `packages/core/src/store/postgres.ts`.
+Store selection happens in `packages/core/src/store/factory.ts`.
+
+Selection rules:
+
+- `FERRET_DATABASE_URL` -> Postgres
+- else `config.store === 'postgres'` without env -> hard fail
+- else `.ferret/graph.db` if present -> SQLite
+- else SQLite by default
+
+### Persisted node model
+
+`FerretNode` fields:
+
+- `id`
+- `file_path`
+- `hash`
+- `status`
+- `updated_at`
+
+`NodeStatus` values:
+
+- `stable`
+- `needs-review`
+- `pending`
+- `blocked`
+
+### Persisted contract model
+
+`FerretContract` fields:
+
+- `id`
+- `node_id`
+- `shape_hash`
+- `shape_schema`
+- `type`
+- `status`
+- optional `code_source_file`
+- optional `code_source_symbol`
+
+`ContractStatus` values:
+
+- `stable`
+- `pending`
+- `needs-review`
+
+### Persisted dependency model
+
+Dependencies are edges from a source node to a target contract ID.
+
+That means:
+
+- one file can export one or more contracts
+- one file can depend on many contracts
+- reconciliation is contract-triggered, but node statuses are what get flagged
+
+### Migration details
+
+The SQLite store migrates legacy `roadmap` statuses to `pending` on init.
+The context writer also migrates `context.json` v2 to v3 semantics.
+
+---
+
+## Validation and Drift Classification
+
+The schema validator and comparison logic live in `packages/core/src/extractor/validator.ts`.
+
+### Validation
+
+Contract type validation is strict.
+
+JSON Schema validation is permissive:
+
+- unsupported keywords do not fail extraction
+- they emit warnings instead
+
+Unsupported keywords currently include:
+
+- `$ref`
+- `allOf`
+- `anyOf`
+- `oneOf`
+- `not`
+- `if` / `then` / `else`
+- `$defs`
+- `definitions`
+- `patternProperties`
+- `dependencies`
+
+### Downward classification rules
+
+`compareSchemas()` classifies changes as:
+
+- `breaking`
+- `non-breaking`
+- `no-change`
+
+Breaking examples in code:
+
+- type changed
+- required field removed
+- required field added
+- enumerated value removed
+- property removed
+- array item type changed
+
+Non-breaking examples in code:
+
+- optional field added
+- enumerated value added
+
+No-change means the schemas are semantically identical.
+
+### Upward classification rules
+
+`classifyUpwardDrift()` in `packages/core/src/extractor/upward-classifier.ts` reuses `compareSchemas()`.
+
+That gives the code -> contract path the same taxonomy:
+
+- `BREAKING`
+- `NON_BREAKING`
+- `NOOP`
+
+---
+
+## Reconciler
+
+The reconciler is implemented in `packages/core/src/reconciler/index.ts`.
+
+Its job is not extraction. Its job is graph reasoning.
+
+Current responsibilities:
+
+1. Load nodes, contracts, and dependencies from the store.
+2. Validate import integrity.
+3. Suggest likely missing imports.
+4. Find trigger contracts by selecting contracts whose parent node is `needs-review`.
+5. Perform breadth-first propagation across downstream dependents.
+6. Mark impacted nodes as `needs-review`.
+7. Return a `ReconcileReport`.
+
+### Import integrity checks
+
+The reconciler explicitly reports:
+
+- unresolved imports
+- self imports
+- circular imports
+- orphaned contracts
+
+When integrity violations exist, reconciliation returns `consistent: false` and stops propagation.
+
+### BFS propagation
+
+Propagation characteristics:
+
+- downstream only
+- starts from trigger contracts
+- walks via dependency edges
+- caps transitive traversal at depth 10
+- skips nodes already in `needs-review` or `pending`
+
+### Suggestions
+
+The reconciler can also emit non-blocking import suggestions through `suggestMissingImports()`.
+
+---
+
+## Context Snapshot
+
+`packages/core/src/context/index.ts` writes `.ferret/context.json` after every scan.
+
+Current context version:
+
+- `version: "3.0"`
+- `schemaVersion: "1.0.0"`
+
+The context file contains:
+
+- `contracts[]`
+- `edges[]`
+- `needsReview[]`
+- generation timestamp
+
+Each context contract carries:
+
+- `id`
+- `type`
+- parsed `shape`
+- `status`
+- `specFile`
+- `codeFile`
+
+This file is used as the committed CI baseline in `lint --ci --ci-baseline committed`.
+
+---
+
+## Command Flows
+
+### `ferret init`
+
+Primary file: `packages/cli/bin/commands/init.ts`
+
+Flow:
+
+- creates `.ferret/`
+- writes `.ferret/.gitignore`
+- initializes SQLite store and tables
+- writes starter `ferret.config.json`
+- writes `contracts/example.contract.md`
+- writes `CLAUDE.md`
+- can install a pre-commit hook that runs `ferret lint --changed`
+
+### `ferret scan`
+
+Primary file: `packages/cli/bin/commands/scan.ts`
+
+Flow:
+
+1. Load config and store.
+2. Discover `.contract.md` files from `specDir` and `filePattern`.
+3. Auto-discover `.contract.ts` files unless `contractParsers.typescript === false`.
+4. Optionally narrow to staged files with `--changed`.
+5. Extract each file.
+6. Compare each contract against the stored version.
+7. Set status based on downward comparison.
+8. Auto-promote pending contracts to stable when an external `source` resolves clean and upward drift is `NOOP`.
+9. Write nodes, contracts, and dependencies back to the store.
+10. Rewrite `.ferret/context.json`.
+
+Scan is the mutation entry point for graph state.
+
+### `ferret lint`
+
+Primary file: `packages/cli/bin/commands/lint.ts`
+
+Flow:
+
+1. Optionally restore the committed `context.json` baseline in CI mode.
+2. Run `scan` quietly.
+3. Reconcile downward drift and integrity violations.
+4. Run upward drift checks by re-extracting live code for contracts with `code_source_file` and `code_source_symbol`.
+5. Print human output or JSON diagnostics.
+6. Exit non-zero for drift in CI mode or when performance budget is exceeded.
+
+This is the primary daily enforcement command.
+
+### `ferret extract`
+
+Primary file: `packages/cli/bin/commands/extract.ts`
+
+Flow:
+
+- globs TypeScript files from `config.codeContracts.include` or `src/**/*.ts`
+- runs tree-sitter extraction
+- maps inferred contract IDs to deterministic markdown file paths
+- generates or updates `.contract.md` files under `specDir`
+- emits diagnostics for invalid IDs, collisions, and partial extraction issues
+
+This command bridges code-first TypeScript source into markdown contracts.
+
+### `ferret review`
+
+Primary file: `packages/cli/bin/commands/review.ts`
+
+Flow:
+
+- runs scan quietly
+- runs reconcile
+- builds reviewable downward-drift items
+- builds upward-drift review items
+- records review actions in `ferret_reconciliation_log`
+- can emit JSON or interactive guidance
+
+Supported review actions:
+
+- `accept`
+- `update`
+- `reject`
+
+### `ferret status`
+
+Primary files:
+
+- `packages/cli/bin/commands/status.ts`
+- `packages/core/src/status/index.ts`
+
+Flow:
+
+- summarizes current contract statuses
+- counts dependents per contract
+- can emit JSON or write `STATUS.md`
+- always exits 0
+
+### `ferret audit`
+
+Primary files:
+
+- `packages/cli/bin/commands/audit.ts`
+- `packages/core/src/audit/index.ts`
+
+Flow:
+
+- runs reconcile
+- builds status report
+- reruns upward drift checks
+- returns a read-only bidirectional report
+- always exits 0
+
+### `ferret watch`
+
+Primary files:
+
+- `packages/cli/bin/commands/watch.ts`
+- `packages/core/src/watch/index.ts`
+
+Flow:
+
+- watches `specDir` recursively
+- reacts to `.contract.md` and `.contract.ts` changes only
+- debounces events
+- reruns `ferret lint`
+- does not implement business logic itself
+
+---
+
+## Bidirectional Drift Model
+
+The current code implements bidirectional drift enforcement.
 
 ```mermaid
-flowchart TD
-    A[code file edited] --> B[Hash diff detects file changed]
-    B --> C[Tree-sitter parses AST]
-    C --> D{Has @ferret-contract annotation?}
-    D -->|no| E[No-op. File not linked to graph.]
-    D -->|yes| F{Structurally significant change?}
-    F -->|no — implementation only| G[No-op. Exit 0.]
-    F -->|yes| H[Extract new contract shape]
-    H --> I{Shape hash matches stored contract?}
-    I -->|yes| J[No-op. Exit 0.]
-    I -->|no — drift detected| K[BFS walks UP the DAG]
-    K --> L[Spec nodes that export this contract<br/>flagged: needs-review]
-    L --> M[Report: spec is lying about code]
-    M --> N{CI mode?}
-    N -->|yes| O[Exit 1 + JSON report]
-    N -->|no| P[Human-readable CLI output]
+flowchart LR
+		A[Contract changes] --> B[scan]
+		B --> C[compareSchemas]
+		C --> D[mark trigger contracts\nand nodes needs-review]
+		D --> E[reconcile BFS]
+		E --> F[flag downstream dependents]
+
+		G[Code changes] --> H[tree-sitter or .contract.ts extraction]
+		H --> I[classifyUpwardDrift]
+		I --> J[report upward drift\nin lint review audit]
 ```
 
----
+### Downward direction
 
-## Layer Responsibilities
+Declared contract changes are detected during `scan`.
+When a stored contract and extracted contract differ, the contract status is updated.
+`lint` then uses the reconciler to flag dependent nodes.
 
-Strict separation. No layer reaches into another layer's domain. Ever.
+### Upward direction
 
-| Layer          | Responsibility                                                  | Does NOT do                              |
-| -------------- | --------------------------------------------------------------- | ---------------------------------------- |
-| **Store**      | Insert, update, query, delete. Parameterised SQL only.          | Business logic, graph traversal, parsing |
-| **Extractor**  | Turn a file into an `ExtractionResult`.                         | Talk to store, know about graph          |
-| **Validator**  | Validate JSON Schema subset. Classify breaking vs non-breaking. | Parse files, I/O, side effects           |
-| **Reconciler** | BFS traversal, flag dirty nodes, return report.                 | Parse files, format output               |
-| **Context**    | Write `.ferret/context.json` after every scan.                  | Anything else                            |
-| **CLI**        | Read config, call core, print result, exit.                     | Business logic, parsing, traversal       |
+For contracts that carry code source metadata:
 
-**CLI command file maximum: 50 lines. If a command file exceeds this, logic is in the wrong layer.**
+- `.contract.md` contracts can point at `source.file` and `source.symbol`
+- `.contract.ts` contracts persist `code_source_file` and `code_source_symbol`
 
----
+`lint`, `review`, and `audit` re-extract the live code shape and compare it with the stored declared schema.
 
-## The ExtractionResult Interface
+Extraction strategy:
 
-Every parser — gray-matter (`.contract.md`), Tree-sitter (code-first), and TypeScript (`.contract.ts`, v0.3.0) —
-returns this exact shape. The rest of the system cannot tell them apart.
+- target ends with `.contract.ts` -> use `extractFromContractFile()`
+- any other TypeScript file -> use `extractContractsFromTypeScript()`
 
-```typescript
-interface ExtractionResult {
-  filePath: string;
-  fileType: 'spec' | 'code';
-  contracts: Array<{
-    id: string; // e.g. "api.GET/search"
-    type: string; // e.g. "api"
-    shape: object; // JSON Schema object — SpecFerret supported subset
-    shape_hash: string; // SHA-256 of key-sorted schema
-    imports: string[]; // e.g. ["auth.jwt", "tables.document"]
-  }>;
-  extractedBy: 'gray-matter' | 'tree-sitter' | 'typescript';
-  extractedAt: number; // unix ms
-  warning?: 'no-frontmatter';
-}
-```
+That is how the repo currently enforces code -> contract drift.
 
 ---
 
-## Technology Decisions — Final
+## Performance and Execution Characteristics
 
-These are not open for discussion or reconsideration.
+Current code-level characteristics:
 
-| Job                         | Tool                             | Reason                                                                                                                             |
-| --------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime                     | Bun 1.0+                         | Performance, native SQLite, TypeScript native, Claude Code alignment                                                               |
-| Spec frontmatter parsing    | `gray-matter`                    | Synchronous, proven, zero deps                                                                                                     |
-| JSON Schema validation      | `ajv` + `ajv-formats`            | 50M weekly downloads. Proven.                                                                                                      |
-| Schema hashing              | `node:crypto` SHA-256            | Built-in, deterministic, fast                                                                                                      |
-| Storage — default           | `bun:sqlite`                     | Built-in to Bun, synchronous, zero deps                                                                                            |
-| Storage — roadmap           | Postgres via `DBStore` interface | Sprint 2                                                                                                                           |
-| Annotation detection        | Regex                            | Sprint 1. `@ferret-contract:` is a predictable pattern. No parser needed.                                                          |
-| Code shape extraction       | Tree-sitter TypeScript           | Sprint 1. Pulled forward from Sprint 3 — structural extraction without annotations is the primary use-case.                        |
-| Contract format (type-safe) | `.contract.ts` + Zod             | Sprint 8 (v0.3.0, shipped). TypeScript-native contracts: tsc enforces structural drift; ferret enforces invariants/value coverage. |
-| Zod → JSON Schema           | `zod-to-json-schema`             | Sprint 8 (v0.3.0, shipped). Converts Zod output schemas to JSON Schema for `shape_schema TEXT` in SQLite.                          |
-| Test runner                 | `bun test`                       | Native to runtime, fast, no config                                                                                                 |
+- no external service dependency in the default path
+- synchronous markdown extraction
+- SQLite default store with WAL mode
+- tree-sitter for static TypeScript source extraction
+- runtime import for `.contract.ts`
+- file hash short-circuiting in `scan`
+- optional performance budgets in `lint` and `extract`
 
-**Do not use WASM. Do not add LLMs to the default path. Ever.**
+Watch mode is event-driven and reuses the CLI rather than embedding reconciliation logic in the watcher.
 
 ---
 
-## Sprint Boundaries
+## What The Current Code Does Not Do
 
-```
-Sprint 1 (complete)
-  ferret init       — SQLite, scaffold files, pre-commit hook opt-in
-  ferret scan       — gray-matter extraction, breaking/non-breaking classification
-  ferret lint       — scan + reconcile, Boris output format, --ci JSON mode
-  context.json      — auto-generated on every scan
-  Performance gate  — ferret lint under 500ms on clean project
+Based on the implementation currently checked in, SpecFerret does not:
 
-Sprint 2 (roadmap — not yet built)
-  Postgres store implementation
-  SQLite → Postgres migration
-  ferret upgrade command
+- parse planning docs or sprint stories directly
+- infer contracts from non-TypeScript implementation languages
+- run as a background server
+- require a hosted control plane
+- enforce schema keywords beyond its supported JSON Schema subset
 
-Sprints 3–7 (complete — v0.1.x through v0.2.0)
-  ferret extract    — Tree-sitter TypeScript extraction, no annotations required
-  ferret review     — interactive resolution, upward drift context, --json mode
-  ferret diagnostics— import graph diagnostics
-  ferret lint --ci  — JSON mode, GitHub Action wrapper
-  Bidirectional drift — spec→code AND code→spec live (G9)
-  source: blocks    — links code artifacts to contracts
-  context.json      — versioned, auto-migrating
-
-Sprint 8 (complete — v0.3.0, shipped 2026-04-14)
-  .contract.ts support  — TypeScript-native contract format via defineContract<T>
-  Contract<T> type      — defineContract helper, isContract type guard
-  ferret status         — current drift state, --json, --export STATUS.md
-
-V3 (Sebastian's vision)
-  Rust transpiler — built on the JSON Schema foundation
-  Full JSON Schema support ($ref, allOf, composition)
-```
+Any document that claims those runtime paths should be treated as stale unless the code gains them.
 
 ---
 
-_© Laser Unicorn — MIT License_
+## Canonical Mental Model
+
+The current architecture is:
+
+- a Bun CLI
+- backed by a reusable core library
+- storing a local contract graph
+- extracting shapes from markdown, `.contract.ts`, and TypeScript source
+- classifying drift in both directions
+- surfacing results through lint, review, status, audit, watch, and `context.json`
+
+That is the architecture implemented in code today.

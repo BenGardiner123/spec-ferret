@@ -1,340 +1,491 @@
-# Spec Folder Conventions
+# SpecFerret — Current Spec Conventions
 
-The definitive reference for how to organise spec files in a SpecFerret project.
-Covers native SpecFerret projects, BMAD/spec-kit integration, and naming rules.
-
----
-
-## Privacy Rule (Non-Negotiable)
-
-Do not put personally identifiable information (PII) or secrets in any project documentation.
-
-This applies to `contracts/`, `docs/`, `spec/`, examples, screenshots, runbooks,
-release notes, and CI evidence links.
-
-Never commit real:
-
-- names, emails, phone numbers, addresses, government IDs
-- API keys, tokens, passwords, cookies, session IDs, JWTs
-- customer IDs or account IDs that can be traced to a real person
-
-Use synthetic placeholders only, for example:
-
-- `user@example.test`
-- `USER_ID_PLACEHOLDER`
-- `REDACTED_TOKEN`
-
-If a log or screenshot includes sensitive data, redact it before commit. If redaction
-is not possible, do not include it.
+This document describes the conventions that exist in the current codebase.
+It is derived from `packages/core` and `packages/cli`, not from older planning docs.
+If this document and the code disagree, the code wins.
 
 ---
 
-## Part 1 — Folder Structure
+## Scope
 
-### The Rule
+These conventions are based on what SpecFerret actually reads, writes, and enforces today.
 
-SpecFerret owns `contracts/`. Planning docs live elsewhere.
+The runtime currently cares about:
 
-```
-contracts/       ← live contracts — SpecFerret reads this
-docs/            ← planning docs, architecture, roadmap — SpecFerret ignores this
-```
+- the configured spec directory
+- `.contract.md` files under that directory
+- `.contract.ts` files under that directory
+- TypeScript source files used by `ferret extract` or linked via `source`
+- `.ferret/context.json`
+- `ferret.config.json`
 
-`contracts/` is the contract tree. Every `.contract.md` file under it must have valid
-`ferret:` frontmatter or SpecFerret will warn on scan. Do not put prose-only
-documents, meeting notes, or ADRs in `contracts/`.
+The runtime does not parse planning documents, sprint stories, PRDs, or ADRs.
 
-### Domain-First, Not Sprint-First
+---
 
-Organise by domain, not by sprint or ticket number. Sprints are temporal —
-they stop making sense three weeks after they close. Domains are structural —
-they match how your system actually works.
+## 1. Discovery Rules
 
-**Good — domain-first:**
+### Project root
 
-```
-contracts/
-  auth/
-    jwt.contract.md
-    login.contract.md
-    refresh.contract.md
-  users/
-    profile.contract.md
-    preferences.contract.md
-  search/
-    query.contract.md
-    index.contract.md
-  tables/
-    user.contract.md
-    document.contract.md
-    session.contract.md
-```
+SpecFerret resolves a project root, then loads configuration and graph state relative to that root.
 
-**Bad — sprint-first:**
+### Default spec directory
 
-```
-contracts/
-  sprint-1/
-    auth-jwt.contract.md
-    user-table.contract.md
-  sprint-2/
-    search-query.contract.md
-    user-preferences.contract.md
-```
-
-Sprint folders create three problems:
-
-1. You can never find a contract without knowing when it was built
-2. Related contracts are scattered across time-based siblings
-3. Moving contracts between folders breaks file paths in version control
-
-### Flat Is Fine
-
-If your project has fewer than ~15 contracts, a flat `contracts/` directory is
-perfectly valid. Don't create folders for the sake of folders:
-
-```
-contracts/
-  jwt.contract.md
-  login.contract.md
-  user-table.contract.md
-  search-query.contract.md
-  example.contract.md
-```
-
-Add domain folders when a flat list becomes hard to scan visually — typically
-around 15–20 files.
-
-### Nesting Depth
-
-One level of domain folders is the recommendation. Two levels is the maximum.
-Three levels means your spec tree is modelling your org chart, not your system.
-
-```
-# Good — one level
-contracts/auth/jwt.contract.md
-
-# Acceptable — two levels
-contracts/api/auth/login.contract.md
-
-# Too deep — stop
-contracts/api/v2/auth/internal/jwt.contract.md
-```
-
-### The `specDir` Config
-
-`ferret.config.json` controls where SpecFerret looks:
+The default config in code is:
 
 ```json
 {
   "specDir": "contracts/",
-  "filePattern": "**/*.contract.md"
+  "filePattern": "**/*.contract.md",
+  "includes": ["**/*.contract.md"],
+  "store": "sqlite"
 }
 ```
 
-SpecFerret recursively scans all `.contract.md` files under `specDir`. Subdirectories
-are automatically included — no extra configuration needed.
+So by default SpecFerret scans `contracts/`.
+
+### What `scan` discovers
+
+`ferret scan` currently discovers files in two ways:
+
+1. It globs `filePattern` inside `specDir` for markdown contracts.
+2. It also auto-discovers `**/*.contract.ts` inside `specDir` unless `contractParsers.typescript` is explicitly set to `false`.
+
+That means mixed-format projects are supported in the same `specDir`.
+
+### What `watch` watches
+
+`ferret watch` watches `specDir` recursively and reacts only to:
+
+- `.contract.md`
+- `.contract.ts`
+
+### What `extract` reads
+
+`ferret extract` reads TypeScript source files from `codeContracts.include`.
+
+If that config is absent, it defaults to:
+
+```json
+{
+  "codeContracts": {
+    "include": ["src/**/*.ts"]
+  }
+}
+```
 
 ---
 
-## Part 2 — Naming Rules
+## 2. Supported Contract File Types
 
-### File Names
+SpecFerret currently supports two contract authoring formats.
 
-| Rule                     | Example                                                            |
-| ------------------------ | ------------------------------------------------------------------ |
-| Lowercase only           | `jwt.contract.md` not `JWT.contract.md`                            |
-| Hyphens for multi-word   | `user-profile.contract.md` not `user_profile.contract.md`          |
-| Match the contract name  | `id: auth.jwt` → file: `auth/jwt.contract.md` or `jwt.contract.md` |
-| No spaces                | `rate-limits.contract.md` not `rate limits.contract.md`            |
-| `.contract.md` extension | Always — this is what SpecFerret scans for                         |
+### `.contract.md`
 
-File names do not need to match contract IDs exactly, but a predictable mapping
-makes the project navigable. The recommended convention:
+Markdown contracts are read with `gray-matter`.
 
-```
-Contract ID        File path
-─────────────      ─────────────────────────────
-auth.jwt           contracts/auth/jwt.contract.md
-tables.user        contracts/tables/user.contract.md
-api.GET/users      contracts/api/get-users.contract.md
-flows.onboarding   contracts/flows/onboarding.contract.md
-```
+Required frontmatter fields:
 
-The namespace portion of the ID maps to the folder. The name portion maps to
-the file. Forward slashes in REST paths become hyphens in file names.
+- `ferret.id`
+- `ferret.type`
+- `ferret.shape`
 
-### Contract IDs
+Optional frontmatter fields used by the runtime:
 
-Contract IDs are defined in CONTRACT-SCHEMA.MD. The short version:
+- `ferret.imports`
+- `ferret.status`
+- `ferret.source.file`
+- `ferret.source.symbol`
+
+If a markdown file has no `ferret:` block, extraction returns `warning: 'no-frontmatter'` and the file is skipped.
+
+### `.contract.ts`
+
+TypeScript-native contracts are read by dynamically importing the file and selecting exported values that satisfy `isContract()`.
+
+Current contract shape fields used by code:
+
+- `id`
+- `value`
+- `output`
+- `invariants`
+- `consumes`
+- `forbids`
+- `status`
+- `source`
+- `closedBy`
+- `closedWhen`
+- `dependsOn`
+
+Important current runtime details:
+
+- a single `.contract.ts` file may export multiple contracts
+- if `id` is omitted, the export name becomes the contract ID
+- `consumes` is converted into dependency imports
+- `source.file` and `source.symbol` are used for code linkage
+- if `source` is omitted, the extractor defaults to the contract file path and export name
+
+`defineContract()` adds `schema: z.object(output)` to the returned object.
+
+---
+
+## 3. Markdown Contract Rules
+
+### One markdown contract per file
+
+The markdown extractor returns exactly one contract per `.contract.md` file.
+
+That is true for markdown only.
+It is not a universal rule for `.contract.ts`.
+
+### Allowed contract types
+
+The current code enforces this closed set of types:
+
+- `api`
+- `table`
+- `type`
+- `event`
+- `flow`
+- `config`
+
+Any other `ferret.type` value fails extraction.
+
+### Supported status values
+
+Markdown status is normalized like this:
+
+- `active` -> `stable`
+- `complete` -> `stable`
+- anything else, including missing status -> `pending`
+
+### Imports
+
+If `ferret.imports` is present and is an array, each value becomes a dependency edge from the current file to a target contract ID.
+
+### Source linkage
+
+If present, this frontmatter is read and stored:
 
 ```yaml
-id: <namespace>.<name>
+source:
+  file: src/example.ts
+  symbol: ExampleType
 ```
 
-- Lowercase only
-- Dot-separated namespace
-- Hyphens for multi-word names
-- Forward slash for REST paths: `api.GET/users`
-- Unique across the entire graph
-
-### One Contract Per File
-
-Each `.contract.md` file exports exactly one contract. If you need two contracts for the
-same endpoint (request and response as separate shapes), use two files or combine
-them into a single shape with `request:` and `response:` keys.
+This is used by upward drift checks in `lint`, `review`, and `audit`.
 
 ---
 
-## Part 3 — Using SpecFerret with BMAD / spec-kit
+## 4. TypeScript Contract Rules
 
-### What SpecFerret Is Not
+### Type classification
 
-SpecFerret is not a planning tool. It does not generate PRDs, user stories,
-architecture documents, or implementation plans. It does not know about sprints,
-epics, or backlogs.
+`.contract.ts` extraction currently persists all TypeScript-native contracts with type:
 
-SpecFerret is a **contract graph engine**. It tracks the shapes your system
-promises to provide, detects when those shapes drift, and tells you what
-downstream dependencies are affected.
-
-### The Integration Pattern
-
-If you use BMAD, spec-kit, or any structured planning workflow, the integration
-is straightforward: **your planning tools generate the documents, SpecFerret
-guards the contracts.**
-
-```
-Planning layer (BMAD / spec-kit / your process)
-  ↓ writes
-docs/                    ← PRDs, architecture, stories, ADRs
-  ↓ informs
-contracts/               ← live contracts with ferret: frontmatter
-  ↑ guards
-SpecFerret               ← detects drift, flags dependencies
+```text
+type
 ```
 
-The handoff point is the frontmatter block. When a planning document defines a
-contract shape, a developer (or an AI agent) creates a corresponding `.contract.md` file
-in `contracts/` with the `ferret:` frontmatter. From that point forward, SpecFerret
-owns the shape.
+There is no separate runtime field today for setting `.contract.ts` contracts to `api`, `table`, `event`, `flow`, or `config`.
 
-### Parallel Directory Convention
+### Status values
 
+The current TypeScript contract interface allows:
+
+- `complete`
+- `active`
+- `pending`
+
+These are normalized the same way as markdown:
+
+- `complete` or `active` -> `stable`
+- `pending` or omitted -> `pending`
+
+### Dependencies
+
+Dependencies are declared through `consumes`.
+
+Resolution rules:
+
+- same-file contract references resolve to either `consumed.id` or the same-file export name
+- external references use `consumed.id` when present
+- unresolved references are kept as `"[unresolved]"` and emit a warning
+
+### Source linkage
+
+If you want a `.contract.ts` contract linked to an external implementation type, set:
+
+```ts
+source: { file: 'src/example.ts', symbol: 'ExampleType' }
 ```
-your-project/
-  docs/                        ← planning docs (BMAD, spec-kit, ADRs)
-    architecture.md
-    prd-search-feature.md
-    stories/
-      sprint-2-stories.md
-  contracts/                   ← live contracts (SpecFerret)
-    auth/
-      jwt.contract.md
-      login.contract.md
-    search/
-      query.contract.md
-      index.contract.md
-    tables/
-      user.contract.md
-      document.contract.md
-  src/                         ← source code
-  ferret.config.json
-```
 
-`docs/` is for humans and planning tools.
-`contracts/` is for SpecFerret.
-
-This is a convention, not a requirement. SpecFerret only reads `specDir`.
-You can name your planning folder anything — `docs/`, `planning/`, `.bmad/` —
-as long as it is not inside `specDir`.
-
-### Workflow: BMAD/spec-kit → SpecFerret
-
-1. **Plan**: Use BMAD or spec-kit to produce a PRD, architecture doc, or story
-2. **Extract contracts**: Identify the data shapes in the planning doc
-3. **Create spec files**: Write `.contract.md` files in `contracts/` with `ferret:` frontmatter
-4. **Lint**: Run `ferret lint` to register and validate contracts in the graph
-5. **Build**: Implement the feature
-6. **Guard**: `ferret lint` runs on commit — catches drift before it ships
-
-Steps 2–3 are the manual bridge today. Sprint 3 will add `@ferret-contract`
-annotations that link code directly to spec contracts, tightening the loop.
-
-### What SpecFerret Will Never Do
-
-- Parse or understand BMAD templates
-- Read spec-kit output formats
-- Generate planning documents
-- Replace your planning workflow
-
-SpecFerret operates downstream of planning. It turns your decisions into
-enforceable contracts. That's the boundary.
+If `source` is omitted, the runtime defaults to the contract file itself and the export name.
 
 ---
 
-## Part 4 — Starter Tree
+## 5. File Path Conventions
 
-### For Native SpecFerret Projects
+### Default layout created by `init`
 
-Run `ferret init` to get started:
+`ferret init` creates this starter layout:
 
-```
-your-project/
-  .ferret/
-    graph.db                   ← contract database (auto-created)
-    context.json               ← live graph snapshot (auto-generated on scan)
-  contracts/
-    example.contract.md        ← starter template (delete when you have real contracts)
-  ferret.config.json           ← config (auto-created)
-  CLAUDE.md                    ← AI agent instructions (auto-created)
-```
-
-Then build out your contract tree by domain:
-
-```
-contracts/
-  auth/
-    jwt.contract.md            ← id: auth.jwt
-    login.contract.md          ← id: api.POST/auth/login
-    refresh.contract.md        ← id: api.POST/auth/refresh
-  users/
-    profile.contract.md        ← id: api.GET/users/profile
-    table.contract.md          ← id: tables.user
-  config/
-    rate-limits.contract.md    ← id: config.rate-limits
-    feature-flags.contract.md  ← id: config.feature-flags
-```
-
-### For BMAD/spec-kit Projects
-
-Same as above, plus your planning directory:
-
-```
+```text
 your-project/
   .ferret/
     graph.db
     context.json
-  docs/                        ← your planning docs (SpecFerret ignores)
-    architecture.md
-    prd-v2.md
-    stories/
-      sprint-3.md
-  contracts/                   ← live contracts (SpecFerret reads)
-    auth/
-      jwt.contract.md
-      login.contract.md
-    search/
-      query.contract.md
-  src/
-    ...
+  contracts/
+    example.contract.md
   ferret.config.json
   CLAUDE.md
 ```
 
-### Minimal Viable Contract
+That is the only scaffold the code creates by default.
 
-The smallest valid spec file:
+### Contract file placement
+
+The code does not enforce domain-first folders, flat folders, or nesting depth.
+
+It only enforces discovery through `specDir`.
+
+So these are both valid from the runtime's perspective if they live under `specDir`:
+
+- `contracts/auth/jwt.contract.md`
+- `contracts/nested/any/depth/example.contract.ts`
+
+Whether deeper nesting is a good idea is a team choice, not a code-enforced rule.
+
+### Path mapping used by `ferret extract`
+
+When `ferret extract` generates markdown contracts from TypeScript source, it maps IDs to file paths like this:
+
+1. Split the ID on the first dot.
+2. Use the first segment as the folder under `specDir`.
+3. Join the remaining segments.
+4. Normalize the file name to lowercase hyphenated text.
+5. Write `<name>.contract.md`.
+
+Examples derived from the mapping code:
+
+```text
+auth.jwt         -> contracts/auth/jwt.contract.md
+tables.user      -> contracts/tables/user.contract.md
+api.GET/users    -> contracts/api/get-users.contract.md
+```
+
+This is the generator's path convention.
+The scanner itself does not require paths to follow that mapping.
+
+---
+
+## 6. ID Conventions and Current Enforcement
+
+### Current runtime rules
+
+The code does not enforce one global ID format everywhere.
+
+What is currently true:
+
+- markdown extraction requires `id` to be present
+- `.contract.ts` extraction uses `id` if present, else the export name
+- `ferret extract` validates generated IDs with this pattern:
+
+```text
+^[A-Za-z0-9_.\/-]+$
+```
+
+- `ferret extract` also requires generated IDs to contain at least one dot
+
+### Collision rules
+
+`ferret scan` currently detects conflicting IDs across files during the same run and prints:
+
+```text
+ferret: CONFLICT <id> — defined in both <file-a> and <file-b>
+```
+
+This is advisory output during scan.
+It does not hard-fail scan by itself.
+
+`ferret extract` is stricter about output-path collisions:
+
+- two IDs that map to the same generated markdown path are treated as an error
+- updating an existing markdown file with a different frontmatter ID is treated as an error
+
+### Practical convention
+
+The code-generated path mapping and starter content both assume dot-scoped IDs such as:
+
+- `api.GET/example`
+- `auth.jwt`
+- `tables.user`
+
+That is the current house style implied by the code, even though scan does not fully validate it for every authoring path.
+
+---
+
+## 7. Shape Conventions
+
+### Supported JSON Schema subset
+
+The validator warns, but does not fail, when markdown contracts include unsupported keywords.
+
+Keywords that currently warn:
+
+- `$ref`
+- `allOf`
+- `anyOf`
+- `oneOf`
+- `not`
+- `if`
+- `then`
+- `else`
+- `$defs`
+- `definitions`
+- `patternProperties`
+- `dependencies`
+
+### Comparison rules
+
+The current schema comparison logic understands and classifies changes across:
+
+- `type`
+- `properties`
+- `required`
+- `enum`
+- `items`
+- top-level `request`
+- top-level `response`
+
+Breaking changes in current code include:
+
+- required field removed
+- required field added
+- field type changed
+- property removed
+- enumerated value removed
+- array item type changed
+
+Non-breaking changes in current code include:
+
+- optional field added
+- enumerated value added
+
+### Required arrays
+
+The comparison logic treats `required` as an array of strings.
+Ordering differences are normalized semantically during comparison.
+
+`ferret extract` also sorts and deduplicates generated `required` arrays when it writes markdown.
+
+---
+
+## 8. Dependencies and Graph Edges
+
+Dependency edges are always stored as:
+
+- source node file path
+- target contract ID
+
+Current authoring paths to create those edges:
+
+- markdown `imports`
+- TypeScript `consumes`
+
+The reconciler later uses those edges to:
+
+- detect unresolved imports
+- detect self imports
+- detect circular imports
+- detect orphaned contracts
+- walk downstream impact via BFS
+
+---
+
+## 9. Source Links and Upward Drift
+
+SpecFerret currently supports linking a contract to a code symbol.
+
+For markdown contracts, that comes from:
+
+```yaml
+source:
+  file: src/example.ts
+  symbol: ExampleType
+```
+
+For `.contract.ts` contracts, that comes from either:
+
+- explicit `source`
+- or the default fallback to the current file and export name
+
+Current runtime rules:
+
+- `scan` stores `code_source_file` and `code_source_symbol`
+- `lint`, `review`, and `audit` re-extract the live code shape
+- non-`.contract.ts` source files are re-extracted with tree-sitter
+- `.contract.ts` source files are re-extracted via dynamic import
+
+`scan` also auto-promotes a pending contract to `stable` when:
+
+- it has a source file and symbol
+- the source file is external to the current contract file
+- upward drift compares as `NOOP`
+
+---
+
+## 10. Status Conventions
+
+The persisted contract status values are:
+
+- `stable`
+- `pending`
+- `needs-review`
+
+The persisted node status values are:
+
+- `stable`
+- `pending`
+- `needs-review`
+- `blocked`
+
+`blocked` exists in the store model for nodes.
+It is not an author-facing frontmatter or `.contract.ts` status value.
+
+The runtime also migrates legacy `roadmap` statuses to `pending`.
+
+---
+
+## 11. What Is Not Enforced By Code
+
+The following ideas may still be useful team conventions, but they are not enforced by the current runtime:
+
+- privacy and redaction policy
+- domain-first folder structure
+- sprint-first folders being forbidden
+- maximum nesting depth
+- keeping planning docs in `docs/`
+- BMAD or spec-kit specific directory structure
+- one contract per file across all formats
+- strict namespace-to-type matching for every authoring path
+
+What the code actually enforces is much narrower:
+
+- file discovery under `specDir`
+- required markdown fields
+- allowed markdown contract types
+- dependency extraction from `imports` and `consumes`
+- drift classification
+- graph persistence and reporting
+
+---
+
+## 12. Minimal Examples
+
+### Minimal markdown contract
+
+This is the smallest markdown contract that the extractor will accept:
 
 ```markdown
 ---
@@ -352,26 +503,38 @@ ferret:
 # User Table
 ```
 
-That's it. Three required fields in the frontmatter — `id`, `type`, `shape` —
-plus a valid JSON Schema shape. Everything below the closing `---` is
-free-form prose that SpecFerret never reads.
+### Minimal `.contract.ts` contract
+
+This is the smallest TypeScript-native contract shape implied by the runtime interface:
+
+```ts
+import { z } from 'zod';
+import { defineContract } from '@specferret/core';
+
+export const user = defineContract({
+  id: 'types.user',
+  value: 'User type',
+  output: {
+    id: z.string(),
+  },
+});
+```
+
+In the current implementation, this will be extracted as a contract of type `type`.
 
 ---
 
-## Summary — The Opinions
+## Canonical Summary
 
-| Topic                     | SpecFerret's position                                      |
-| ------------------------- | ---------------------------------------------------------- |
-| Contract tree location    | `contracts/` — completely separate from planning docs      |
-| File extension            | `.contract.md` — SpecFerret scans only these files         |
-| Folder structure          | Domain-first, never sprint-first                           |
-| Nesting depth             | 1 level recommended, 2 max                                 |
-| File naming               | Lowercase, hyphens, `.contract.md` extension               |
-| One contract per file     | Yes, always                                                |
-| Planning doc separation   | Keep planning docs outside `specDir`                       |
-| Flat vs nested            | Flat is fine under ~15 files                               |
-| BMAD/spec-kit integration | Parallel directories, manual bridge, SpecFerret downstream |
+The current codebase assumes:
 
----
+- `specDir` is the only contract discovery boundary
+- `.contract.md` and `.contract.ts` are both first-class inputs
+- `ferret extract` generates markdown contracts from TypeScript source
+- markdown contracts carry one contract per file
+- `.contract.ts` files may carry multiple contracts
+- dependencies come from `imports` and `consumes`
+- source links drive upward drift detection
+- path style is mostly conventional, but discovery is what matters
 
-_© Laser Unicorn — MIT License_
+Those are the spec conventions that exist in the code today.

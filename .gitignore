@@ -156,3 +156,8 @@ ferret.config.json
 .github/specferret/
 .github/instructions/
 CLAUDE.md
+#all generated files from graphify and the folder for the graphify output
+
+
+.graphify_*
+/graphify-out/
